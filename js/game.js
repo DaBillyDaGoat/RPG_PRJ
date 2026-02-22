@@ -311,6 +311,17 @@ const FACTION_CLASSES={
   },
 };
 
+// LOCATIONS
+const LOCATIONS={
+  newark:{name:'Newark',shortName:'NEWRK',ctrl:'hostile',faction:'iron_syndicate',svgX:332,svgY:149,travelDays:2,travelSupplies:15,travelTroopRisk:true,raidRisk:3,supplyPerTurn:12,features:['Factory districts','Iron Syndicate garrison','Industrial output'],flavor:'Smoke-choked factory city. Commissioner Stahl runs it like a corporation \u2014 because it is one.'},
+  mountainside:{name:'Mountainside',shortName:'MTNSD',ctrl:'neutral',faction:'mountain_covenant',svgX:288,svgY:163,travelDays:2,travelSupplies:10,travelTroopRisk:false,raidRisk:1,supplyPerTurn:8,features:['Natural springs','Mountain fortress','Water filtration'],flavor:'High in the Watchungs. Clean water flows here. The Covenant guards it with religion and rifles.'},
+  tcnj:{name:'TCNJ Campus',shortName:'TCNJ',ctrl:'unclaimed',faction:'player',svgX:187,svgY:259,travelDays:0,travelSupplies:0,travelTroopRisk:false,raidRisk:2,supplyPerTurn:5,claimable:true,features:['Abandoned campus','Defensible buildings','Central location'],flavor:'The College of New Jersey \u2014 empty since 2669. Central, defensible, unclaimed. Yours if you want it.'},
+  trenton:{name:'Trenton',shortName:'TRENT',ctrl:'neutral',faction:'trenton_collective',svgX:196,svgY:273,travelDays:1,travelSupplies:8,travelTroopRisk:false,raidRisk:1,supplyPerTurn:10,features:['Farmland','Food stores','Collective governance'],flavor:'The breadbasket of NJ 2999. Chair Osei runs it by committee. It somehow works.'},
+  mcguire:{name:'McGuire AFB',shortName:'MCGRE',ctrl:'hostile',faction:'rust_eagles',svgX:231,svgY:321,travelDays:2,travelSupplies:12,travelTroopRisk:true,raidRisk:3,supplyPerTurn:10,features:['Military airstrip','Armory','Aircraft (fuel unknown)'],flavor:'Three generations of Air Force descendants who never left. General Rusk still runs daily drills.'},
+  lbi:{name:'LBI Harbor',shortName:'LBI',ctrl:'neutral',faction:'coastal_brotherhood',svgX:358,svgY:338,travelDays:3,travelSupplies:18,travelTroopRisk:false,raidRisk:2,supplyPerTurn:9,features:['Harbor','Trade routes','Smuggling network'],flavor:'Long Beach Island. Captain Salieri runs the most profitable port on the coast. Everything moves through here \u2014 for a price.'},
+};
+const PATROL_ROUTES=[{from:'newark',to:'tcnj'},{from:'mcguire',to:'tcnj'},{from:'mcguire',to:'trenton'}];
+
 // Build flat class lookup
 const CLASSES={};
 Object.values(FACTION_CLASSES).forEach(f=>{
