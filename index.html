@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>JERSEY WASTELAND 2999</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Jersey 2999">
+<meta name="theme-color" content="#080808">
+<meta name="description" content="Jersey Wasteland 2999 — Post-apocalyptic political RPG set in New Jersey, year 2999. Campaign 1 of Wasteland Chronicles.">
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+<div id="bg-ascii"></div>
+<div id="app">
+
+<!-- TITLE SCREEN — Windows 95 desktop aesthetic -->
+<div id="title-block">
+<div class="wp" style="background:var(--wg);">
+  <div class="wtb"><div class="wtt"><span>&#128192;</span> UNTITLED_RPG.EXE &mdash; v0.1 ALPHA</div><div class="wbs"><div class="wbtn">_</div><div class="wbtn">&#9633;</div><div class="wbtn">&#10005;</div></div></div>
+  <div class="wi" style="padding:0;">
+    <div class="desktop-home">
+      <div class="desktop-logo">
+        <div class="desktop-icon">&#127918;</div>
+        <div class="desktop-titles">
+          <div class="desktop-game-title">WORKING TITLE</div>
+          <div class="desktop-game-sub">RPG &mdash; AI Assisted</div>
+        </div>
+      </div>
+      <div class="desktop-tagline">&ldquo;Every faction has a reason. None of them are good.&rdquo;</div>
+      <div class="desktop-divider"></div>
+      <div class="desktop-meta">
+        <div class="desktop-meta-chip">GENRE<span>Political Survival</span></div>
+        <div class="desktop-meta-chip">ENGINE<span>Claude API</span></div>
+        <div class="desktop-meta-chip">STATUS<span>Early Access</span></div>
+        <div class="desktop-meta-chip">BUILD<span>NJ-2999 Alpha</span></div>
+      </div>
+      <div id="home-continue-row" style="display:none;margin-top:14px;width:100%;gap:8px;flex-wrap:wrap;">
+        <button class="desktop-save-btn" onclick="resumeGame(window._ps)">&#9654; CONTINUE LAST SAVE</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- STORY SELECT SCREEN -->
+<div id="story-select">
+<div class="wp">
+  <div class="wtb"><div class="wtt"><span>&#128196;</span> CAMPAIGN_SELECT.EXE &mdash; CHOOSE YOUR STORY</div><div class="wbs"><div class="wbtn">?</div></div></div>
+  <div class="wi">
+    <div class="story-grid">
+
+      <!-- STORY 01: JERSEY WASTELAND 2999 — LIVE -->
+      <div class="story-card" id="sc-jersey" onclick="selectStory('jersey')">
+        <div class="sc-banner" style="background:linear-gradient(to right,#007a1f,#00ff41,#007a1f);"></div>
+        <div class="sc-inner">
+          <div class="sc-top">
+            <div class="sc-icon">&#9762;</div>
+            <div class="sc-badges">
+              <div class="sc-status live">&#9679; PLAYABLE</div>
+              <div class="sc-num">CAMPAIGN 01</div>
+            </div>
+          </div>
+          <div class="sc-title">JERSEY WASTELAND 2999</div>
+          <div class="sc-tagline">// POLITICAL GORE COMEDY // POST-APOCALYPTIC NJ //</div>
+          <div class="sc-desc">Year 2999. New Jersey was abandoned in 2669 when the rich fled off-world and the poor stayed behind. Three centuries of isolation, mutation, and petty political violence later — six warring city-states control what remains of the Garden State. You start with nothing but a name, a faction, and an empty college campus.<br><br>Unite the wasteland. Conquer it. Or get eaten by something in the Pine Barrens.</div>
+          <div class="sc-meta">
+            <div class="sc-meta-item">SETTING: <span>Post-Apoc NJ 2999</span></div>
+            <div class="sc-meta-item">TONE: <span>Dark Comedy / Gore</span></div>
+            <div class="sc-meta-item">FACTIONS: <span>7</span></div>
+            <div class="sc-meta-item">MAP: <span>Real NJ Geography</span></div>
+            <div class="sc-meta-item">ENDINGS: <span>Multiple</span></div>
+          </div>
+          <button class="sc-select-btn" onclick="selectStory('jersey');event.stopPropagation();">[ SELECT CAMPAIGN &gt;&gt; ]</button>
+        </div>
+      </div>
+
+      <!-- STORY 02: CHROME FRONTIER — 80s Space -->
+      <div class="story-card space-card" id="sc-space">
+        <div class="sc-banner space-banner"></div>
+        <div class="sc-inner">
+          <div class="sc-top">
+            <div class="sc-icon">&#128752;</div>
+            <div class="sc-badges">
+              <div class="sc-status coming-soon">&#9670; COMING SOON</div>
+              <div class="sc-num">CAMPAIGN 02</div>
+            </div>
+          </div>
+          <div class="sc-title space-title">CHROME FRONTIER</div>
+          <div class="sc-tagline space-tagline">// RETRO-FUTURE // SPACE POLITICS // 80s ENERGY //</div>
+          <div class="sc-desc space-desc">The solar system is colonized, corporatized, and running exactly as badly as you would expect. Monorails connect everything. Nothing works on time. The Jetsons lied.<br><br>Navigate interplanetary factions, chrome-plated bureaucracies, and the chaos of a future that arrived on schedule but forgot to bring competence.</div>
+          <div class="sc-meta">
+            <div class="sc-meta-item">SETTING: <span>Solar System 2185</span></div>
+            <div class="sc-meta-item">TONE: <span>Retro-Futurist Comedy</span></div>
+            <div class="sc-meta-item">VIBE: <span>Jetsons x Blade Runner</span></div>
+            <div class="sc-meta-item">STATUS: <span>In Development</span></div>
+          </div>
+          <button class="sc-select-btn space-select-btn" disabled>[ IN DEVELOPMENT ]</button>
+        </div>
+      </div>
+
+      <!-- STORY 03: CLASSIFIED -->
+      <div class="story-card locked" id="sc-locked2">
+        <div class="sc-banner" style="background:linear-gradient(to right,#1a1a1a,#333,#1a1a1a);"></div>
+        <div class="sc-lock-overlay">&#128274; LOCKED</div>
+        <div class="sc-inner">
+          <div class="sc-top">
+            <div class="sc-icon" style="filter:grayscale(1);opacity:.25;">&#128683;</div>
+            <div class="sc-badges">
+              <div class="sc-status classified">&#9632; CLASSIFIED</div>
+              <div class="sc-num">CAMPAIGN 03</div>
+            </div>
+          </div>
+          <div class="sc-title" style="color:var(--wgdd);">&#9608;&#9608;&#9608;&#9608;&#9608;&#9608; &#9608;&#9608;&#9608;&#9608;</div>
+          <div class="sc-tagline" style="color:var(--wgdd);">// [REDACTED] //</div>
+          <div class="sc-desc" style="color:var(--wgdd);font-size:.52rem;">ACCESS DENIED. File sealed.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- SETUP SCREEN -->
+<div id="setup-screen" style="display:none;">
+  <button class="back-to-stories" onclick="backToStories()">&#8592; BACK TO CAMPAIGN SELECT</button>
+  <div class="story-badge-strip" id="setup-story-badge">
+    <div class="story-badge-name" id="setup-story-name">JERSEY WASTELAND 2999</div>
+    <div class="story-badge-tag">SELECTED CAMPAIGN</div>
+  </div>
+  <div class="wp">
+    <div class="wtb"><div class="wtt"><span>&#128273;</span> SYSTEM_ACCESS.EXE</div><div class="wbs"><div class="wbtn">?</div></div></div>
+    <div class="wi">
+      <div class="fw"><div class="dos-label">ANTHROPIC API KEY</div>
+        <input type="password" class="dos-input" id="api-key" placeholder="sk-ant-api03-..." autocomplete="off"/>
+        <div class="dos-hint">&gt; GET KEY: <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></div>
+      </div>
+    </div>
+  </div>
+  <div class="wp">
+    <div class="wtb"><div class="wtt"><span>&#128128;</span> SURVIVOR_PROFILE.DAT</div><div class="wbs"><div class="wbtn">?</div></div></div>
+    <div class="wi">
+      <div class="fw"><div class="dos-label">SURVIVOR DESIGNATION</div>
+        <input type="text" class="dos-input" id="char-name" placeholder="e.g. Governor Skeez Malvetti" maxlength="40"/>
+      </div>
+      <div class="fw"><div class="dos-label">YOUR FACTION NAME</div>
+        <input type="text" class="dos-input" id="faction-name-input" placeholder="e.g. The New Jersey Accord" maxlength="40"/>
+        <div class="dos-hint">&gt; TCNJ IS EMPTY. YOU ARE BUILDING SOMETHING FROM NOTHING.</div>
+      </div>
+      <div class="fw"><div class="dos-label">FACTION CLASS</div>
+        <!-- STEP 1: PICK ORIGIN FACTION -->
+        <div style="font-size:.5rem;color:var(--gd);letter-spacing:2px;margin-bottom:6px;">STEP 1 — SELECT ORIGIN FACTION</div>
+        <div class="arch-grid" style="grid-template-columns:1fr 1fr 1fr;">
+          <div class="arch-card" data-arch="iron_syndicate" onclick="selectFaction(this)">
+            <span class="arch-icon">&#129967;</span>
+            <div class="arch-name" style="color:#cc0000">IRON SYNDICATE</div>
+            <div class="arch-stat">Newark Factory State</div>
+          </div>
+          <div class="arch-card" data-arch="rust_eagles" onclick="selectFaction(this)">
+            <span class="arch-icon">&#9992;</span>
+            <div class="arch-name" style="color:#cc6600">RUST EAGLES</div>
+            <div class="arch-stat">McGuire AFB Military</div>
+          </div>
+          <div class="arch-card" data-arch="mountain_covenant" onclick="selectFaction(this)">
+            <span class="arch-icon">&#9968;</span>
+            <div class="arch-name" style="color:#0099aa">MTN COVENANT</div>
+            <div class="arch-stat">Mountainside Water Cult</div>
+          </div>
+          <div class="arch-card" data-arch="trenton_collective" onclick="selectFaction(this)">
+            <span class="arch-icon">&#127807;</span>
+            <div class="arch-name" style="color:#aacc00">TRENTON COLLECTIVE</div>
+            <div class="arch-stat">Agrarian Commune</div>
+          </div>
+          <div class="arch-card" data-arch="coastal_brotherhood" onclick="selectFaction(this)">
+            <span class="arch-icon">&#9875;</span>
+            <div class="arch-name" style="color:#0066cc">COASTAL BROTHERHOOD</div>
+            <div class="arch-stat">LBI Crime Network</div>
+          </div>
+          <div class="arch-card" data-arch="the_hollowed" onclick="selectFaction(this)">
+            <span class="arch-icon">&#128128;</span>
+            <div class="arch-name" style="color:#880000">THE HOLLOWED</div>
+            <div class="arch-stat">Pine Barrens Raiders</div>
+          </div>
+          <div class="arch-card" data-arch="subnet" onclick="selectFaction(this)" style="grid-column:2">
+            <span class="arch-icon">&#128190;</span>
+            <div class="arch-name" style="color:#00aaff">SUBNET</div>
+            <div class="arch-stat">Underground Network</div>
+          </div>
+        </div>
+        <div style="font-size:.5rem;color:var(--gd);letter-spacing:2px;margin-top:10px;margin-bottom:6px;" id="sub-step-label" style="display:none">STEP 2 — SELECT SUBCLASS</div>
+        <!-- STEP 2: SUBCLASS (shown after archetype pick) -->
+        <div class="subclass-panel" id="subclass-panel">
+          <div class="sub-header" id="sub-header" style="white-space:normal;line-height:1.5;">SELECT SUBCLASS</div>
+          <div class="sub-grid" id="sub-grid"></div>
+        </div>
+      </div>
+      <div class="fw">
+        <div class="stat-pts">UNALLOCATED POINTS: <span id="points-left">5</span></div>
+        <div class="dos-label">ATTRIBUTE ALLOCATION</div>
+        <div class="stats-grid-s">
+          <div class="stat-row"><span class="stat-nm">&#9762; BRUTALITY</span><div class="sbt" onclick="adjustStat('brutality',event)"><div class="sbf" id="bar-brutality" style="width:30%"></div></div><span class="sv" id="val-brutality">3</span></div>
+          <div class="stat-row"><span class="stat-nm">&#129504; CUNNING</span><div class="sbt" onclick="adjustStat('cunning',event)"><div class="sbf" id="bar-cunning" style="width:30%"></div></div><span class="sv" id="val-cunning">3</span></div>
+          <div class="stat-row"><span class="stat-nm">&#128227; CHARISMA</span><div class="sbt" onclick="adjustStat('charisma',event)"><div class="sbf" id="bar-charisma" style="width:30%"></div></div><span class="sv" id="val-charisma">3</span></div>
+          <div class="stat-row"><span class="stat-nm">&#129656; DEPRAVITY</span><div class="sbt" onclick="adjustStat('depravity',event)"><div class="sbf" id="bar-depravity" style="width:30%"></div></div><span class="sv" id="val-depravity">3</span></div>
+        </div>
+      </div>
+      <div class="err" id="setup-error"></div>
+      <button class="begin-btn" id="begin-btn" onclick="beginGame()">[ BOOT CAMPAIGN &gt;&gt; ]</button>
+    </div>
+  </div>
+</div>
+
+<div id="game-screen">
+  <div class="char-panel">
+    <div class="char-hdr">
+      SURVIVOR: <span id="panel-name">-</span> &nbsp;|&nbsp; CLASS: <span id="panel-class">-</span><br>
+      FACTION: <span id="panel-faction">-</span> &nbsp;|&nbsp; LOCATION: <span id="panel-loc">TCNJ</span>
+    </div>
+    <div class="stats-row">
+      <div class="sc"><span class="scl">BRUTALITY</span><span class="scv" id="g-brutality">3</span></div>
+      <div class="sc"><span class="scl">CUNNING</span><span class="scv" id="g-cunning">3</span></div>
+      <div class="sc"><span class="scl">CHARISMA</span><span class="scv" id="g-charisma">3</span></div>
+      <div class="sc"><span class="scl">DEPRAVITY</span><span class="scv" id="g-depravity">3</span></div>
+    </div>
+    <div class="res-row">
+      <div class="res-chip">DAY: <span id="res-days">0</span></div>
+      <div class="res-chip">SUPPLIES: <span id="res-supplies">50</span></div>
+      <div class="res-chip">TROOPS: <span id="res-troops">10</span></div>
+      <div class="res-chip">TERR: <span id="res-territories">1</span>/6</div>
+    </div>
+    <div class="ap-row" id="ap-row"></div>
+    <div class="hp-label"><span>&#9632; INFLUENCE RATING</span><span id="hp-text">100/100</span></div>
+    <div class="hp-track"><div class="hp-fill" id="hp-bar" style="width:100%"></div></div>
+  </div>
+
+  <div class="tab-bar">
+    <div class="tab active" id="tab-story" onclick="switchTab('story')">&#128221; NARRATIVE</div>
+    <div class="tab" id="tab-map" onclick="switchTab('map')">&#128506; MAP</div>
+    <div class="tab" id="tab-factions" onclick="switchTab('factions')">&#9876; FACTIONS</div>
+    <div class="tab" id="tab-skills" onclick="switchTab('skills')">&#129516; SKILLS</div>
+  </div>
+
+  <!-- STORY -->
+  <div id="story-view">
+    <div class="wp" style="margin-top:0;border-top:none;">
+      <div class="wtb"><div class="wtt"><span>&#128221;</span> <span id="story-win-title">NARRATIVE_ENGINE.EXE</span></div><div class="wbs"><div class="wbtn">?</div></div></div>
+      <div class="wi" style="min-height:180px;"><div id="story-text"></div></div>
+    </div>
+    <div class="dos-loading" id="dos-loading">&gt; PROCESSING DECISION TREE</div>
+    <div class="err" id="game-error"></div>
+    <div class="choices-container" id="choices-container"></div>
+    <div class="open-wrap" id="open-wrap" style="display:none;">
+      <input type="text" class="open-input" id="open-input" placeholder="&gt; TYPE YOUR OWN ACTION... (earns +2 AP)" maxlength="200"/>
+      <button class="open-submit" onclick="submitOpen()">[ DO IT ]</button>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div id="map-view" style="display:none;">
+    <div class="wp" style="margin-top:0;border-top:none;">
+      <div class="wtb"><div class="wtt"><span>&#128506;</span> CAMPAIGN_MAP.EXE</div><div class="wbs"><div class="wbtn">?</div></div></div>
+      <div style="margin:4px;background:#000;border:2px inset var(--wgd);">
+        <div class="map-res-bar">
+          <span>DAY: <span id="map-day">0</span></span>
+          <span>SUPPLIES: <span id="map-sup">50</span></span>
+          <span>TROOPS: <span id="map-trp">10</span></span>
+          <span>LOC: <span id="map-cur-loc">TCNJ</span></span>
+        </div>
+        <div class="map-wrap" id="map-wrap">
+          <svg id="campaign-svg" viewBox="0 0 400 580" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(0,255,65,0.04)" stroke-width="0.4"/></pattern>
+              <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              <clipPath id="nj-clip"><path d="M208.4,0 L313.8,0 L400,85.9 L366.5,157.5 L316.2,205.3 L330.5,236.3 L366.5,296 L356.9,336.5 L325.7,408.1 L273.1,477.4 L155.7,580 L0,563.3 L43.1,477.4 L86.2,391.4 L122.2,300.7 L186.8,272.1 L177.2,205.3 L208.4,85.9 Z"/></clipPath>
+            </defs>
+            <rect width="400" height="580" fill="#000814"/>
+            <text x="370" y="280" font-family="Share Tech Mono" font-size="5.5" fill="rgba(0,80,180,0.2)" text-anchor="middle" transform="rotate(90,370,280)">ATLANTIC OCEAN</text>
+            <text x="30" y="520" font-family="Share Tech Mono" font-size="5" fill="rgba(0,80,180,0.18)" text-anchor="middle" transform="rotate(-10,30,520)">DELAWARE BAY</text>
+            <g clip-path="url(#nj-clip)">
+              <rect width="400" height="580" fill="#050f05"/>
+              <rect width="400" height="580" fill="url(#grid)"/>
+              <ellipse cx="295" cy="390" rx="75" ry="65" fill="rgba(0,255,65,0.04)" stroke="rgba(0,255,65,0.07)" stroke-width="1" stroke-dasharray="4,6"/>
+              <text x="295" y="386" font-family="Share Tech Mono" font-size="5.5" fill="rgba(0,255,65,0.18)" text-anchor="middle">PINE BARRENS</text>
+              <text x="295" y="394" font-family="Share Tech Mono" font-size="4.5" fill="rgba(0,255,65,0.12)" text-anchor="middle">[IRRADIATED]</text>
+              <circle cx="270" cy="400" r="1.5" fill="rgba(0,255,65,0.15)"/><circle cx="300" cy="415" r="1" fill="rgba(0,255,65,0.12)"/><circle cx="315" cy="380" r="1.5" fill="rgba(0,255,65,0.1)"/>
+            </g>
+            <path d="M208.4,0 L313.8,0 L400,85.9 L366.5,157.5 L316.2,205.3 L330.5,236.3 L366.5,296 L356.9,336.5 L325.7,408.1 L273.1,477.4 L155.7,580 L0,563.3 L43.1,477.4 L86.2,391.4 L122.2,300.7 L186.8,272.1 L177.2,205.3 L208.4,85.9 Z" fill="none" stroke="rgba(0,255,65,0.35)" stroke-width="1.5"/>
+            <g transform="translate(32,32)"><text x="0" y="-10" font-family="Share Tech Mono" font-size="7" fill="rgba(0,255,65,0.4)" text-anchor="middle">N</text><line x1="0" y1="-8" x2="0" y2="8" stroke="rgba(0,255,65,0.3)" stroke-width="1"/><line x1="-8" y1="0" x2="8" y2="0" stroke="rgba(0,255,65,0.3)" stroke-width="1"/></g>
+            <line x1="332" y1="149" x2="288" y2="163" class="road" id="road-newark-mountainside"/>
+            <path d="M332,153 C310,180 270,210 240,235 C215,255 200,258 187,259" fill="none" class="road" id="road-newark-tcnj"/>
+            <path d="M288,167 C260,190 230,220 210,245 C200,252 193,256 187,259" fill="none" class="road" id="road-mside-tcnj"/>
+            <line x1="187" y1="263" x2="196" y2="273" class="road" id="road-tcnj-trenton"/>
+            <path d="M196,276 C205,295 218,310 228,319" fill="none" class="road" id="road-trenton-mcguire"/>
+            <line x1="190" y1="263" x2="231" y2="321" class="road" id="road-tcnj-mcguire"/>
+            <path d="M238,323 C270,325 310,330 355,337" fill="none" class="road" id="road-mcguire-lbi"/>
+            <path d="M338,155 C350,200 362,270 360,337" fill="none" class="road" id="road-newark-lbi" stroke-dasharray="5,7" style="opacity:.3"/>
+            <g class="loc-node ctrl-hostile" id="node-newark" onclick="clickLoc('newark')" transform="translate(332,149)">
+              <circle class="outer" cx="0" cy="0" r="13" filter="url(#glow)"/><circle class="inner" cx="0" cy="0" r="6"/>
+              <text x="0" y="-18" font-family="Share Tech Mono" font-size="6.5" fill="rgba(204,0,0,.9)" text-anchor="middle">NEWARK</text>
+              <text x="0" y="-10" font-family="Share Tech Mono" font-size="4" fill="rgba(204,0,0,.6)" text-anchor="middle">[IRON SYNDICATE]</text>
+            </g>
+            <g class="loc-node ctrl-neutral" id="node-mountainside" onclick="clickLoc('mountainside')" transform="translate(288,163)">
+              <circle class="outer" cx="0" cy="0" r="11"/><circle class="inner" cx="0" cy="0" r="5.5"/>
+              <text x="-15" y="5" font-family="Share Tech Mono" font-size="5.5" fill="rgba(255,176,0,.9)" text-anchor="end">MTNSIDE</text>
+              <text x="-15" y="12" font-family="Share Tech Mono" font-size="4" fill="rgba(255,176,0,.5)" text-anchor="end">[COVENANT]</text>
+            </g>
+            <g class="loc-node ctrl-player current-loc" id="node-tcnj" onclick="clickLoc('tcnj')" transform="translate(187,259)">
+              <circle class="outer" cx="0" cy="0" r="14" filter="url(#glow)"/><circle class="inner" cx="0" cy="0" r="7"/>
+              <text x="0" y="-19" font-family="Share Tech Mono" font-size="7" fill="rgba(0,255,65,.95)" text-anchor="middle">TCNJ</text>
+              <text x="0" y="-11" font-family="Share Tech Mono" font-size="4" fill="rgba(0,255,65,.6)" text-anchor="middle">[YOUR BASE]</text>
+            </g>
+            <g class="loc-node ctrl-neutral" id="node-trenton" onclick="clickLoc('trenton')" transform="translate(196,273)">
+              <circle class="outer" cx="0" cy="0" r="11"/><circle class="inner" cx="0" cy="0" r="5.5"/>
+              <text x="15" y="5" font-family="Share Tech Mono" font-size="5.5" fill="rgba(255,176,0,.9)" text-anchor="start">TRENTON</text>
+              <text x="15" y="12" font-family="Share Tech Mono" font-size="4" fill="rgba(255,176,0,.5)" text-anchor="start">[COLLECTIVE]</text>
+            </g>
+            <g class="loc-node ctrl-hostile" id="node-mcguire" onclick="clickLoc('mcguire')" transform="translate(231,321)">
+              <circle class="outer" cx="0" cy="0" r="13" filter="url(#glow)"/><circle class="inner" cx="0" cy="0" r="6.5"/>
+              <text x="-16" y="4" font-family="Share Tech Mono" font-size="5.5" fill="rgba(204,0,0,.9)" text-anchor="end">McGUIRE</text>
+              <text x="-16" y="11" font-family="Share Tech Mono" font-size="4" fill="rgba(204,0,0,.6)" text-anchor="end">[RUST EAGLES]</text>
+            </g>
+            <g class="loc-node ctrl-neutral" id="node-lbi" onclick="clickLoc('lbi')" transform="translate(358,338)">
+              <circle class="outer" cx="0" cy="0" r="11"/><circle class="inner" cx="0" cy="0" r="5.5"/>
+              <text x="0" y="-16" font-family="Share Tech Mono" font-size="5.5" fill="rgba(255,176,0,.9)" text-anchor="middle">LBI</text>
+              <text x="0" y="-9" font-family="Share Tech Mono" font-size="4" fill="rgba(255,176,0,.5)" text-anchor="middle">[BROTHERHOOD]</text>
+            </g>
+            <circle class="patrol-dot" id="patrol1" cx="332" cy="149" r="3.5"/>
+            <circle class="patrol-dot" id="patrol2" cx="231" cy="321" r="3.5"/>
+            <text x="360" y="50" font-family="Share Tech Mono" font-size="5" fill="rgba(255,255,255,0.08)" text-anchor="middle">NEW YORK</text>
+            <text x="90" y="185" font-family="Share Tech Mono" font-size="5" fill="rgba(255,255,255,0.08)" text-anchor="middle">PENNSYLVANIA</text>
+          </svg>
+          <div class="map-legend">
+            <div><div class="leg-dot" style="background:var(--g)"></div>PLAYER</div>
+            <div><div class="leg-dot" style="background:var(--blood)"></div>HOSTILE</div>
+            <div><div class="leg-dot" style="background:var(--a)"></div>NEUTRAL</div>
+            <div><div class="leg-dot" style="background:#ff8800"></div>CONTESTED</div>
+          </div>
+          <div class="loc-popup" id="loc-popup" style="display:none;">
+            <div class="loc-popup-inner">
+              <div class="lpop-tb" id="lpop-tb">LOCATION.DAT</div>
+              <div class="lpop-body">
+                <div class="lpop-name" id="lpop-name">-</div>
+                <div class="lpop-leader" id="lpop-leader">-</div>
+                <div class="lpop-ctrl" id="lpop-ctrl">-</div>
+                <div class="lpop-feat" id="lpop-feat">-</div>
+                <div class="lpop-cost" id="lpop-cost">-</div>
+                <div class="lpop-btns">
+                  <button class="lpop-btn" id="lpop-travel-btn" onclick="travelToSelected()">[ TRAVEL ]</button>
+                  <button class="lpop-btn" id="lpop-talk-btn" onclick="talkFromMap()" style="display:none">[ TALK ]</button>
+                  <button class="lpop-btn" onclick="closePopup()">[ CLOSE ]</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FACTIONS -->
+  <div id="factions-view" style="display:none;">
+    <div class="wp" style="margin-top:0;border-top:none;">
+      <div class="wtb"><div class="wtt"><span>&#9876;</span> FACTION_RELATIONS.DAT</div><div class="wbs"><div class="wbtn">?</div></div></div>
+      <div class="wi"><div class="faction-list" id="faction-list"></div></div>
+    </div>
+  </div>
+
+  <!-- DIALOGUE -->
+  <div id="dialogue-screen">
+    <div class="wp" style="margin-top:0;border-top:none;">
+      <div class="wtb"><div class="wtt"><span>&#128172;</span> <span id="dlg-win-title">DIALOGUE.EXE</span></div><div class="wbs"><div class="wbtn">?</div></div></div>
+      <div class="wi">
+        <div class="dlg-wrap">
+          <div class="dlg-portrait">
+            <div class="port-ascii" id="port-ascii"></div>
+            <div>
+              <div class="port-name" id="port-name">-</div>
+              <div class="port-title" id="port-title">-</div>
+              <div class="port-rel" id="port-rel">-</div>
+            </div>
+          </div>
+          <div class="dlg-text" id="dlg-text">...</div>
+          <div class="dos-loading" id="dlg-loading">&gt; PROCESSING RESPONSE</div>
+          <div class="dlg-choices" id="dlg-choices"></div>
+          <div class="dlg-open-wrap">
+            <input type="text" class="open-input" id="dlg-open" placeholder="&gt; SAY SOMETHING CUSTOM..." maxlength="200"/>
+            <button class="open-submit" onclick="submitDlgOpen()">[ SAY IT ]</button>
+          </div>
+          <button class="dlg-back" onclick="closeDialogue()">[ &larr; BACK TO FACTIONS ]</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SKILLS -->
+  <div id="skills-view" style="display:none;">
+    <div class="wp" style="margin-top:0;border-top:none;">
+      <div class="wtb"><div class="wtt"><span>&#129516;</span> SKILL_TREE.EXE &mdash; ACTION POINTS</div><div class="wbs"><div class="wbtn">?</div></div></div>
+      <div class="wi">
+        <div class="skills-info">TOTAL BANKED AP: <span id="total-ap">0</span> &nbsp;|&nbsp; AP earned by doing actions in each skill.<br>More skill XP = <span>more AP per action</span> = more powerful options unlocked.<br>AP is <span>BANKABLE</span>. Spend it to boost a critical action, or save for emergencies.</div>
+        <div class="skill-grid" id="skill-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="turn-info">
+    <span id="turn-counter">&gt; TURN 001</span>
+    <button class="restart-btn" onclick="restartGame()">[ REBOOT / NEW GAME ]</button>
+  </div>
+</div>
+</div>
+
+<div class="load-overlay" id="load-overlay">
+  <div class="load-box">
+    <div class="load-tb">
+      <span>&#9881; NARRATIVE_ENGINE.EXE</span>
+      <span id="load-turn-lbl" style="opacity:.7;font-size:.55rem;"></span>
+    </div>
+    <div class="load-body">
+      <div class="load-spinner">
+        <svg viewBox="0 0 48 48"><circle class="pip-ring" cx="24" cy="24" r="19"/><circle class="pip-ring2" cx="24" cy="24" r="12"/></svg>
+        <div class="pip-label" id="pip-label">[!]</div>
+      </div>
+      <div class="load-info">
+        <div class="load-status" id="load-status-txt">PROCESSING<span class="load-dots"></span></div>
+        <div class="load-sub" id="load-sub-txt">Consulting the wasteland...</div>
+        <div class="load-bar-track"><div class="load-bar-fill" id="load-bar-fill"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/game.js"></script>
+</body>
+</html>

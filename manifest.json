@@ -1,0 +1,9 @@
+{
+  "name": "Jersey Wasteland 2999",
+  "short_name": "Jersey 2999",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#080808",
+  "theme_color": "#080808",
+  "icons": []
+}
