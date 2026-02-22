@@ -671,9 +671,9 @@ function extractJSON(text){
 }
 
 async function callDlg(sys,msg){
-  const r=await fetch('https://api.anthropic.com/v1/messages',{
+  const r=await fetch('https://airpg-api-proxi.billybuteau.workers.dev/',{
     method:'POST',
-    headers:{'Content-Type':'application/json','x-api-key':state.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:700,system:sys,messages:[...state.dlgHistory,{role:'user',content:msg}]})
   });
   if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+r.status);}
@@ -795,9 +795,9 @@ WRITING FORMAT:
 - NPCs stay in voice: Vera=cold. Tombstone=loud bluster. Finn=cryptic. Marta=direct warmth. Salieri=charming criminal. The Mouth=eloquent cannibal. Architect 7=systems metaphors.
 ${boost?'- BOOSTED: 4th [STAR] choice using '+state.boostedSkill+' with extra impact.':''}
 
-{"story":"narrative","choices":[{"label":"A","text":"action","flavor":"hint","skill":"force|wit|influence|shadow|grit","ap_reward":1},{"label":"B","text":"action","flavor":"hint","skill":"...","ap_reward":1},{"label":"C","text":"action","flavor":"hint","skill":"...","ap_reward":1}${boost?',{"label":"STAR","text":"boosted action","flavor":"BOOSTED '+state.boostedSkill+'","skill":"'+state.boostedSkill+'","ap_reward":0}':''}],"hp_change":0,"stat_change":{"stat":"none","delta":0},"location_change":{"location":"none","ctrl":"player"},"resource_change":{"supplies":0,"troops":0},"faction_rel_change":{"faction":"none","delta":0},"event_title":"Title"}`;  const r=await fetch('https://api.anthropic.com/v1/messages',{
+{"story":"narrative","choices":[{"label":"A","text":"action","flavor":"hint","skill":"force|wit|influence|shadow|grit","ap_reward":1},{"label":"B","text":"action","flavor":"hint","skill":"...","ap_reward":1},{"label":"C","text":"action","flavor":"hint","skill":"...","ap_reward":1}${boost?',{"label":"STAR","text":"boosted action","flavor":"BOOSTED '+state.boostedSkill+'","skill":"'+state.boostedSkill+'","ap_reward":0}':''}],"hp_change":0,"stat_change":{"stat":"none","delta":0},"location_change":{"location":"none","ctrl":"player"},"resource_change":{"supplies":0,"troops":0},"faction_rel_change":{"faction":"none","delta":0},"event_title":"Title"}`;  const r=await fetch('https://airpg-api-proxi.billybuteau.workers.dev/',{
     method:'POST',
-    headers:{'Content-Type':'application/json','x-api-key':state.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1400,system:sys,messages:[...state.history,{role:'user',content:msg}]})
   });
   if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+r.status);}
