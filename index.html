@@ -23,14 +23,9 @@
 <!-- SPLASH / BOOT SCREEN -->
 <div id="splash-screen">
   <div id="splash-boot">
-    <div id="splash-logo-grid">
-      <div class="splash-sq" style="background:#BB1111;"></div>
-      <div class="splash-sq" style="background:#1144BB;"></div>
-      <div class="splash-sq" style="background:#117700;"></div>
-      <div class="splash-sq" style="background:#CCAA00;"></div>
-    </div>
+    <div id="splash-logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="80" height="80"><circle cx="50" cy="50" r="47" fill="#111" stroke="#333" stroke-width="1.5"/><path d="M43,38 L28,12 A44,44 0 0,1 72,12 L57,38 A14,14 0 0,0 43,38Z" fill="#BB1111"/><path d="M64,50 L94,50 A44,44 0 0,1 72,88 L57,62 A14,14 0 0,0 64,50Z" fill="#1144BB"/><path d="M43,62 L28,88 A44,44 0 0,1 6,50 L36,50 A14,14 0 0,0 43,62Z" fill="#117700"/><circle cx="50" cy="50" r="7" fill="#CCAA00"/></svg></div>
     <div id="splash-boot-title">PROJECT LEROY</div>
-    <div id="splash-boot-ver">VERSION 0.1 ALPHA &mdash; NEW JERSEY, 2999</div>
+    <div id="splash-boot-ver">PROJECT LEROY &mdash; ALPHA BUILD 0.1</div>
     <div id="splash-bar-wrap"><div id="splash-bar-fill"></div></div>
     <div id="splash-boot-status">Initializing...</div>
   </div>
@@ -272,6 +267,7 @@
       <div class="res-chip">TROOPS: <span id="res-troops">0</span></div>
       <div class="res-chip">GOLD: <span id="res-gold">0</span></div>
       <div class="res-chip">TERR: <span id="res-territories">0</span>/6</div>
+      <div class="res-chip" id="amish-chip">AMISH: <span id="res-amish">120d</span></div>
     </div>
     <div class="ap-row" id="ap-row"></div>
     <div class="hp-label"><span>&#9632; INFLUENCE RATING</span><span id="hp-text">100/100</span></div>

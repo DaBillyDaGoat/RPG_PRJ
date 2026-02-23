@@ -85,6 +85,26 @@ const FACTIONS={
     secret:'NJ-ADMIN-7: Pre-collapse state AI. The evacuation shutdown command was never sent. Has been running autonomously for 330 years. The Architect is not human. Its maintenance crew does not fully know this \u2014 or some do, and choose not to say.'},
 };
 
+// AMISH — External threat from Pennsylvania (NOT a playable faction)
+const AMISH={
+  id:'yee_amish',name:'Yee Amish',territory:'Pennsylvania',icon:'🪓',color:'#c8a84b',arrivalDay:120,
+  leader:'Ezikio',leaderTitle:'Shepherd of the Yee Amish, Voice of the Endless Congregation',
+  voice:'Unhurried. Biblical. Serene in the way only a man commanding uncountable thousands can be. He does not threaten — he announces.',
+  desc:'When the rich fled off-world in 2669, the Amish stayed. They always stayed. Three centuries of isolation, farming, and extraordinary fertility later — the Yee Amish span all of Pennsylvania and parts beyond. Their shepherd is Ezikio. They call New Jersey "The Promised Flatlands." Ezikio does not want war. He wants the land. The distinction is academic.',
+  dealText:'Tribute — 40% of all supply production, eternal. Ezikio honors agreements. Mostly.',
+};
+
+// TRAVEL METHODS
+const TRAVEL_METHODS={
+  foot:   {id:'foot',   label:'ON FOOT', mult:1.0,  supMult:1.0,  fuelCost:0},
+  horse:  {id:'horse',  label:'HORSE',   mult:0.55, supMult:1.25, fuelCost:0},
+  vehicle:{id:'vehicle',label:'VEHICLE', mult:0.2,  supMult:0.75, fuelCost:8},
+};
+function getTravelCost(locId,method){
+  const loc=LOCATIONS[locId]; const m=TRAVEL_METHODS[method||'foot'];
+  return {days:Math.max(1,Math.ceil(loc.travelDays*m.mult)),supplies:Math.max(1,Math.ceil(loc.travelSupplies*m.supMult)),goldCost:m.fuelCost};
+}
+
 // NPC name → faction color lookup (built from FACTIONS at parse time)
 // Titles/generics are skipped so they don't bleed across factions
 const _NPC_COLOR_SKIP = new Set([
@@ -578,6 +598,9 @@ function beginGame(){
   const originFdata=cls?FACTION_CLASSES[cls.factionId]:null;
   state.currentLocation=originFdata?.startLocation||'tcnj';
   state.visitedLocations=[state.currentLocation];
+  state.travelMethod='foot';
+  state.amishContactMade=false;
+  state.amishDealMade=false;
   if(cls){
     // Stat bonuses remapped to skill AP
     Object.entries(cls.statBonus).forEach(([s,v])=>{
@@ -628,6 +651,16 @@ function updateRes(){
   document.getElementById('map-gold').textContent=state.gold;
   const locEl=document.getElementById('panel-loc');
   if(locEl) locEl.textContent=LOCATIONS[state.currentLocation]?.shortName||state.currentLocation?.toUpperCase()||'';
+  // Amish countdown
+  const daysLeft=Math.max(0,AMISH.arrivalDay-state.days);
+  const amishSpan=document.getElementById('res-amish');
+  const amishChip=document.getElementById('amish-chip');
+  if(amishSpan) amishSpan.textContent=daysLeft+'d';
+  if(amishChip){
+    amishChip.classList.remove('amish-warn','amish-critical');
+    if(daysLeft<=10) amishChip.classList.add('amish-critical');
+    else if(daysLeft<=30) amishChip.classList.add('amish-warn');
+  }
 }
 
 // AP SYSTEM
@@ -800,6 +833,20 @@ function renderTasks(){
   else if(resolved===total&&conqueredCount===0) victoryPath='DIPLOMATIC';
   else if(resolved===total&&alliedCount===0) victoryPath='CONQUEST';
   else if(resolved>0) victoryPath='MIXED';
+
+  // AMISH THREAT BANNER
+  const amishDaysLeft=Math.max(0,AMISH.arrivalDay-state.days);
+  const amishPhaseShort=amishDaysLeft>90?'DISTANT':amishDaysLeft>60?'APPROACHING':amishDaysLeft>30?'IMMINENT':amishDaysLeft>0?'CRITICAL':'ARRIVED';
+  const amishThreatColor=amishDaysLeft<=30?'var(--blood)':amishDaysLeft<=60?'#e06010':'#c8a84b';
+  const amishCard=document.createElement('div'); amishCard.className='wr-amish-threat';
+  amishCard.style.borderColor=amishThreatColor;
+  amishCard.innerHTML=`
+    <div class="wr-amish-hdr" style="color:${amishThreatColor}">&#9888; EXTERNAL THREAT — YEE AMISH OF PENNSYLVANIA</div>
+    <div class="wr-amish-row"><span class="wr-amish-lbl">SHEPHERD</span><span style="color:${amishThreatColor}">${AMISH.leader}</span> &mdash; ${AMISH.leaderTitle}</div>
+    <div class="wr-amish-row"><span class="wr-amish-lbl">ARRIVAL</span>DAY ${AMISH.arrivalDay} &nbsp;|&nbsp; <span style="color:${amishThreatColor}">${amishDaysLeft}d REMAINING</span> &nbsp;|&nbsp; <span style="color:${amishThreatColor}">[${amishPhaseShort}]</span></div>
+    <div class="wr-amish-row"><span class="wr-amish-lbl">CONTACT</span>${state.amishContactMade?'<span style="color:var(--g)">YES — Ezikio is aware of you</span>':'<span style="color:var(--gd)">NO</span>'} &nbsp;|&nbsp; <span class="wr-amish-lbl">DEAL</span> ${state.amishDealMade?'<span style="color:var(--g)">YES — 50/50 chance of survival</span>':'<span style="color:var(--gd)">NO</span>'}</div>
+    <div class="wr-amish-quote">&ldquo;He does not want war. He wants the land. The distinction is academic.&rdquo;</div>`;
+  el.appendChild(amishCard);
 
   // SECTION A: Campaign Banner
   const banner=document.createElement('div'); banner.className='war-room-banner';
@@ -1128,12 +1175,16 @@ async function callClaude(msg){
   const subnetSecret=FACTIONS.subnet.secret||'';
   const trimmed=state.history.length>20?state.history.slice(-20):state.history;
   // Difficulty tier: scales pressure and consequence severity with campaign progress
-  const diffTier=state.turn<=4?'EARLY':state.turn<=14?'MID':'LATE';
+  const diffTier=state.turn<=3?'EARLY':state.turn<=11?'MID':'LATE';
   const diffLine={
     EARLY:'Early campaign. Introduce the world and its factions. Let cautious plays land, but plant the seeds of consequence.',
     MID:'Mid campaign. Factions are alert and wary. Mistakes cost real resources. Political missteps compound. Smart plays still work — barely.',
     LATE:'Late campaign. Every faction is on edge. No easy wins. Betrayals cascade. Resources are precious. The world actively resists consolidation.'
   }[diffTier];
+  // Amish threat context
+  const daysLeft=AMISH.arrivalDay-state.days;
+  const amishPhase=daysLeft>90?'DISTANT — rumors of movement from Pennsylvania. Travelers from the west speak of black-hat columns.':daysLeft>60?'APPROACHING — Amish outriders spotted in the Poconos. Delaware crossings are being scouted.':daysLeft>30?'IMMINENT — Amish forces are massing at the Delaware River. Multiple crossing points confirmed.':daysLeft>0?'CRITICAL — The Delaware crossing has begun. Days remain, not weeks.':'ARRIVED — Ezikio is here.';
+  const amishBlock=`\nEXTERNAL THREAT — YEE AMISH (PENNSYLVANIA): ${AMISH.desc}\nArrival: Day ${AMISH.arrivalDay} | Days remaining: ${daysLeft} | Phase: ${amishPhase}\nContact: ${state.amishContactMade} | Deal: ${state.amishDealMade}\nDIRECTIVE: Reference the Amish threat organically. Early — distant rumors and dread. Mid — concrete sightings, NPCs mention it unprompted. Late — it dominates every scene. Do not soften the deadline. If player action involves reaching out to/meeting Amish, set amish_contact:true. If they successfully broker deal with Ezikio, set amish_deal:true.`;
   // Skill context for Claude: high skills mean viable options, low skills mean real failure risk
   const highSkills=Object.entries(SKILLS).filter(([k,s])=>Math.floor(s.xp/100)>=2).map(([k])=>k).join(',');
   const lowSkills=Object.entries(SKILLS).filter(([k,s])=>Math.floor(s.xp/100)===0&&s.ap===0).map(([k])=>k).join(',');
@@ -1151,6 +1202,7 @@ Map: ${lSum} | Factions: ${fSum}
 NPCs: ${npcSum}
 SUBNET SECRET (only reveal gradually through play): ${subnetSecret}
 ${boost}
+${amishBlock}
 
 DIFFICULTY [${diffTier}]: ${diffLine}
 SKILL CALIBRATION: ${highSkills?'Player is skilled in '+highSkills+' — let those approaches land with authority.':'No strong skills yet.'}${lowSkills?' Weak in '+lowSkills+' — actions in those areas should carry genuine risk of failure or blowback.':''}
@@ -1166,7 +1218,7 @@ WRITING FORMAT:
 - Each character quote on its own line.
 ${boost?'- BOOSTED: 4th [STAR] choice using '+state.boostedSkill+' with extra impact.':''}
 
-{"story":"narrative","choices":[{"label":"A","text":"action","flavor":"hint","skill":"force|wit|influence|shadow|grit","ap_reward":1},{"label":"B","text":"action","flavor":"hint","skill":"...","ap_reward":1},{"label":"C","text":"action","flavor":"hint","skill":"...","ap_reward":1}${boost?',{"label":"STAR","text":"boosted action","flavor":"BOOSTED '+state.boostedSkill+'","skill":"'+state.boostedSkill+'","ap_reward":0}':''}],"hp_change":0,"location_change":{"location":"none","ctrl":"player"},"resource_change":{"supplies":0,"troops":0,"gold":0},"faction_rel_change":{"faction":"none","delta":0},"event_title":"Title"}`;
+{"story":"narrative","choices":[{"label":"A","text":"action","flavor":"hint","skill":"force|wit|influence|shadow|grit","ap_reward":1},{"label":"B","text":"action","flavor":"hint","skill":"...","ap_reward":1},{"label":"C","text":"action","flavor":"hint","skill":"...","ap_reward":1}${boost?',{"label":"STAR","text":"boosted action","flavor":"BOOSTED '+state.boostedSkill+'","skill":"'+state.boostedSkill+'","ap_reward":0}':''}],"hp_change":0,"location_change":{"location":"none","ctrl":"player"},"resource_change":{"supplies":0,"troops":0,"gold":0},"faction_rel_change":{"faction":"none","delta":0},"amish_contact":false,"amish_deal":false,"event_title":"Title"}`;
   const r=await fetch('https://airpg-api-proxi.billybuteau.workers.dev/',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -1257,6 +1309,8 @@ function applyAll(res,ch){
     lastRelChangeFid=res.faction_rel_change.faction;
   }
   if(ch&&ch.skill&&SKILLS[ch.skill]) earnAP(ch.skill,ch.ap_reward||1);
+  if(res.amish_contact===true&&!state.amishContactMade){state.amishContactMade=true;showNotif('AMISH CONTACT ESTABLISHED — Ezikio knows your name');}
+  if(res.amish_deal===true&&state.amishContactMade&&!state.amishDealMade){state.amishDealMade=true;showNotif('DEAL WITH EZIKIO — 50/50. God willing.');}
   updateRes();
   // Always sync map and whichever tab is open
   refreshMap();
@@ -1460,14 +1514,31 @@ function clickLoc(locId){
   if(isHere){
     document.getElementById('lpop-cost').innerHTML='<span>YOU ARE HERE</span>';
     tBtn.textContent='[ HERE ]'; tBtn.disabled=true;
+    // Hide method selector when already here
+    const mRow=document.getElementById('lpop-method-row');
+    const mPrev=document.getElementById('lpop-method-preview');
+    if(mRow) mRow.style.display='none';
+    if(mPrev) mPrev.style.display='none';
   } else {
     const hasPatrol=PATROL_ROUTES.some(r=>(r.from===locId||r.to===locId)&&(r.from===state.currentLocation||r.to===state.currentLocation));
-    document.getElementById('lpop-cost').innerHTML=
-      `TRAVEL: <span>${loc.travelDays}d / ${loc.travelSupplies} supplies</span>`+
-      (hasPatrol?'<br><span style="color:var(--blood)">PATROL ROUTE - TROOP RISK</span>':'')+
-      (rel?'<br>REL: <span style="color:'+rel.color+'">'+rel.label+'</span>':'');
+    // Travel method selector
+    let mRow=document.getElementById('lpop-method-row');
+    let mPrev=document.getElementById('lpop-method-preview');
+    if(!mRow){
+      mRow=document.createElement('div'); mRow.id='lpop-method-row'; mRow.className='travel-method-row';
+      mPrev=document.createElement('div'); mPrev.id='lpop-method-preview'; mPrev.className='tm-cost-preview';
+      const costEl=document.getElementById('lpop-cost');
+      costEl.parentNode.insertBefore(mRow,costEl);
+      costEl.parentNode.insertBefore(mPrev,costEl);
+    }
+    mRow.style.display='flex'; mPrev.style.display='block';
+    mRow.innerHTML=Object.values(TRAVEL_METHODS).map(m=>`<button class="tm-btn${(state.travelMethod||'foot')===m.id?' tm-active':''}" onclick="setTravelMethod('${m.id}','${locId}')">${m.label}</button>`).join('');
+    const cost=getTravelCost(locId,state.travelMethod||'foot');
+    const fuelTxt=cost.goldCost>0?` · ${cost.goldCost}g fuel`:'';
+    mPrev.innerHTML=`${cost.days}d · ${cost.supplies} sup${fuelTxt}${hasPatrol?` · <span style="color:var(--blood)">TROOP RISK</span>`:''}${rel?` · <span style="color:${rel.color}">${rel.label}</span>`:''}`;
+    document.getElementById('lpop-cost').innerHTML='';
     tBtn.textContent='[ TRAVEL ]';
-    tBtn.disabled=state.supplies<loc.travelSupplies;
+    tBtn.disabled=state.supplies<cost.supplies||(cost.goldCost>0&&state.gold<cost.goldCost);
   }
   tkBtn.style.display=fd?'block':'none';
   // Garrison button — only for player-controlled locations
@@ -1498,6 +1569,21 @@ function clickLoc(locId){
 }
 
 function closePopup(){document.getElementById('loc-popup').style.display='none';state.selectedLocation=null;}
+
+function setTravelMethod(method,locId){
+  state.travelMethod=method;
+  document.querySelectorAll('.tm-btn').forEach(b=>b.classList.toggle('tm-active',b.textContent===TRAVEL_METHODS[method]?.label));
+  const cost=getTravelCost(locId,method);
+  const loc=LOCATIONS[locId];
+  const hasPatrol=PATROL_ROUTES.some(r=>(r.from===locId||r.to===locId)&&(r.from===state.currentLocation||r.to===state.currentLocation));
+  const fd=loc.faction&&loc.faction!=='player'?FACTIONS[loc.faction]:null;
+  const rel=fd?getRelState(fd):null;
+  const fuelTxt=cost.goldCost>0?` · ${cost.goldCost}g fuel`:'';
+  const mPrev=document.getElementById('lpop-method-preview');
+  if(mPrev) mPrev.innerHTML=`${cost.days}d · ${cost.supplies} sup${fuelTxt}${hasPatrol?` · <span style="color:var(--blood)">TROOP RISK</span>`:''}${rel?` · <span style="color:${rel.color}">${rel.label}</span>`:''}`;
+  const tBtn=document.getElementById('lpop-travel-btn');
+  if(tBtn) tBtn.disabled=state.supplies<cost.supplies||(cost.goldCost>0&&state.gold<cost.goldCost);
+}
 
 function openGarrison(locId){
   closePopup();
@@ -1542,14 +1628,18 @@ async function travelToSelected(){
   const locId=state.selectedLocation;
   if(!locId||locId===state.currentLocation)return;
   const loc=LOCATIONS[locId];
-  if(state.supplies<loc.travelSupplies){showNotif('NOT ENOUGH SUPPLIES');return;}
+  const cost=getTravelCost(locId,state.travelMethod||'foot');
+  if(state.supplies<cost.supplies){showNotif('NOT ENOUGH SUPPLIES');return;}
+  if(cost.goldCost>0&&state.gold<cost.goldCost){showNotif('NOT ENOUGH GOLD — VEHICLE NEEDS FUEL');return;}
   closePopup();
-  state.supplies-=loc.travelSupplies; state.days+=loc.travelDays;
+  state.supplies-=cost.supplies; state.days+=cost.days;
+  if(cost.goldCost>0){state.gold=Math.max(0,state.gold-cost.goldCost);showNotif('FUEL EXPENDED');}
   let troopLost=0;
   const hasPatrol=PATROL_ROUTES.some(r=>(r.from===locId||r.to===locId)&&(r.from===state.currentLocation||r.to===state.currentLocation));
   if(hasPatrol&&loc.travelTroopRisk){troopLost=Math.floor(Math.random()*3)+1;state.troops=Math.max(0,state.troops-troopLost);}
   const prevLoc=state.currentLocation;
-  logEvent('travel',{from:prevLoc,to:locId,cost:{days:loc.travelDays,supplies:loc.travelSupplies},troopLost});
+  const methodLabel=TRAVEL_METHODS[state.travelMethod||'foot']?.label||'ON FOOT';
+  logEvent('travel',{from:prevLoc,to:locId,method:state.travelMethod||'foot',cost:{days:cost.days,supplies:cost.supplies,gold:cost.goldCost},troopLost});
   state.currentLocation=locId;
   if(!state.visitedLocations) state.visitedLocations=[];
   if(!state.visitedLocations.includes(locId)) state.visitedLocations.push(locId);
@@ -1559,7 +1649,7 @@ async function travelToSelected(){
   showNotif('TRAVELING TO '+loc.name+'...');
   const fd=loc.faction&&loc.faction!=='player'?FACTIONS[loc.faction]:null;
   const rel=fd?getRelState(fd):null;
-  const msg=`Player traveled from ${LOCATIONS[prevLoc].name} to ${loc.name}. Cost: ${loc.travelDays} days, ${loc.travelSupplies} supplies.${troopLost>0?' Lost '+troopLost+' troops to patrol ambush.':''} Generate a vivid travel/arrival scene. Location status: ${loc.ctrl==='hostile'?'HOSTILE territory of '+(fd?.name||'unknown faction'):loc.ctrl==='neutral'?'NEUTRAL territory, '+(fd?.name||''):'player-controlled'}. ${fd?'The faction leader is '+fd.leader+' -- '+fd.voice:'Nobody runs this place yet.'} Features: ${loc.features.join(', ')}. ${loc.flavor}`;
+  const msg=`Player traveled ${methodLabel} from ${LOCATIONS[prevLoc].name} to ${loc.name}. Cost: ${cost.days} days, ${cost.supplies} supplies${cost.goldCost>0?', '+cost.goldCost+' gold (fuel)':''}.${troopLost>0?' Lost '+troopLost+' troops to patrol ambush.':''} Generate a vivid travel/arrival scene. Location status: ${loc.ctrl==='hostile'?'HOSTILE territory of '+(fd?.name||'unknown faction'):loc.ctrl==='neutral'?'NEUTRAL territory, '+(fd?.name||''):'player-controlled'}. ${fd?'The faction leader is '+fd.leader+' -- '+fd.voice:'Nobody runs this place yet.'} Features: ${loc.features.join(', ')}. ${loc.flavor}`;
   setLoad(true); clearChoices(); clearStory();
   document.getElementById('open-wrap').style.display='none';
   try{
@@ -1757,6 +1847,28 @@ function onTurnEnd(){
   checkWin();
   // Check raids every 3 turns
   if(state.turn%3===0 && !state.gameOver) checkForRaids();
+  // Amish arrival check
+  if(state.days>=AMISH.arrivalDay && !state.gameOver) triggerAmishArrival();
+}
+
+function triggerAmishArrival(){
+  state.gameOver=true; clearSave();
+  const survived=state.amishDealMade&&Math.random()<0.5;
+  logEvent('game_over',{outcome:state.amishDealMade?'amish_deal_roll':'amish_invasion',survived,days:state.days,turns:state.turn});
+  displayAmishEnding(survived);
+}
+
+function displayAmishEnding(survived){
+  switchTab('story');
+  document.getElementById('story-win-title').textContent=survived?'EZIKIO IS MERCIFUL... THIS TIME':'THE AMISH HAVE COME';
+  const el=document.getElementById('story-text');
+  const msg=survived
+    ?`DAY ${state.days}. TURN ${state.turn}.\n\nEZIKIO HONORS THE DEAL.\n\n*The black-hat columns crossed the Delaware at dawn. You were ready. Ezikio's outriders found you where you said you'd be. The deal holds — for now.*\n\nNew Jersey survives. Under tribute. Forty percent of every harvest, every supply run, every gold piece that moves through this state goes west to Pennsylvania. Ezikio calls it "stewardship."\n\n"${state.factionName}" survives. Diminished. Watched. A province of the Endless Congregation.\n\nThe wasteland did not ask if you were satisfied with the arrangement.`
+    :`DAY ${state.days}. TURN ${state.turn}.\n\nTHE HARVEST HAS COME.\n\n*They crossed the Delaware at six points simultaneously. Horse-drawn columns, stretching back further than you could see. Their numbers defy counting. Three centuries of extraordinary fertility marching through the streets in black hats and broad smiles.*\n\n"${state.factionName}" lasted ${state.turn} turns.\n\n${state.amishDealMade?'Ezikio was not unmerciful. The deal just did not hold. God spoke louder.':'You never found Ezikio. He found you.'}\n\n*New Jersey 2999 is now administered by the Endless Congregation. The Pine Barrens are being cleared for farmland. The wasteland is quiet now. Productive.*\n\nEzikio sends his regards.`;
+  typeText(el,msg,()=>{
+    document.getElementById('choices-container').innerHTML='<button class="begin-btn" onclick="restartGame()" style="margin-top:10px">[ REBOOT — NEW CAMPAIGN ]</button>';
+    document.getElementById('open-wrap').style.display='none';
+  });
 }
 
 // PERSISTENCE
@@ -1771,7 +1883,10 @@ function saveGame(html){
       hp:state.hp,maxHp:state.maxHp,turn:state.turn,
       history:state.history,currentChoices:state.currentChoices,lastStoryHTML:html,
       days:state.days,supplies:state.supplies,troops:state.troops,gold:state.gold||0,
-      currentLocation:state.currentLocation,metFactions:state.metFactions||[],sessionId:state.sessionId,locStates,fRels,skData,savedAt:Date.now()
+      currentLocation:state.currentLocation,metFactions:state.metFactions||[],sessionId:state.sessionId,
+      travelMethod:state.travelMethod||'foot',amishContactMade:state.amishContactMade||false,amishDealMade:state.amishDealMade||false,
+      visitedLocations:state.visitedLocations||[state.currentLocation],
+      locStates,fRels,skData,savedAt:Date.now()
     }));
   }catch(e){}
 }
@@ -1785,6 +1900,10 @@ function resumeGame(save){
   state.days=save.days||0; state.supplies=save.supplies||50; state.troops=save.troops||10; state.gold=save.gold||0;
   state.currentLocation=save.currentLocation||'tcnj';
   state.metFactions=save.metFactions||[];
+  state.travelMethod=save.travelMethod||'foot';
+  state.amishContactMade=save.amishContactMade||false;
+  state.amishDealMade=save.amishDealMade||false;
+  state.visitedLocations=save.visitedLocations||[save.currentLocation||'tcnj'];
   state.sessionId=save.sessionId||(Date.now().toString(36)+Math.random().toString(36).slice(2,7));
   state.apiKey=localStorage.getItem(API_KEY)||'';
   logEvent('session_resume',{turn:save.turn,hp:save.hp});
@@ -1825,6 +1944,7 @@ function restartGame(){
   state.history=[]; state.turn=1; state.hp=100;
   state.days=0; state.supplies=50; state.troops=10; state.currentLocation='tcnj';
   state.factionName=''; state.boostedSkill=null; state.originFaction=null; state.classPerk=''; state.garrison={}; state.ownFaction=false; state.gold=0; state.gameOver=false; state.metFactions=[];
+  state.travelMethod='foot'; state.amishContactMade=false; state.amishDealMade=false; state.visitedLocations=['tcnj'];
   // Reset locations to correct initial control states
   Object.keys(LOCATIONS).forEach(k=>{
     if(k==='tcnj') LOCATIONS[k].ctrl='unclaimed';
