@@ -433,3 +433,12 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
 .char-role{font-size:.55rem;color:var(--gd);font-style:italic;margin-bottom:3px;}
 .char-faction{font-size:.5rem;letter-spacing:1px;margin-bottom:4px;text-transform:uppercase;}
 .char-voice{font-size:.52rem;color:var(--wgdd);line-height:1.55;border-top:1px solid rgba(255,255,255,.05);padding-top:4px;margin-top:2px;}
+
+/* ── TINY PHONE (<375px) — tab bar scrolls horizontally ── */
+@media (max-width:375px){
+  .tab-bar{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .tab-bar::-webkit-scrollbar{display:none;}
+  .tab{flex-shrink:0;font-size:.48rem;padding:5px 7px;}
+  .chars-cards{grid-template-columns:1fr;}
+  .wi{padding:8px;}
+}

@@ -879,11 +879,19 @@ function extractJSON(text){
   throw new Error('Malformed JSON in response');
 }
 
+// MODEL SELECTION — Haiku for regular turns, Sonnet for major beats
+// Major beats: opening turns, every 5th turn, low HP, raid events
+function pickModel(msg){
+  const isRaid=typeof msg==='string'&&msg.toLowerCase().includes('raid');
+  const isMajor=state.turn<=2||state.turn%5===0||state.hp<30||isRaid;
+  return isMajor?'claude-sonnet-4-20250514':'claude-3-5-haiku-20241022';
+}
+
 async function callDlg(sys,msg){
   const r=await fetch('https://airpg-api-proxi.billybuteau.workers.dev/',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:700,system:sys,messages:[...state.dlgHistory,{role:'user',content:msg}]})
+    body:JSON.stringify({model:'claude-3-5-haiku-20241022',max_tokens:700,system:sys,messages:[...state.dlgHistory,{role:'user',content:msg}]})
   });
   if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+r.status);}
   const d=await r.json();
@@ -988,6 +996,16 @@ async function callClaude(msg){
   const npcSum=Object.values(FACTIONS).filter(f=>f.characters?.length).map(f=>f.name+': '+f.characters.map(c=>c.name+'('+c.role+')').join(', ')).join(' | ');
   const subnetSecret=FACTIONS.subnet.secret||'';
   const trimmed=state.history.length>20?state.history.slice(-20):state.history;
+  // Difficulty tier: scales pressure and consequence severity with campaign progress
+  const diffTier=state.turn<=4?'EARLY':state.turn<=14?'MID':'LATE';
+  const diffLine={
+    EARLY:'Early campaign. Introduce the world and its factions. Let cautious plays land, but plant the seeds of consequence.',
+    MID:'Mid campaign. Factions are alert and wary. Mistakes cost real resources. Political missteps compound. Smart plays still work — barely.',
+    LATE:'Late campaign. Every faction is on edge. No easy wins. Betrayals cascade. Resources are precious. The world actively resists consolidation.'
+  }[diffTier];
+  // Skill context for Claude: high skills mean viable options, low skills mean real failure risk
+  const highSkills=Object.entries(SKILLS).filter(([k,s])=>Math.floor(s.xp/100)>=2).map(([k])=>k).join(',');
+  const lowSkills=Object.entries(SKILLS).filter(([k,s])=>Math.floor(s.xp/100)===0&&s.ap===0).map(([k])=>k).join(',');
   const sys=`{JSON ONLY. START WITH {. END WITH }. NOTHING OUTSIDE.}
 
 JERSEY WASTELAND 2999. NJ year 2999. Rich fled off-world 2669. Warring city-states. Irradiated Pine Barrens. Jersey slang + 330yr drift. Dark comedy, political gore.
@@ -1001,22 +1019,25 @@ NPCs: ${npcSum}
 SUBNET SECRET (only reveal gradually through play): ${subnetSecret}
 ${boost}
 
+DIFFICULTY [${diffTier}]: ${diffLine}
+SKILL CALIBRATION: ${highSkills?'Player is skilled in '+highSkills+' — let those approaches land with authority.':'No strong skills yet.'}${lowSkills?' Weak in '+lowSkills+' — actions in those areas should carry genuine risk of failure or blowback.':''}
 TROOP CONTEXT: ${state.troops} mobile troops with player. More troops = brutal combat options viable. 0-2 troops = stealth/diplomacy forced.
-VICTORY: Win by (A) controlling ALL 6 locations, OR (B) every faction resolved — allied (rel 66+) or eliminated (rel 0 + home captured). Any mix of ally/destroy works. Build narrative tension toward these goals. Factions should feel beatable or alliances feel achievable based on player actions so far.
+CONSEQUENCE RULE: The world does not bend to the player. Factions resist manipulation. Poorly planned actions backfire with real costs (supplies, troops, relation drops, HP loss). Choices should never all feel safe.
+VICTORY: Win by (A) controlling ALL 6 locations, OR (B) every faction resolved — allied (rel 66+) or eliminated (rel 0 + home captured). Any mix of ally/destroy works.
 WRITING FORMAT:
 - *italics* for actions: *smoke pours from the factory stack.* *He doesn't look up.*
 - Named quotes for speech: "Vera Stahl: That's not how Newark works."
-- 2-3 tight paragraphs. Earned gore. No fluff.
-- NPCs stay in voice: Vera=cold. Tombstone=loud bluster. Finn=cryptic. Jameer=direct warmth. Salieri=charming criminal. The Mouth=eloquent cannibal. The Architect=systems metaphors.
-- Supporting NPCs (Frost, Malone, Dice, Okafor, Perpetua, Tomás, Pam, Webb, Patches, Vega, Teeth, Vessel) can appear in scenes. Use them for texture and reveals.
-- Put each character quote on its own line. Be concise — 2 tight paragraphs max per scene.
+- 2 tight paragraphs max. Earned gore. No fluff.
+- NPCs stay in voice: Stahl=cold corporate. Tombstone=loud bluster. Finn=cryptic zealot. Jameer=direct warmth. Salieri=charming criminal. The Mouth=eloquent cannibal. The Architect=systems metaphors, never says I.
+- Supporting NPCs (Frost, Malone, Dice, Okafor, Perpetua, Tomás, Pam, Webb, Patches, Vega, Teeth, Vessel) can appear in scenes for texture and reveals.
+- Each character quote on its own line.
 ${boost?'- BOOSTED: 4th [STAR] choice using '+state.boostedSkill+' with extra impact.':''}
 
-{"story":"narrative","choices":[{"label":"A","text":"action","flavor":"hint","skill":"force|wit|influence|shadow|grit","ap_reward":1},{"label":"B","text":"action","flavor":"hint","skill":"...","ap_reward":1},{"label":"C","text":"action","flavor":"hint","skill":"...","ap_reward":1}${boost?',{"label":"STAR","text":"boosted action","flavor":"BOOSTED '+state.boostedSkill+'","skill":"'+state.boostedSkill+'","ap_reward":0}':''}],"hp_change":0,"stat_change":{"stat":"none","delta":0},"location_change":{"location":"none","ctrl":"player"},"resource_change":{"supplies":0,"troops":0,"gold":0},"faction_rel_change":{"faction":"none","delta":0},"event_title":"Title"}`;
+{"story":"narrative","choices":[{"label":"A","text":"action","flavor":"hint","skill":"force|wit|influence|shadow|grit","ap_reward":1},{"label":"B","text":"action","flavor":"hint","skill":"...","ap_reward":1},{"label":"C","text":"action","flavor":"hint","skill":"...","ap_reward":1}${boost?',{"label":"STAR","text":"boosted action","flavor":"BOOSTED '+state.boostedSkill+'","skill":"'+state.boostedSkill+'","ap_reward":0}':''}],"hp_change":0,"location_change":{"location":"none","ctrl":"player"},"resource_change":{"supplies":0,"troops":0,"gold":0},"faction_rel_change":{"faction":"none","delta":0},"event_title":"Title"}`;
   const r=await fetch('https://airpg-api-proxi.billybuteau.workers.dev/',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1400,system:sys,messages:[...trimmed,{role:'user',content:msg}]})
+    body:JSON.stringify({model:pickModel(msg),max_tokens:1400,system:sys,messages:[...trimmed,{role:'user',content:msg}]})
   });
   if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+r.status);}
   const d=await r.json();
@@ -1078,15 +1099,6 @@ async function submitOpen(){
 
 function applyAll(res,ch){
   if(res.hp_change){updateHp(state.hp+res.hp_change);showNotif(res.hp_change<0?'INFLUENCE '+res.hp_change:'INFLUENCE +'+res.hp_change);}
-  if(res.stat_change&&res.stat_change.stat!=='none'&&res.stat_change.delta){
-    const s=res.stat_change.stat;
-    if(state.character[s]!==undefined){
-      state.character[s]=Math.max(1,Math.min(10,state.character[s]+res.stat_change.delta));
-      const el=document.getElementById('g-'+s);
-      el.textContent=state.character[s];
-      el.classList.add('stat-flash'); setTimeout(()=>el.classList.remove('stat-flash'),600);
-    }
-  }
   if(res.resource_change){
     if(res.resource_change.supplies){state.supplies=Math.max(0,state.supplies+res.resource_change.supplies);showNotif('SUPPLIES '+(res.resource_change.supplies>0?'+':'')+res.resource_change.supplies);}
     if(res.resource_change.troops){state.troops=Math.max(0,state.troops+res.resource_change.troops);showNotif('TROOPS '+(res.resource_change.troops>0?'+':'')+res.resource_change.troops);}
@@ -1631,8 +1643,13 @@ function restartGame(){
   clearSave();
   state.history=[]; state.turn=1; state.hp=100;
   state.days=0; state.supplies=50; state.troops=10; state.currentLocation='tcnj';
-  state.factionName=''; state.boostedSkill=null; state.originFaction=null; state.classPerk=''; state.garrison={}; state.ownFaction=false; state.troops=0; state.gold=0; state.gameOver=false; state.metFactions=[];
-  Object.keys(LOCATIONS).forEach(k=>{LOCATIONS[k].ctrl=k==='tcnj'?'unclaimed':k==='newark'||k==='mcguire'?'faction':'faction';});
+  state.factionName=''; state.boostedSkill=null; state.originFaction=null; state.classPerk=''; state.garrison={}; state.ownFaction=false; state.gold=0; state.gameOver=false; state.metFactions=[];
+  // Reset locations to correct initial control states
+  Object.keys(LOCATIONS).forEach(k=>{
+    if(k==='tcnj') LOCATIONS[k].ctrl='unclaimed';
+    else if(k==='newark'||k==='mcguire') LOCATIONS[k].ctrl='hostile';
+    else LOCATIONS[k].ctrl='neutral';
+  });
   Object.values(FACTIONS).forEach(f=>{
     f.relationScore=f.id==='iron_syndicate'?10:f.id==='rust_eagles'?15:f.id==='the_hollowed'?0:f.id==='subnet'?40:f.id==='mountain_covenant'?45:50;
   });
