@@ -223,7 +223,7 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
 .desktop-save-btn.secondary:hover{background:#d4d0c8;}
 .space-card{border:1px solid #7b2fbe!important;background:var(--wg);}
 .space-banner{background:linear-gradient(135deg,#0d001a 0%,#3d0070 40%,#00d4ff 70%,#ff6ec7 100%)!important;height:8px;}
-.space-desc{color:var(--wgdd)!important;}
+.space-desc{color:#bb44ff!important;}
 .sc-status.coming-soon{background:#3d0070;color:#ffe66d;padding:2px 6px;font-size:.5rem;letter-spacing:1px;border:1px solid #7b2fbe;}
 .space-select-btn{background:#1a0033!important;color:#7b2fbe!important;border:1px solid #7b2fbe!important;cursor:not-allowed!important;opacity:.6;}
 .notif{position:fixed;bottom:18px;right:14px;background:var(--wg);border-top:2px solid var(--ww);border-left:2px solid var(--ww);border-right:2px solid var(--wgd);border-bottom:2px solid var(--wgd);padding:7px 14px;font-family:'Share Tech Mono',monospace;font-size:.62rem;color:var(--wk);z-index:1000;max-width:260px;box-shadow:2px 2px 0 rgba(0,0,0,.5);animation:nIn .2s ease,nOut .3s ease 2.5s forwards;}
@@ -276,7 +276,7 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
 .sk-alloc-hint{font-size:.48rem;color:var(--gd);letter-spacing:.5px;line-height:1.4;}
 /* Campaign card consistency */
 .sc-title-red{color:#cc4422;}
-.sc-desc-dim{color:#888;}
+.sc-desc-dim{color:#cc4422;}
 .dlg-text em{color:var(--gd);font-style:italic;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 @keyframes sFlash{0%{color:#fff}100%{color:var(--g)}}

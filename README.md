@@ -1,6 +1,6 @@
 # Jersey Wasteland 2999
 
-> Campaign 1 of **Wasteland Chronicles** — a post-apocalyptic political RPG set in New Jersey, year 2999.
+> Campaign 1 of **Project Leroy** — a post-apocalyptic political RPG set in New Jersey, year 2999.
 
 **[▶ Play Now](https://dabillydagoat.github.io/ProjectLeroy)**
 
@@ -37,4 +37,4 @@ Open `index.html` in any modern browser. You will need an [Anthropic API key](ht
 
 ---
 
-*Wasteland Chronicles — Campaign 1 of an ongoing series.*
+*Project Leroy — Campaign 1 of an ongoing series.*

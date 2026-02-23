@@ -2025,7 +2025,7 @@ function buildLogHTML(log){
   const errRows=errors.map(e=>`<tr><td>${new Date(e.ts).toLocaleString()}</td><td>T${e.turn}</td><td>${e.model||'?'}</td><td>${e.src||''}</td><td class="err">${e.msg||''}</td></tr>`).join('');
 
   return`<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><title>Wasteland Chronicles — Dev Log</title><style>
+<html lang="en"><head><meta charset="UTF-8"><title>Project Leroy — Dev Log</title><style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:monospace;background:#0a0a0a;color:#b8b8b8;padding:24px;font-size:13px;line-height:1.6;}
 h1{color:#00ff41;font-size:1.5rem;letter-spacing:3px;margin-bottom:4px;}
@@ -2054,7 +2054,7 @@ ul{padding-left:16px;font-size:.78rem;color:#666;column-count:2;column-gap:20px;
 li{margin-bottom:3px;break-inside:avoid;}
 .footer{color:#1a1a1a;font-size:.6rem;text-align:center;margin-top:40px;letter-spacing:2px;}
 </style></head><body>
-<h1>⚔ WASTELAND CHRONICLES — DEV LOG</h1>
+<h1>⚔ PROJECT LEROY — DEV LOG</h1>
 <div class="sub">EXPORTED ${new Date().toLocaleString()} &nbsp;|&nbsp; ${log.length} EVENTS &nbsp;|&nbsp; ${sKeys.length} SESSIONS</div>
 
 <h2>Summary</h2>
@@ -2094,7 +2094,7 @@ ${errRows?`<table><tr><th>Time</th><th>Turn</th><th>Model</th><th>Source</th><th
 <h2>Session Timelines</h2>
 ${sessionDetails||'<span style="color:#222">No sessions.</span>'}
 
-<div class="footer">WASTELAND CHRONICLES DEV LOG — CONFIDENTIAL — ${new Date().toLocaleDateString()}</div>
+<div class="footer">PROJECT LEROY DEV LOG — CONFIDENTIAL — ${new Date().toLocaleDateString()}</div>
 </body></html>`;
 }
 
