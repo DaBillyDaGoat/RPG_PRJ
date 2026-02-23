@@ -1756,29 +1756,52 @@ function settingsTab(tab){
 // ── DEV LOGGING ──
 const LOG_KEY='wc_devlog_v1';
 const LOG_MAX=800;
+// Paste your Cloudflare Worker URL here after setup (see workers/logger.js for instructions)
+// Example: 'https://projectleroy-logger.YOUR.workers.dev'
+const LOG_REMOTE_URL='';
 
 function logEvent(type,data){
   try{
+    const entry={ts:Date.now(),sid:state.sessionId||'nosession',turn:state.turn||0,type,...data};
+    // Local cache
     const raw=localStorage.getItem(LOG_KEY);
     const log=raw?JSON.parse(raw):[];
-    log.push({ts:Date.now(),sid:state.sessionId||'nosession',turn:state.turn||0,type,...data});
+    log.push(entry);
     if(log.length>LOG_MAX)log.splice(0,log.length-LOG_MAX);
     localStorage.setItem(LOG_KEY,JSON.stringify(log));
+    // Remote — fire and forget, zero performance impact
+    if(LOG_REMOTE_URL){
+      fetch(LOG_REMOTE_URL+'/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(entry)}).catch(()=>{});
+    }
   }catch(e){}
 }
 
 function getDevLog(){try{return JSON.parse(localStorage.getItem(LOG_KEY))||[];}catch(e){return[];}}
-function clearDevLog(){localStorage.removeItem(LOG_KEY);updateDevPanel();showNotif('DEV LOG CLEARED');}
+function clearDevLog(){
+  localStorage.removeItem(LOG_KEY);
+  if(LOG_REMOTE_URL){fetch(LOG_REMOTE_URL+'/logs',{method:'DELETE'}).catch(()=>{});}
+  updateDevPanel();
+  showNotif('DEV LOG CLEARED');
+}
 
-function updateDevPanel(){
-  const log=getDevLog();
+async function updateDevPanel(){
+  let log=getDevLog();
+  const cntEl=document.getElementById('dev-event-count');
+  // Fetch all-device log from remote if configured
+  if(LOG_REMOTE_URL){
+    if(cntEl)cntEl.textContent='Loading...';
+    try{
+      const r=await fetch(LOG_REMOTE_URL+'/logs');
+      if(r.ok)log=await r.json();
+    }catch(e){}
+  }
   const bytes=new Blob([JSON.stringify(log)]).size;
   const kb=(bytes/1024).toFixed(1);
-  const cntEl=document.getElementById('dev-event-count');
-  if(cntEl)cntEl.textContent=log.length+' events ('+kb+' KB)';
+  const label=LOG_REMOTE_URL?' [all devices]':' [this device]';
+  if(cntEl)cntEl.textContent=log.length+' events ('+kb+' KB)'+label;
   const table=document.getElementById('dev-recent');
   if(!table)return;
-  const recent=log.slice(-15).reverse();
+  const recent=log.slice(-20).reverse();
   table.innerHTML='<tr><th>Time</th><th>Sess</th><th>Trn</th><th>Type</th><th>Data</th></tr>';
   recent.forEach(e=>{
     const time=new Date(e.ts).toLocaleTimeString();
@@ -1799,8 +1822,14 @@ function closeDevPanel(){
   if(m)m.style.display='none';
 }
 
-function exportDevLog(){
-  const log=getDevLog();
+async function exportDevLog(){
+  let log=getDevLog();
+  if(LOG_REMOTE_URL){
+    try{
+      const r=await fetch(LOG_REMOTE_URL+'/logs');
+      if(r.ok)log=await r.json();
+    }catch(e){}
+  }
   if(!log.length){showNotif('LOG IS EMPTY');return;}
   const html=buildLogHTML(log);
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
