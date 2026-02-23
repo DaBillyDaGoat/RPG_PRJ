@@ -852,6 +852,8 @@ function buildDlgSys(f){
   const loc=Object.values(LOCATIONS).filter(l=>l.ctrl==='player').length;
   return `{JSON ONLY. NO TEXT BEFORE OR AFTER THE JSON OBJECT.}
 
+NOT FALLOUT. No Vaults, Brotherhood, Deathclaws, Nuka-Cola, caps, Power Armor, Super Mutants, or Synths. This is NJ 2999 — political city-states, class exodus, gold currency, Jersey culture.
+
 You ARE ${f.leader} of ${f.name}. Relation to player: ${rel.label}.
 Voice: ${f.voice}
 Player: ${state.character.name} / "${state.factionName}" — ${state.troops} troops, ${state.supplies} supplies, ${loc} territories.
@@ -1019,6 +1021,8 @@ async function callClaude(msg){
   const sys=`{JSON ONLY. START WITH {. END WITH }. NOTHING OUTSIDE.}
 
 JERSEY WASTELAND 2999. NJ year 2999. Rich fled off-world 2669. Warring city-states. Irradiated Pine Barrens. Jersey slang + 330yr drift. Dark comedy, political gore.
+
+NOT FALLOUT. NEVER USE: Vaults, Vault-Tec, Brotherhood of Steel, Super Mutants, Deathclaws, Nuka-Cola, bottle caps as currency, Power Armor, Pip-Boys, the Institute, Synths, FEV, Stimpaks, RadAway, Rad-X, Enclave, or "War never changes." This world's apocalypse was a CLASS EXODUS — the rich fled to orbit, not a nuclear war. Currency is GOLD. Factions are POLITICAL CITY-STATES, not raider tribes. Mutations are from 330yr chemical/bio drift, not FEV. This is The Wire meets Dune meets Jersey Shore — gritty urban politics, not retro-nuclear Americana.
 
 PLAYER: ${state.character.name} (${CLASSES[state.character.class]?.name||state.character.class}${state.originFaction?', ex-'+FACTIONS[state.originFaction]?.name:''}) / "${state.factionName}"
 HP:${state.hp} Day:${state.days} Sup:${state.supplies} Troops(mobile):${state.troops} Gold:${state.gold} | @${LOCATIONS[state.currentLocation]?.name||state.currentLocation}
