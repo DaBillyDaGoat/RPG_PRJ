@@ -436,6 +436,7 @@ const state={
 };
 let skillAllocRemaining=5;
 const skillAlloc={force:0,wit:0,influence:0,shadow:0,grit:0};
+let lastRelChangeFid=null;
 
 // TABS
 function switchTab(tab){
@@ -586,6 +587,8 @@ function updateRes(){
   document.getElementById('map-sup').textContent=state.supplies;
   document.getElementById('map-trp').textContent=state.troops;
   document.getElementById('map-gold').textContent=state.gold;
+  const locEl=document.getElementById('panel-loc');
+  if(locEl) locEl.textContent=LOCATIONS[state.currentLocation]?.shortName||state.currentLocation?.toUpperCase()||'';
 }
 
 // AP SYSTEM
@@ -722,7 +725,7 @@ function renderFactions(){
       });
       npcHtml+='</div>';
     }
-    const card=document.createElement('div'); card.className='faction-card';
+    const card=document.createElement('div'); card.className='faction-card'+(f.id===lastRelChangeFid?' rel-flash':'');
     card.innerHTML=`
       <div class="fc-hdr">
         <div class="fc-name">${f.icon} ${f.name}</div>
@@ -737,6 +740,7 @@ function renderFactions(){
       ${npcHtml}
       <button class="fc-talk-btn" onclick="openDialogue('${f.id}')">[ OPEN CHANNEL WITH ${f.leader.toUpperCase()} ]</button>`;
     list.appendChild(card);
+    if(f.id===lastRelChangeFid){setTimeout(()=>{card.classList.remove('rel-flash');lastRelChangeFid=null;},2000);}
   });
 }
 
@@ -744,40 +748,94 @@ function renderFactions(){
 function renderTasks(){
   const el=document.getElementById('tasks-list'); if(!el)return;
   el.innerHTML='';
-  const hdr=document.createElement('div'); hdr.className='tasks-header';
-  const resolved=Object.keys(FACTIONS).filter(fid=>isResolved(fid)).length;
-  const total=Object.keys(FACTIONS).length;
-  hdr.innerHTML=`<div class="tasks-title">&#128204; OPERATION: BRING ORDER</div>
-    <div class="tasks-sub">Resolve every faction — ally them (RELATION 66+) or conquer them (capture home + RELATION 0).<br>Progress: <span style="color:var(--g)">${resolved}/${total} factions resolved.</span></div>`;
-  el.appendChild(hdr);
-  Object.values(FACTIONS).forEach(f=>{
+  const factions=Object.values(FACTIONS);
+  const resolved=factions.filter(f=>isResolved(f.id)).length;
+  const total=factions.length;
+  const territories=Object.values(LOCATIONS).filter(l=>l.ctrl==='player').length;
+  const totalTerr=Object.keys(LOCATIONS).length;
+  // Victory path detection
+  const alliedCount=factions.filter(f=>isResolved(f.id)&&f.relationScore>=66).length;
+  const conqueredCount=factions.filter(f=>isResolved(f.id)&&f.relationScore===0).length;
+  let victoryPath='UNDECIDED';
+  if(territories===totalTerr) victoryPath='DOMINATION';
+  else if(resolved===total&&conqueredCount===0) victoryPath='DIPLOMATIC';
+  else if(resolved===total&&alliedCount===0) victoryPath='CONQUEST';
+  else if(resolved>0) victoryPath='MIXED';
+
+  // SECTION A: Campaign Banner
+  const banner=document.createElement('div'); banner.className='war-room-banner';
+  const overallPct=Math.round(((territories/totalTerr)+(resolved/total))/2*100);
+  banner.innerHTML=`
+    <div class="war-room-title">&#9876; WAR ROOM &mdash; OPERATION: BRING ORDER</div>
+    <div class="war-room-stats">
+      <div class="war-stat"><div class="war-stat-val">${territories}/${totalTerr}</div><div class="war-stat-lbl">TERRITORIES</div></div>
+      <div class="war-stat"><div class="war-stat-val">${resolved}/${total}</div><div class="war-stat-lbl">RESOLVED</div></div>
+      <div class="war-stat"><div class="war-stat-val">${state.days}</div><div class="war-stat-lbl">DAYS</div></div>
+      <div class="war-stat"><div class="war-stat-val" style="color:var(--a)">${victoryPath}</div><div class="war-stat-lbl">PATH</div></div>
+    </div>
+    <div class="war-room-prog-wrap"><div class="war-room-prog-fill" style="width:${overallPct}%"></div></div>`;
+  el.appendChild(banner);
+
+  // SECTION B: Faction Intel
+  const fHdr=document.createElement('div'); fHdr.className='wr-section-hdr'; fHdr.textContent='FACTION INTEL'; el.appendChild(fHdr);
+  factions.forEach(f=>{
     const done=isResolved(f.id);
     const rel=getRelState(f);
     const home=FACTION_HOME[f.id];
     const homeLoc=home?LOCATIONS[home]:null;
-    let statusLabel,statusColor;
-    if(done){
-      if(f.relationScore>=66){statusLabel='&#10003; ALLIED';statusColor='var(--g)';}
-      else{statusLabel='&#10003; ELIMINATED';statusColor='var(--blood)';}
-    } else {statusLabel=rel.label;statusColor=rel.color;}
-    let objText;
-    if(f.relationScore>=66){objText='Alliance secured. Maintain relation above 66.';}
-    else if(done){objText='Faction eliminated. Home territory captured.';}
+    const homeCtrl=homeLoc?homeLoc.ctrl:'none';
+    const homeLabel=homeCtrl==='player'?`<span style="color:var(--g)">YOURS</span>`:homeCtrl==='hostile'?`<span style="color:var(--blood)">ENEMY</span>`:`<span style="color:var(--a)">NEUTRAL</span>`;
+    const keyContact=f.characters&&f.characters.length?f.characters[0]:null;
+    const met=state.metFactions.includes(f.id);
+    let objHint;
+    if(done&&f.relationScore>=66) objHint=`<span style="color:var(--g)">&#10003; ALLIED &mdash; alliance secured</span>`;
+    else if(done) objHint=`<span style="color:var(--blood)">&#10007; ELIMINATED &mdash; faction destroyed</span>`;
     else{
-      const allyNeeds=66-f.relationScore;
-      const capStatus=homeLoc?(homeLoc.ctrl==='player'?'<span style="color:var(--g)">HOME CAPTURED</span>':'Capture: '+homeLoc.name):'No fixed territory';
-      objText=`Ally path: +${allyNeeds} relation needed &nbsp;|&nbsp; Conquest path: ${capStatus} + reduce to 0`;
+      const allyGap=66-f.relationScore;
+      const capStatus=homeLoc?(homeCtrl==='player'?`<span style="color:var(--g)">home captured</span>`:'capture '+homeLoc.shortName):'no fixed territory';
+      objHint=`Ally: +${allyGap} REL needed &nbsp;|&nbsp; Conquer: ${capStatus} + reduce to 0`;
     }
-    const card=document.createElement('div'); card.className='task-card'+(done?' task-done':'');
+    const card=document.createElement('div'); card.className='wr-faction-card'+(done?' wr-resolved':'');
     card.innerHTML=`
-      <div class="task-hdr">
-        <span class="task-name">${f.icon} ${f.name}</span>
-        <span class="task-status" style="color:${statusColor}">${statusLabel}</span>
+      <div class="wr-fc-top">
+        <div class="wr-fc-name">${f.icon} ${f.name}</div>
+        <div class="wr-fc-badge" style="color:${rel.color};border-color:${rel.color}">${rel.label} ${f.relationScore}</div>
       </div>
-      <div class="task-obj">${objText}</div>
-      <div class="task-rel-track"><div class="task-rel-fill" style="width:${f.relationScore}%;background:${rel.color}"></div></div>`;
+      <div class="wr-fc-rel-bar"><div class="wr-fc-rel-fill" style="width:${f.relationScore}%;background:${rel.color}"></div></div>
+      <div class="wr-fc-details">
+        <div class="wr-fc-detail"><span class="wr-detail-lbl">LEADER</span>${f.leader}</div>
+        <div class="wr-fc-detail"><span class="wr-detail-lbl">HOME</span>${homeLoc?homeLoc.shortName+' ['+homeLabel+']':'NOMADIC'}</div>
+        ${keyContact?`<div class="wr-fc-detail"><span class="wr-detail-lbl">CONTACT</span>${met?keyContact.name+' &bull; '+keyContact.role:'[ OPEN DIALOGUE TO REVEAL ]'}</div>`:''}
+      </div>
+      <div class="wr-fc-obj">${objHint}</div>`;
     el.appendChild(card);
   });
+
+  // SECTION C: Troop Disposition
+  const tHdr=document.createElement('div'); tHdr.className='wr-section-hdr'; tHdr.textContent='TROOP DISPOSITION'; el.appendChild(tHdr);
+  const totalGarr=Object.values(state.garrison).reduce((a,b)=>a+b,0);
+  const troopCard=document.createElement('div'); troopCard.className='wr-troop-card';
+  let troopHtml=`<div class="wr-troop-row"><span class="wr-troop-lbl">&#9654; MOBILE (with you)</span><span class="wr-troop-val">${state.troops}</span></div>`;
+  Object.entries(state.garrison).filter(([,v])=>v>0).forEach(([locId,count])=>{
+    const loc=LOCATIONS[locId];
+    troopHtml+=`<div class="wr-troop-row"><span class="wr-troop-lbl">&#9632; GARRISONED @ ${loc?loc.shortName:locId}</span><span class="wr-troop-val">${count}</span></div>`;
+  });
+  troopHtml+=`<div class="wr-troop-row wr-troop-total"><span class="wr-troop-lbl">TOTAL FORCE</span><span class="wr-troop-val" style="color:var(--g)">${state.troops+totalGarr}</span></div>`;
+  troopCard.innerHTML=troopHtml; el.appendChild(troopCard);
+
+  // SECTION D: Territory Grid
+  const terrHdr=document.createElement('div'); terrHdr.className='wr-section-hdr'; terrHdr.textContent='TERRITORY CONTROL'; el.appendChild(terrHdr);
+  const terrGrid=document.createElement('div'); terrGrid.className='wr-terr-grid';
+  Object.entries(LOCATIONS).forEach(([id,loc])=>{
+    const ctrlColor=loc.ctrl==='player'?'var(--g)':loc.ctrl==='hostile'?'var(--blood)':'var(--a)';
+    const garr=state.garrison[id]||0;
+    const tile=document.createElement('div'); tile.className='wr-terr-tile'; tile.style.borderColor=ctrlColor;
+    tile.innerHTML=`<div class="wr-terr-name" style="color:${ctrlColor}">${loc.shortName}</div>
+      <div class="wr-terr-ctrl" style="color:${ctrlColor}">${loc.ctrl.toUpperCase()}</div>
+      <div class="wr-terr-info">+${loc.supplyPerTurn} SUP/T${garr>0?' | &#9632;'+garr:''}</div>`;
+    terrGrid.appendChild(tile);
+  });
+  el.appendChild(terrGrid);
 }
 
 // CHARACTERS RENDER
@@ -786,16 +844,25 @@ function renderChars(){
   el.innerHTML='';
   Object.values(FACTIONS).forEach(f=>{
     const met=state.metFactions.includes(f.id);
+    const rel=getRelState(f);
     const fcolor=FACTION_CLASSES[f.id]?.color||'var(--a)';
     const sec=document.createElement('div'); sec.className='chars-section';
     let charCards='';
     if(f.id==='subnet'){
-      charCards=`<div class="char-card char-unknown">
+      charCards=`<div class="char-card ${met?'':'char-unknown'}">
         <div class="char-name">THE ARCHITECT</div>
         <div class="char-role">[ RECORDS CLASSIFIED ]</div>
         <div class="char-faction" style="color:${fcolor}">${f.name}</div>
+        ${met?'<div class="char-voice">Signal detected. Identity unverifiable. Watching.</div>':''}
       </div>`;
     } else if(f.characters&&f.characters.length){
+      // Leader always visible with status
+      charCards+=`<div class="char-card char-leader">
+        <div class="char-name">${f.leader}</div>
+        <div class="char-role">${f.leaderTitle||'Leader'}</div>
+        <div class="char-faction" style="color:${fcolor}">${f.name}</div>
+        <div class="char-rel" style="color:${rel.color}">${rel.label} &bull; ${f.relationScore}/100</div>
+      </div>`;
       f.characters.forEach(c=>{
         if(met){
           charCards+=`<div class="char-card">
@@ -807,13 +874,15 @@ function renderChars(){
         } else {
           charCards+=`<div class="char-card char-unknown">
             <div class="char-name">???</div>
-            <div class="char-role">[ NOT YET ENCOUNTERED ]</div>
+            <div class="char-role">[ INTEL LOCKED &mdash; open dialogue to reveal ]</div>
             <div class="char-faction" style="color:${fcolor}">${f.name}</div>
           </div>`;
         }
       });
     }
-    sec.innerHTML=`<div class="chars-faction-hdr">${f.icon} ${f.name}<span class="chars-met-badge ${met?'chars-met':'chars-unmet'}">${met?'CONTACTED':'UNKNOWN'}</span></div>
+    sec.innerHTML=`<div class="chars-faction-hdr">${f.icon} ${f.name}
+      <span class="chars-rel-badge" style="color:${rel.color};border-color:${rel.color}">${rel.label}</span>
+      <span class="chars-met-badge ${met?'chars-met':'chars-unmet'}">${met?'CONTACTED':'UNKNOWN'}</span></div>
       <div class="chars-cards">${charCards}</div>`;
     el.appendChild(sec);
   });
@@ -1079,6 +1148,7 @@ async function makeChoice(idx){
   const ch=state.currentChoices[idx]; if(!ch)return;
   logEvent('choice_made',{label:ch.label,text:(ch.text||'').slice(0,60),skill:ch.skill});
   setLoad(true); disableChoices(true); clearStory();
+  const db=document.getElementById('turn-delta-bar'); if(db) db.style.display='none';
   document.getElementById('open-wrap').style.display='none';
   const p=`Player chose: "${ch.text}". Show vivid, brutal, funny consequences.`;
   try{
@@ -1100,6 +1170,7 @@ async function submitOpen(){
   const text=input.value.trim(); if(!text||state.isLoading||state.gameOver)return;
   input.value='';
   setLoad(true); disableChoices(true); clearStory();
+  const db=document.getElementById('turn-delta-bar'); if(db) db.style.display='none';
   document.getElementById('open-wrap').style.display='none';
   const sk=detectSkill(text);
   logEvent('custom_action',{text:text.slice(0,80),skill:sk});
@@ -1129,22 +1200,54 @@ function applyAll(res,ch){
     LOCATIONS[res.location_change.location].ctrl=res.location_change.ctrl;
     showNotif(LOCATIONS[res.location_change.location].name+' -> '+res.location_change.ctrl.toUpperCase());
     state.currentLocation=res.location_change.location;
-    const locEl=document.getElementById('panel-loc');
-    if(locEl) locEl.textContent=LOCATIONS[res.location_change.location].shortName||res.location_change.location.toUpperCase();
-    if(document.getElementById('map-view').style.display!=='none') refreshMap();
   }
   if(res.faction_rel_change&&res.faction_rel_change.faction!=='none'&&FACTIONS[res.faction_rel_change.faction]){
     FACTIONS[res.faction_rel_change.faction].relationScore=Math.max(0,Math.min(100,FACTIONS[res.faction_rel_change.faction].relationScore+(res.faction_rel_change.delta||0)));
     showNotif(FACTIONS[res.faction_rel_change.faction].name+' REL: '+(res.faction_rel_change.delta>0?'+':'')+res.faction_rel_change.delta);
+    lastRelChangeFid=res.faction_rel_change.faction;
   }
   if(ch&&ch.skill&&SKILLS[ch.skill]) earnAP(ch.skill,ch.ap_reward||1);
   updateRes();
+  // Always sync map and whichever tab is open
+  refreshMap();
+  const t=state.activeTab;
+  if(t==='factions') renderFactions();
+  if(t==='tasks') renderTasks();
+  if(t==='chars') renderChars();
+}
+
+function buildDeltaBar(res){
+  const bar=document.getElementById('turn-delta-bar'); if(!bar)return;
+  const parts=[];
+  if(res.hp_change&&res.hp_change!==0){const col=res.hp_change>0?'var(--g)':'var(--blood)';parts.push(`<span style="color:${col}">INFLUENCE ${res.hp_change>0?'+':''}${res.hp_change}</span>`);}
+  if(res.resource_change){
+    const rc=res.resource_change;
+    if(rc.supplies&&rc.supplies!==0){const col=rc.supplies>0?'var(--g)':'var(--blood)';parts.push(`<span style="color:${col}">SUP ${rc.supplies>0?'+':''}${rc.supplies}</span>`);}
+    if(rc.troops&&rc.troops!==0){const col=rc.troops>0?'var(--g)':'var(--blood)';parts.push(`<span style="color:${col}">TROOPS ${rc.troops>0?'+':''}${rc.troops}</span>`);}
+    if(rc.gold&&rc.gold!==0){const col=rc.gold>0?'var(--g)':'var(--blood)';parts.push(`<span style="color:${col}">GOLD ${rc.gold>0?'+':''}${rc.gold}</span>`);}
+  }
+  if(res.location_change&&res.location_change.location!=='none'&&LOCATIONS[res.location_change.location]){
+    const loc=LOCATIONS[res.location_change.location];
+    parts.push(`<span style="color:var(--a)">${loc.shortName}: ${res.location_change.ctrl.toUpperCase()}</span>`);
+  }
+  if(res.faction_rel_change&&res.faction_rel_change.faction!=='none'&&FACTIONS[res.faction_rel_change.faction]){
+    const f=FACTIONS[res.faction_rel_change.faction];
+    const d=res.faction_rel_change.delta||0;
+    if(d!==0){const col=d>0?'var(--g)':'var(--blood)';parts.push(`<span style="color:${col}">${f.name.split(' ')[0]} REL ${d>0?'+':''}${d}</span>`);}
+  }
+  if(parts.length){
+    bar.innerHTML='&gt;&nbsp;'+parts.join('&nbsp;<span style="color:var(--gd)">|</span>&nbsp;');
+    bar.style.display='block';
+  } else {
+    bar.style.display='none';
+  }
 }
 
 // DISPLAY
 function displayResult(res,doSave){
   clearChoices();
   document.getElementById('game-error').style.display='none';
+  buildDeltaBar(res);
   if(res.event_title) document.getElementById('story-win-title').textContent='NARRATIVE_ENGINE.EXE -- '+res.event_title.toUpperCase();
   const el=document.getElementById('story-text');
   typeText(el,res.story||'',()=>{

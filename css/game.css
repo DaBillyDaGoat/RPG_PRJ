@@ -420,18 +420,62 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
 .task-rel-track{height:4px;background:#111;border:1px solid rgba(0,255,65,.15);overflow:hidden;}
 .task-rel-fill{height:100%;transition:width .4s;}
 
+/* ── TURN DELTA BAR ── */
+#turn-delta-bar{font-family:'Share Tech Mono',monospace;font-size:.55rem;color:var(--a);padding:5px 10px;background:rgba(0,0,0,.6);border:1px solid rgba(255,176,0,.2);border-top:none;letter-spacing:.5px;line-height:1.6;animation:fadeIn .3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── WAR ROOM / OBJECTIVES ── */
+.war-room-banner{background:#000;border:1px solid var(--gd);padding:12px 14px;margin-bottom:10px;}
+.war-room-title{font-size:.68rem;color:var(--a);letter-spacing:2px;margin-bottom:10px;}
+.war-room-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
+.war-stat{text-align:center;padding:6px 4px;background:#060606;border:1px solid rgba(0,255,65,.1);}
+.war-stat-val{font-size:.85rem;color:var(--g);font-family:'VT323',monospace;}
+.war-stat-lbl{font-size:.42rem;color:var(--gd);letter-spacing:1px;margin-top:2px;}
+.war-room-prog-wrap{height:4px;background:#111;border:1px solid rgba(0,255,65,.15);overflow:hidden;}
+.war-room-prog-fill{height:100%;background:var(--g);transition:width .6s;}
+.wr-section-hdr{font-size:.55rem;color:var(--gd);letter-spacing:2px;padding:5px 0 3px;border-bottom:1px solid rgba(0,255,65,.15);margin:10px 0 6px;}
+.wr-faction-card{background:#000;border:1px solid rgba(0,255,65,.2);padding:10px 12px;margin-bottom:6px;transition:border-color .3s;}
+.wr-faction-card.wr-resolved{opacity:.6;border-style:dashed;}
+.wr-fc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.wr-fc-name{font-size:.65rem;color:var(--ww);letter-spacing:.5px;}
+.wr-fc-badge{font-size:.48rem;padding:2px 7px;border:1px solid;letter-spacing:1px;}
+.wr-fc-rel-bar{height:3px;background:#111;overflow:hidden;margin-bottom:7px;}
+.wr-fc-rel-fill{height:100%;transition:width .5s;}
+.wr-fc-details{display:flex;flex-direction:column;gap:3px;margin-bottom:6px;}
+.wr-fc-detail{font-size:.52rem;color:var(--wgdd);}
+.wr-detail-lbl{color:var(--gd);letter-spacing:1px;margin-right:6px;font-size:.47rem;}
+.wr-fc-obj{font-size:.5rem;color:var(--a);border-top:1px solid rgba(255,176,0,.15);padding-top:5px;}
+.wr-troop-card{background:#000;border:1px solid rgba(0,255,65,.2);padding:10px 12px;margin-bottom:6px;}
+.wr-troop-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid rgba(0,255,65,.06);}
+.wr-troop-row:last-child{border-bottom:none;}
+.wr-troop-lbl{font-size:.52rem;color:var(--wgdd);}
+.wr-troop-val{font-size:.65rem;color:var(--a);font-family:'VT323',monospace;}
+.wr-troop-total .wr-troop-lbl{color:var(--g);}
+.wr-terr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:6px;}
+.wr-terr-tile{background:#000;border:1px solid;padding:8px 6px;text-align:center;}
+.wr-terr-name{font-size:.6rem;font-family:'VT323',monospace;margin-bottom:2px;}
+.wr-terr-ctrl{font-size:.42rem;letter-spacing:1px;margin-bottom:3px;}
+.wr-terr-info{font-size:.44rem;color:var(--gd);}
+
+/* ── FACTION RELATION FLASH ── */
+@keyframes relFlash{0%{background:#000;box-shadow:none;}30%{background:rgba(0,255,65,.08);box-shadow:0 0 12px rgba(0,255,65,.3);}100%{background:#000;box-shadow:none;}}
+.faction-card.rel-flash{animation:relFlash 2s ease forwards;}
+
 /* ── CHARACTERS / PEOPLE TAB ── */
 .chars-section{margin-bottom:12px;}
-.chars-faction-hdr{font-size:.63rem;color:var(--a);letter-spacing:1px;padding:6px 10px;background:#000;border:1px solid var(--gd);display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
-.chars-met-badge{font-size:.48rem;padding:2px 7px;letter-spacing:1px;border:1px solid;}
+.chars-faction-hdr{font-size:.63rem;color:var(--a);letter-spacing:1px;padding:6px 10px;background:#000;border:1px solid var(--gd);display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;}
+.chars-rel-badge{font-size:.45rem;padding:2px 6px;border:1px solid;letter-spacing:1px;}
+.chars-met-badge{font-size:.48rem;padding:2px 7px;letter-spacing:1px;border:1px solid;margin-left:auto;}
 .chars-met{color:var(--g);border-color:var(--g);}
 .chars-unmet{color:var(--wgdd);border-color:var(--wgdd);}
 .chars-cards{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
 .char-card{background:#000;border:1px solid var(--gd);padding:9px 11px;}
 .char-card.char-unknown{opacity:.42;border-style:dashed;}
+.char-card.char-leader{border-color:var(--a);border-style:solid;}
 .char-name{font-size:.65rem;color:var(--g);margin-bottom:2px;letter-spacing:.5px;}
 .char-role{font-size:.55rem;color:var(--gd);font-style:italic;margin-bottom:3px;}
 .char-faction{font-size:.5rem;letter-spacing:1px;margin-bottom:4px;text-transform:uppercase;}
+.char-rel{font-size:.5rem;letter-spacing:1px;margin-top:2px;}
 .char-voice{font-size:.52rem;color:var(--wgdd);line-height:1.55;border-top:1px solid rgba(255,255,255,.05);padding-top:4px;margin-top:2px;}
 
 /* ── TINY PHONE (<375px) — tab bar scrolls horizontally ── */
