@@ -430,6 +430,7 @@ const state={
   boostedSkill:null,
   originFaction:null,classPerk:'',
   gameOver:false,
+  metFactions:[],   // faction IDs where player has opened dialogue (reveals their NPCs)
 };
 let skillAllocRemaining=5;
 const skillAlloc={force:0,wit:0,influence:0,shadow:0,grit:0};
@@ -437,7 +438,7 @@ const skillAlloc={force:0,wit:0,influence:0,shadow:0,grit:0};
 // TABS
 function switchTab(tab){
   state.activeTab=tab;
-  ['story','map','factions','skills'].forEach(t=>{
+  ['story','map','factions','skills','tasks','chars'].forEach(t=>{
     const v=document.getElementById(t+'-view');
     if(v) v.style.display=t===tab?'block':'none';
     const tb=document.getElementById('tab-'+t);
@@ -447,6 +448,8 @@ function switchTab(tab){
   if(tab==='map'){refreshMap();}
   if(tab==='factions'){renderFactions();}
   if(tab==='skills'){renderSkills();}
+  if(tab==='tasks'){renderTasks();}
+  if(tab==='chars'){renderChars();}
 }
 
 // SETUP
@@ -698,6 +701,23 @@ function renderFactions(){
   const list=document.getElementById('faction-list'); list.innerHTML='';
   Object.values(FACTIONS).forEach(f=>{
     const rel=getRelState(f);
+    const met=state.metFactions.includes(f.id);
+    // Build NPC contacts section
+    let npcHtml='';
+    if(f.id==='subnet'){
+      npcHtml='<div class="fc-npcs"><div class="fc-npc-hdr">KNOWN CONTACTS</div>'
+        +'<div class="fc-npc fc-npc-unknown"><span class="fc-npc-name">THE ARCHITECT</span><span class="fc-npc-role">[ RECORDS CLASSIFIED ]</span></div></div>';
+    } else if(f.characters&&f.characters.length){
+      npcHtml='<div class="fc-npcs"><div class="fc-npc-hdr">'+(met?'KNOWN CONTACTS':'CONTACTS: UNKNOWN')+'</div>';
+      f.characters.forEach(c=>{
+        if(met){
+          npcHtml+=`<div class="fc-npc"><span class="fc-npc-name">${c.name}</span><span class="fc-npc-role">${c.role}</span></div>`;
+        } else {
+          npcHtml+=`<div class="fc-npc fc-npc-unknown"><span class="fc-npc-name">???</span><span class="fc-npc-role">[ NOT YET MET ]</span></div>`;
+        }
+      });
+      npcHtml+='</div>';
+    }
     const card=document.createElement('div'); card.className='faction-card';
     card.innerHTML=`
       <div class="fc-hdr">
@@ -710,8 +730,88 @@ function renderFactions(){
         <div class="fc-rel-lbl"><span>RELATION</span><span>${f.relationScore}/100</span></div>
         <div class="fc-rel-track"><div class="fc-rel-fill" style="width:${f.relationScore}%;background:${rel.color}"></div></div>
       </div>
+      ${npcHtml}
       <button class="fc-talk-btn" onclick="openDialogue('${f.id}')">[ OPEN CHANNEL WITH ${f.leader.toUpperCase()} ]</button>`;
     list.appendChild(card);
+  });
+}
+
+// TASKS / OBJECTIVES RENDER
+function renderTasks(){
+  const el=document.getElementById('tasks-list'); if(!el)return;
+  el.innerHTML='';
+  const hdr=document.createElement('div'); hdr.className='tasks-header';
+  const resolved=Object.keys(FACTIONS).filter(fid=>isResolved(fid)).length;
+  const total=Object.keys(FACTIONS).length;
+  hdr.innerHTML=`<div class="tasks-title">&#128204; OPERATION: BRING ORDER</div>
+    <div class="tasks-sub">Resolve every faction — ally them (RELATION 66+) or conquer them (capture home + RELATION 0).<br>Progress: <span style="color:var(--g)">${resolved}/${total} factions resolved.</span></div>`;
+  el.appendChild(hdr);
+  Object.values(FACTIONS).forEach(f=>{
+    const done=isResolved(f.id);
+    const rel=getRelState(f);
+    const home=FACTION_HOME[f.id];
+    const homeLoc=home?LOCATIONS[home]:null;
+    let statusLabel,statusColor;
+    if(done){
+      if(f.relationScore>=66){statusLabel='&#10003; ALLIED';statusColor='var(--g)';}
+      else{statusLabel='&#10003; ELIMINATED';statusColor='var(--blood)';}
+    } else {statusLabel=rel.label;statusColor=rel.color;}
+    let objText;
+    if(f.relationScore>=66){objText='Alliance secured. Maintain relation above 66.';}
+    else if(done){objText='Faction eliminated. Home territory captured.';}
+    else{
+      const allyNeeds=66-f.relationScore;
+      const capStatus=homeLoc?(homeLoc.ctrl==='player'?'<span style="color:var(--g)">HOME CAPTURED</span>':'Capture: '+homeLoc.name):'No fixed territory';
+      objText=`Ally path: +${allyNeeds} relation needed &nbsp;|&nbsp; Conquest path: ${capStatus} + reduce to 0`;
+    }
+    const card=document.createElement('div'); card.className='task-card'+(done?' task-done':'');
+    card.innerHTML=`
+      <div class="task-hdr">
+        <span class="task-name">${f.icon} ${f.name}</span>
+        <span class="task-status" style="color:${statusColor}">${statusLabel}</span>
+      </div>
+      <div class="task-obj">${objText}</div>
+      <div class="task-rel-track"><div class="task-rel-fill" style="width:${f.relationScore}%;background:${rel.color}"></div></div>`;
+    el.appendChild(card);
+  });
+}
+
+// CHARACTERS RENDER
+function renderChars(){
+  const el=document.getElementById('chars-list'); if(!el)return;
+  el.innerHTML='';
+  Object.values(FACTIONS).forEach(f=>{
+    const met=state.metFactions.includes(f.id);
+    const fcolor=FACTION_CLASSES[f.id]?.color||'var(--a)';
+    const sec=document.createElement('div'); sec.className='chars-section';
+    let charCards='';
+    if(f.id==='subnet'){
+      charCards=`<div class="char-card char-unknown">
+        <div class="char-name">THE ARCHITECT</div>
+        <div class="char-role">[ RECORDS CLASSIFIED ]</div>
+        <div class="char-faction" style="color:${fcolor}">${f.name}</div>
+      </div>`;
+    } else if(f.characters&&f.characters.length){
+      f.characters.forEach(c=>{
+        if(met){
+          charCards+=`<div class="char-card">
+            <div class="char-name">${c.name}</div>
+            <div class="char-role">${c.role}</div>
+            <div class="char-faction" style="color:${fcolor}">${f.name}</div>
+            <div class="char-voice">"${c.voice.length>90?c.voice.substring(0,90)+'...':c.voice}"</div>
+          </div>`;
+        } else {
+          charCards+=`<div class="char-card char-unknown">
+            <div class="char-name">???</div>
+            <div class="char-role">[ NOT YET ENCOUNTERED ]</div>
+            <div class="char-faction" style="color:${fcolor}">${f.name}</div>
+          </div>`;
+        }
+      });
+    }
+    sec.innerHTML=`<div class="chars-faction-hdr">${f.icon} ${f.name}<span class="chars-met-badge ${met?'chars-met':'chars-unmet'}">${met?'CONTACTED':'UNKNOWN'}</span></div>
+      <div class="chars-cards">${charCards}</div>`;
+    el.appendChild(sec);
   });
 }
 
@@ -719,6 +819,7 @@ function renderFactions(){
 function openDialogue(fid){
   const f=FACTIONS[fid]; if(!f)return;
   state.activeFactionDlg=fid; state.dlgHistory=[];
+  if(!state.metFactions.includes(fid)) state.metFactions.push(fid);
   const rel=getRelState(f);
   document.getElementById('dlg-win-title').textContent='DIALOGUE.EXE -- '+f.name.toUpperCase();
   document.getElementById('port-ascii').textContent=f.leaderPortrait;
@@ -726,7 +827,7 @@ function openDialogue(fid){
   document.getElementById('port-title').textContent=f.leaderTitle;
   const relEl=document.getElementById('port-rel');
   relEl.textContent=rel.label; relEl.style.color=rel.color; relEl.style.borderColor=rel.color;
-  ['story','map','factions','skills'].forEach(t=>{const v=document.getElementById(t+'-view');if(v)v.style.display='none';});
+  ['story','map','factions','skills','tasks','chars'].forEach(t=>{const v=document.getElementById(t+'-view');if(v)v.style.display='none';});
   document.getElementById('dialogue-screen').style.display='block';
   document.getElementById('dlg-choices').innerHTML='';
   document.getElementById('dlg-text').textContent='...';
@@ -1479,7 +1580,7 @@ function saveGame(html){
       hp:state.hp,maxHp:state.maxHp,turn:state.turn,
       history:state.history,currentChoices:state.currentChoices,lastStoryHTML:html,
       days:state.days,supplies:state.supplies,troops:state.troops,gold:state.gold||0,
-      currentLocation:state.currentLocation,locStates,fRels,skData,savedAt:Date.now()
+      currentLocation:state.currentLocation,metFactions:state.metFactions||[],locStates,fRels,skData,savedAt:Date.now()
     }));
   }catch(e){}
 }
@@ -1492,6 +1593,7 @@ function resumeGame(save){
   state.history=save.history||[]; state.currentChoices=save.currentChoices||[];
   state.days=save.days||0; state.supplies=save.supplies||50; state.troops=save.troops||10; state.gold=save.gold||0;
   state.currentLocation=save.currentLocation||'tcnj';
+  state.metFactions=save.metFactions||[];
   state.apiKey=localStorage.getItem(API_KEY)||'';
   if(save.locStates) Object.entries(save.locStates).forEach(([k,v])=>{if(LOCATIONS[k])LOCATIONS[k].ctrl=v;});
   if(save.fRels) Object.entries(save.fRels).forEach(([k,v])=>{if(FACTIONS[k])FACTIONS[k].relationScore=v;});
@@ -1529,7 +1631,7 @@ function restartGame(){
   clearSave();
   state.history=[]; state.turn=1; state.hp=100;
   state.days=0; state.supplies=50; state.troops=10; state.currentLocation='tcnj';
-  state.factionName=''; state.boostedSkill=null; state.originFaction=null; state.classPerk=''; state.garrison={}; state.ownFaction=false; state.troops=0; state.gold=0; state.gameOver=false;
+  state.factionName=''; state.boostedSkill=null; state.originFaction=null; state.classPerk=''; state.garrison={}; state.ownFaction=false; state.troops=0; state.gold=0; state.gameOver=false; state.metFactions=[];
   Object.keys(LOCATIONS).forEach(k=>{LOCATIONS[k].ctrl=k==='tcnj'?'unclaimed':k==='newark'||k==='mcguire'?'faction':'faction';});
   Object.values(FACTIONS).forEach(f=>{
     f.relationScore=f.id==='iron_syndicate'?10:f.id==='rust_eagles'?15:f.id==='the_hollowed'?0:f.id==='subnet'?40:f.id==='mountain_covenant'?45:50;
@@ -1594,6 +1696,11 @@ function selectStory(id){
 }
 
 function backToStories(){
+  // Reset skill allocation so returning to setup screen starts fresh
+  Object.keys(skillAlloc).forEach(k=>skillAlloc[k]=0);
+  skillAllocRemaining=5;
+  Object.keys(skillAlloc).forEach(k=>{const e=document.getElementById('alloc-'+k);if(e)e.textContent='0';});
+  const ptsEl=document.getElementById('skill-pts-left');if(ptsEl)ptsEl.textContent='5';
   showScreen('home');
 }
 

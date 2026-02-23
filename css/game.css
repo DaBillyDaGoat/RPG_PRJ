@@ -23,7 +23,8 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
 @keyframes flicker{0%,94%,100%{opacity:1}95%{opacity:.75}97.5%{opacity:.55}98%{opacity:1}}
 .game-subtitle{font-size:.62rem;color:var(--a);margin-top:6px;letter-spacing:3px;}
 .boot-line{font-size:.58rem;color:var(--gd);margin-top:8px;letter-spacing:1px;}
-.tab-bar{display:flex;gap:2px;margin-bottom:-2px;position:relative;z-index:1;padding:0 4px;flex-wrap:wrap;}
+.tab-bar{display:flex;gap:2px;margin-bottom:-2px;position:relative;z-index:2;padding:0 4px;flex-wrap:wrap;background:var(--bg);}
+#story-view,#map-view,#factions-view,#skills-view,#tasks-view,#chars-view,#dialogue-screen{position:relative;z-index:1;}
 .tab{background:#a8a8a8;border-top:2px solid var(--ww);border-left:2px solid var(--ww);border-right:2px solid var(--wgd);border-bottom:2px solid var(--wgd);padding:4px 10px;font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--wgdd);cursor:pointer;letter-spacing:1px;text-transform:uppercase;}
 .tab.active{background:var(--wg);border-bottom:2px solid var(--wg);color:var(--wk);font-weight:bold;padding-bottom:6px;margin-bottom:-2px;}
 .dos-label{font-size:.6rem;color:var(--a);letter-spacing:2px;margin-bottom:5px;}
@@ -393,4 +394,42 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
   /* Settings modal full width */
   .settings-win{width:98%;max-width:98%;}
   .stab-content{font-size:.6rem;}
+
+  /* Chars: single column on mobile */
+  .chars-cards{grid-template-columns:1fr;}
 }
+
+/* ── FACTION CARD NPC CONTACTS ── */
+.fc-npcs{margin-top:8px;border-top:1px solid rgba(0,255,65,.12);padding-top:8px;}
+.fc-npc-hdr{font-size:.5rem;color:var(--gd);letter-spacing:2px;text-transform:uppercase;margin-bottom:5px;}
+.fc-npc{display:flex;justify-content:space-between;align-items:baseline;padding:2px 0;}
+.fc-npc-name{font-size:.6rem;color:var(--g);}
+.fc-npc-role{font-size:.53rem;color:var(--gd);font-style:italic;}
+.fc-npc-unknown .fc-npc-name,.fc-npc-unknown .fc-npc-role{color:var(--wgdd);opacity:.45;}
+
+/* ── TASKS / OBJECTIVES TAB ── */
+.tasks-header{background:#000;border:1px solid var(--gd);padding:10px 14px;margin-bottom:10px;}
+.tasks-title{font-size:.72rem;color:var(--a);letter-spacing:2px;margin-bottom:5px;}
+.tasks-sub{font-size:.56rem;color:var(--gd);line-height:1.7;}
+.task-card{background:#000;border:1px solid var(--gd);padding:10px 12px;margin-bottom:6px;transition:border-color .2s;}
+.task-card.task-done{border-color:rgba(0,255,65,.35);opacity:.75;}
+.task-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.task-name{font-size:.68rem;color:var(--a);letter-spacing:1px;}
+.task-status{font-size:.52rem;letter-spacing:1px;text-transform:uppercase;}
+.task-obj{font-size:.57rem;color:var(--gd);line-height:1.6;margin-bottom:6px;}
+.task-rel-track{height:4px;background:#111;border:1px solid rgba(0,255,65,.15);overflow:hidden;}
+.task-rel-fill{height:100%;transition:width .4s;}
+
+/* ── CHARACTERS / PEOPLE TAB ── */
+.chars-section{margin-bottom:12px;}
+.chars-faction-hdr{font-size:.63rem;color:var(--a);letter-spacing:1px;padding:6px 10px;background:#000;border:1px solid var(--gd);display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.chars-met-badge{font-size:.48rem;padding:2px 7px;letter-spacing:1px;border:1px solid;}
+.chars-met{color:var(--g);border-color:var(--g);}
+.chars-unmet{color:var(--wgdd);border-color:var(--wgdd);}
+.chars-cards{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+.char-card{background:#000;border:1px solid var(--gd);padding:9px 11px;}
+.char-card.char-unknown{opacity:.42;border-style:dashed;}
+.char-name{font-size:.65rem;color:var(--g);margin-bottom:2px;letter-spacing:.5px;}
+.char-role{font-size:.55rem;color:var(--gd);font-style:italic;margin-bottom:3px;}
+.char-faction{font-size:.5rem;letter-spacing:1px;margin-bottom:4px;text-transform:uppercase;}
+.char-voice{font-size:.52rem;color:var(--wgdd);line-height:1.55;border-top:1px solid rgba(255,255,255,.05);padding-top:4px;margin-top:2px;}

@@ -10,6 +10,7 @@
 <meta name="theme-color" content="#080808">
 <meta name="description" content="Wasteland Chronicles — AI-driven modular RPG campaigns.">
 <link rel="manifest" href="manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/game.css">
 </head>
@@ -251,6 +252,8 @@
     <div class="tab" id="tab-map" onclick="switchTab('map')">&#128506; MAP</div>
     <div class="tab" id="tab-factions" onclick="switchTab('factions')">&#9876; FACTIONS</div>
     <div class="tab" id="tab-skills" onclick="switchTab('skills')">&#129516; SKILLS</div>
+    <div class="tab" id="tab-tasks" onclick="switchTab('tasks')">&#128204; TASKS</div>
+    <div class="tab" id="tab-chars" onclick="switchTab('chars')">&#128100; PEOPLE</div>
   </div>
 
   <!-- STORY -->
@@ -376,6 +379,22 @@
     <div class="wp" style="margin-top:0;border-top:none;">
       <div class="wtb"><div class="wtt"><span>&#9876;</span> FACTION_RELATIONS.DAT</div><div class="wbs"><div class="wbtn">?</div></div></div>
       <div class="wi"><div class="faction-list" id="faction-list"></div></div>
+    </div>
+  </div>
+
+  <!-- TASKS / OBJECTIVES -->
+  <div id="tasks-view" style="display:none;">
+    <div class="wp" style="margin-top:0;border-top:none;">
+      <div class="wtb"><div class="wtt"><span>&#128204;</span> OBJECTIVES.DAT</div><div class="wbs"><div class="wbtn">?</div></div></div>
+      <div class="wi"><div id="tasks-list"></div></div>
+    </div>
+  </div>
+
+  <!-- CHARACTERS / PEOPLE -->
+  <div id="chars-view" style="display:none;">
+    <div class="wp" style="margin-top:0;border-top:none;">
+      <div class="wtb"><div class="wtt"><span>&#128100;</span> FIELD_CONTACTS.DAT</div><div class="wbs"><div class="wbtn">?</div></div></div>
+      <div class="wi"><div id="chars-list"></div></div>
     </div>
   </div>
 
