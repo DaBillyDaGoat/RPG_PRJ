@@ -889,14 +889,14 @@ function extractJSON(text){
 function pickModel(msg){
   const isRaid=typeof msg==='string'&&msg.toLowerCase().includes('raid');
   const isMajor=state.turn<=2||state.turn%5===0||state.hp<30||isRaid;
-  return isMajor?'claude-sonnet-4-20250514':'claude-3-5-haiku-20241022';
+  return isMajor?'claude-sonnet-4-20250514':'claude-haiku-4-5-20251001';
 }
 
 async function callDlg(sys,msg){
   const r=await fetch('https://airpg-api-proxi.billybuteau.workers.dev/',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-3-5-haiku-20241022',max_tokens:700,system:sys,messages:[...state.dlgHistory,{role:'user',content:msg}]})
+    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:700,system:sys,messages:[...state.dlgHistory,{role:'user',content:msg}]})
   });
   if(!r.ok){
     const e=await r.json().catch(()=>({}));
