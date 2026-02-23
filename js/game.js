@@ -60,6 +60,69 @@ const FACTIONS={
     fears:'Being found. Losing the network. Running out of parts.'},
 };
 
+// Home territory per faction (null = no fixed surface location)
+const FACTION_HOME={
+  iron_syndicate:'newark',
+  rust_eagles:'mcguire',
+  mountain_covenant:'mountainside',
+  trenton_collective:'trenton',
+  coastal_brotherhood:'lbi',
+  the_hollowed:null,   // Roaming — no fixed home
+  subnet:null,         // Underground — no surface location
+};
+
+// WIN CONDITION HELPERS
+function isResolved(fid){
+  const f=FACTIONS[fid]; if(!f) return true;
+  if(f.relationScore>=66) return true; // Allied, Vassal, or Annexed
+  const home=FACTION_HOME[fid];
+  if(!home) return f.relationScore===0; // No home: relation 0 = driven off / irrelevant
+  return f.relationScore===0 && LOCATIONS[home]?.ctrl==='player'; // Home captured + hostile
+}
+
+function getVictoryType(){
+  const fids=Object.keys(FACTIONS);
+  const allAllied=fids.every(fid=>FACTIONS[fid].relationScore>=66);
+  if(allAllied) return 'diplomatic';
+  const allEliminated=fids.every(fid=>{
+    const f=FACTIONS[fid]; if(f.relationScore===0) return true;
+    const home=FACTION_HOME[fid];
+    return home?LOCATIONS[home]?.ctrl==='player':true;
+  });
+  if(allEliminated) return 'conquest';
+  return 'mixed';
+}
+
+function checkWin(){
+  if(state.gameOver) return;
+  // WIN 1: Total territorial control
+  const allLocs=Object.values(LOCATIONS);
+  if(allLocs.length>0 && allLocs.every(l=>l.ctrl==='player')){
+    displayVictory('domination'); return;
+  }
+  // WIN 2: All factions resolved (allied OR eliminated)
+  if(Object.keys(FACTIONS).every(fid=>isResolved(fid))){
+    displayVictory(getVictoryType()); return;
+  }
+}
+
+function displayVictory(type){
+  state.gameOver=true;
+  clearSave();
+  const msgs={
+    domination:`INFLUENCE RATING: 100%\nTERRITORIAL DOMINATION\n\n"${state.factionName}" controls every inch of New Jersey.\n\nFrom Newark's factories to Long Beach Island's docks, every checkpoint, every farm, every underground bunker — yours. ${state.character.name} didn't just survive the wasteland. They became it.\n\nThe last faction surrendered on turn ${state.turn}. History will call it inevitable. Everyone else will call it terrifying.`,
+    diplomatic:`INFLUENCE RATING: 100%\nDIPLOMATIC MASTERY\n\nSeven factions. Seven deals. Every one of them signed.\n\nThe Iron Syndicate calls you an equal. The Mountain Covenant calls you blessed. The Coastal Brotherhood calls you the best business partner they've ever had. The Hollowed still call you lunch, but at a respectful distance.\n\nIn ${state.turn} turns, ${state.character.name} did what nobody in 330 years of NJ wasteland politics managed: made everyone sit at the same table. Whether they like each other is somebody else's problem now.`,
+    conquest:`INFLUENCE RATING: 100%\nWARLORD ASCENDANT\n\n"${state.factionName}" left nothing standing.\n\nEvery rival has been broken, buried, or fled beyond the Delaware. The wasteland is quiet now — not peaceful, not prosperous, just quiet in the way places get when there's nobody left to argue.\n\n${state.character.name} wanted control. They got it. ${state.turn} turns of escalating violence, and now they have a throne built from the right enemies. New Jersey 2999 is yours.\n\nEnjoy the silence.`,
+    mixed:`INFLUENCE RATING: 100%\nCONSOLIDATION COMPLETE\n\n"${state.factionName}" resolved every faction on its own terms.\n\nSome signed treaties. Some got buried. The ones smart enough to negotiate kept their flags. The ones who didn't...\n\nIn ${state.turn} turns, ${state.character.name} built something from nothing and ended with a hand on every lever that matters in New Jersey. Not every choice was clean. None of them needed to be.\n\nWasteland politics: won.`,
+  };
+  document.getElementById('story-win-title').textContent='CAMPAIGN COMPLETE — '+type.toUpperCase();
+  const el=document.getElementById('story-text');
+  typeText(el,msgs[type]||msgs.mixed,()=>{
+    document.getElementById('choices-container').innerHTML='<button class="begin-btn" onclick="restartGame()" style="margin-top:10px">[ NEW CAMPAIGN ]</button>';
+    document.getElementById('open-wrap').style.display='none';
+  });
+}
+
 // Relation state from score
 function getRelState(f){
   const s=f.relationScore;
@@ -313,10 +376,10 @@ const FACTION_CLASSES={
 
 // LOCATIONS
 const LOCATIONS={
-  newark:{name:'Newark',shortName:'NEWRK',ctrl:'hostile',faction:'iron_syndicate',svgX:332,svgY:149,travelDays:2,travelSupplies:15,travelTroopRisk:true,raidRisk:3,supplyPerTurn:12,features:['Factory districts','Iron Syndicate garrison','Industrial output'],flavor:'Smoke-choked factory city. Commissioner Stahl runs it like a corporation \u2014 because it is one.'},
+  newark:{name:'Newark',shortName:'NEWRK',ctrl:'hostile',faction:'iron_syndicate',svgX:332,svgY:149,travelDays:2,travelSupplies:15,travelTroopRisk:true,raidRisk:3,supplyPerTurn:12,features:['Factory districts','Iron Syndicate garrison','Industrial output'],flavor:'Smoke-choked factory city. Mayor Stahl runs it like a corporation \u2014 because it is one.'},
   mountainside:{name:'Mountainside',shortName:'MTNSD',ctrl:'neutral',faction:'mountain_covenant',svgX:288,svgY:163,travelDays:2,travelSupplies:10,travelTroopRisk:false,raidRisk:1,supplyPerTurn:8,features:['Natural springs','Mountain fortress','Water filtration'],flavor:'High in the Watchungs. Clean water flows here. The Covenant guards it with religion and rifles.'},
   tcnj:{name:'TCNJ Campus',shortName:'TCNJ',ctrl:'unclaimed',faction:'player',svgX:187,svgY:259,travelDays:0,travelSupplies:0,travelTroopRisk:false,raidRisk:2,supplyPerTurn:5,claimable:true,features:['Abandoned campus','Defensible buildings','Central location'],flavor:'The College of New Jersey \u2014 empty since 2669. Central, defensible, unclaimed. Yours if you want it.'},
-  trenton:{name:'Trenton',shortName:'TRENT',ctrl:'neutral',faction:'trenton_collective',svgX:196,svgY:273,travelDays:1,travelSupplies:8,travelTroopRisk:false,raidRisk:1,supplyPerTurn:10,features:['Farmland','Food stores','Collective governance'],flavor:'The breadbasket of NJ 2999. Chair Osei runs it by committee. It somehow works.'},
+  trenton:{name:'Trenton',shortName:'TRENT',ctrl:'neutral',faction:'trenton_collective',svgX:196,svgY:273,travelDays:1,travelSupplies:8,travelTroopRisk:false,raidRisk:1,supplyPerTurn:10,features:['Farmland','Food stores','Collective governance'],flavor:'The breadbasket of NJ 2999. Chair King runs it by committee. It somehow works.'},
   mcguire:{name:'McGuire AFB',shortName:'MCGRE',ctrl:'hostile',faction:'rust_eagles',svgX:231,svgY:321,travelDays:2,travelSupplies:12,travelTroopRisk:true,raidRisk:3,supplyPerTurn:10,features:['Military airstrip','Armory','Aircraft (fuel unknown)'],flavor:'Three generations of Air Force descendants who never left. General Rusk still runs daily drills.'},
   lbi:{name:'LBI Harbor',shortName:'LBI',ctrl:'neutral',faction:'coastal_brotherhood',svgX:358,svgY:338,travelDays:3,travelSupplies:18,travelTroopRisk:false,raidRisk:2,supplyPerTurn:9,features:['Harbor','Trade routes','Smuggling network'],flavor:'Long Beach Island. Captain Salieri runs the most profitable port on the coast. Everything moves through here \u2014 for a price.'},
 };
@@ -341,6 +404,7 @@ const state={
   activeFactionDlg:null,dlgHistory:[],
   boostedSkill:null,
   originFaction:null,classPerk:'',
+  gameOver:false,
 };
 let skillAllocRemaining=5;
 const skillAlloc={force:0,wit:0,influence:0,shadow:0,grit:0};
@@ -807,6 +871,7 @@ Map: ${lSum} | Factions: ${fSum}
 ${boost}
 
 TROOP CONTEXT: ${state.troops} mobile troops with player. More troops = brutal combat options viable. 0-2 troops = stealth/diplomacy forced.
+VICTORY: Win by (A) controlling ALL 6 locations, OR (B) every faction resolved — allied (rel 66+) or eliminated (rel 0 + home captured). Any mix of ally/destroy works. Build narrative tension toward these goals. Factions should feel beatable or alliances feel achievable based on player actions so far.
 WRITING FORMAT:
 - *italics* for actions: *smoke pours from the factory stack.* *He doesn't look up.*
 - Named quotes for speech: "Vera Stahl: That's not how Newark works."
@@ -837,7 +902,7 @@ async function startStory(){
 }
 
 async function makeChoice(idx){
-  if(state.isLoading)return;
+  if(state.isLoading||state.gameOver)return;
   const ch=state.currentChoices[idx]; if(!ch)return;
   setLoad(true); disableChoices(true); clearStory();
   document.getElementById('open-wrap').style.display='none';
@@ -858,7 +923,7 @@ async function makeChoice(idx){
 
 async function submitOpen(){
   const input=document.getElementById('open-input');
-  const text=input.value.trim(); if(!text||state.isLoading)return;
+  const text=input.value.trim(); if(!text||state.isLoading||state.gameOver)return;
   input.value='';
   setLoad(true); disableChoices(true); clearStory();
   document.getElementById('open-wrap').style.display='none';
@@ -1365,8 +1430,9 @@ function collectPassiveIncome(){
 function onTurnEnd(){
   state.days++;
   collectPassiveIncome();
+  checkWin();
   // Check raids every 3 turns
-  if(state.turn%3===0) checkForRaids();
+  if(state.turn%3===0 && !state.gameOver) checkForRaids();
 }
 
 // PERSISTENCE
@@ -1431,7 +1497,7 @@ function restartGame(){
   clearSave();
   state.history=[]; state.turn=1; state.hp=100;
   state.days=0; state.supplies=50; state.troops=10; state.currentLocation='tcnj';
-  state.factionName=''; state.boostedSkill=null; state.originFaction=null; state.classPerk=''; state.garrison={}; state.ownFaction=false; state.troops=0;
+  state.factionName=''; state.boostedSkill=null; state.originFaction=null; state.classPerk=''; state.garrison={}; state.ownFaction=false; state.troops=0; state.gold=0; state.gameOver=false;
   Object.keys(LOCATIONS).forEach(k=>{LOCATIONS[k].ctrl=k==='tcnj'?'unclaimed':k==='newark'||k==='mcguire'?'faction':'faction';});
   Object.values(FACTIONS).forEach(f=>{
     f.relationScore=f.id==='iron_syndicate'?10:f.id==='rust_eagles'?15:f.id==='the_hollowed'?0:f.id==='subnet'?40:f.id==='mountain_covenant'?45:50;
