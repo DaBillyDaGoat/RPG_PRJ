@@ -23,9 +23,9 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
 @keyframes flicker{0%,94%,100%{opacity:1}95%{opacity:.75}97.5%{opacity:.55}98%{opacity:1}}
 .game-subtitle{font-size:.62rem;color:var(--a);margin-top:6px;letter-spacing:3px;}
 .boot-line{font-size:.58rem;color:var(--gd);margin-top:8px;letter-spacing:1px;}
-.tab-bar{display:flex;gap:2px;margin-bottom:-2px;position:relative;z-index:2;padding:0 4px;flex-wrap:wrap;background:var(--bg);}
-#story-view,#map-view,#factions-view,#skills-view,#tasks-view,#chars-view,#dialogue-screen{position:relative;z-index:1;}
-.tab{background:#a8a8a8;border-top:2px solid var(--ww);border-left:2px solid var(--ww);border-right:2px solid var(--wgd);border-bottom:2px solid var(--wgd);padding:4px 10px;font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--wgdd);cursor:pointer;letter-spacing:1px;text-transform:uppercase;}
+.tab-bar{display:flex;gap:2px;margin-bottom:-2px;position:relative;z-index:2;padding:0 4px;flex-wrap:nowrap;background:var(--bg);}
+#story-view,#map-view,#factions-view,#skills-view,#tasks-view,#dialogue-screen{position:relative;z-index:1;}
+.tab{background:#a8a8a8;border-top:2px solid var(--ww);border-left:2px solid var(--ww);border-right:2px solid var(--wgd);border-bottom:2px solid var(--wgd);padding:4px 10px;font-family:'Share Tech Mono',monospace;font-size:.58rem;color:var(--wgdd);cursor:pointer;letter-spacing:1px;text-transform:uppercase;flex:1;text-align:center;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .tab.active{background:var(--wg);border-bottom:2px solid var(--wg);color:var(--wk);font-weight:bold;padding-bottom:6px;margin-bottom:-2px;}
 .dos-label{font-size:.6rem;color:var(--a);letter-spacing:2px;margin-bottom:5px;}
 .dos-label::before{content:'C:\\> ';color:var(--gd);}
@@ -85,6 +85,7 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
 #amish-chip{color:#7a5a00;border-bottom:1px solid #7a5a00;}
 #amish-chip.amish-warn{color:#e06010;border-bottom-color:#e06010;}
 #amish-chip.amish-critical{color:#cc1133;border-bottom-color:#cc1133;animation:pulse 1s infinite;}
+#travel-chip.travel-fuel{color:#d4a017;border-bottom:1px solid #d4a017;}
 .travel-method-row{display:flex;gap:4px;margin-bottom:7px;}
 .tm-btn{flex:1;background:#000;border:1px solid var(--gd);padding:4px 5px;color:var(--gd);font-family:'Share Tech Mono',monospace;font-size:.52rem;cursor:pointer;letter-spacing:1px;text-align:center;}
 .tm-btn:hover{border-color:var(--a);color:var(--a);}
@@ -166,6 +167,26 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
 .lpop-btn{flex:1;min-width:60px;background:var(--wg);border-top:1px solid var(--ww);border-left:1px solid var(--ww);border-right:1px solid var(--wgd);border-bottom:1px solid var(--wgd);padding:4px 5px;font-family:'Share Tech Mono',monospace;font-size:.52rem;color:var(--wk);cursor:pointer;text-align:center;pointer-events:all;}
 .lpop-btn:hover{background:#d4d0c8;}
 .lpop-btn:disabled{opacity:.4;cursor:not-allowed;}
+/* ── MAP NODE LABELS ── */
+.node-lbl{fill:var(--a);}
+.node-sub{fill:rgba(0,255,65,0.45);}
+
+/* ── COUNTY MAP MODE ── */
+.county-road{stroke:rgba(200,180,140,0.25);stroke-width:1;fill:none;stroke-dasharray:4,4;transition:opacity .4s;}
+.county-road.inactive{opacity:.04!important;}
+.county-road.patrolled{stroke:var(--blood);opacity:.7;animation:rp 2s ease-in-out infinite;}
+
+body.map-county-mode .node-lbl{fill:rgba(220,200,160,0.9);}
+body.map-county-mode .node-sub{fill:rgba(200,180,140,0.45);}
+body.map-county-mode .town-node text{fill:rgba(200,180,140,0.45);}
+body.map-county-mode .map-legend{border-color:rgba(200,180,140,0.2);color:rgba(200,180,140,0.5);}
+body.map-county-mode .map-legend .leg-dot{border:1px solid rgba(200,180,140,0.2);}
+body.map-county-mode .map-res-bar{border-bottom-color:rgba(200,180,140,0.15);color:rgba(200,180,140,0.45);}
+body.map-county-mode .map-res-bar span{color:rgba(220,200,160,0.7);}
+body.map-county-mode .loc-node circle.outer{filter:none;}
+body.map-county-mode .road{stroke:rgba(200,180,140,0.2);stroke-dasharray:4,4;}
+body.map-county-mode .road.patrolled{stroke:var(--blood);}
+
 /* FACTIONS */
 .faction-list{display:grid;grid-template-columns:1fr;gap:12px;}
 .faction-card{background:#000;border:1px solid var(--gd);padding:16px 18px;}
@@ -562,7 +583,7 @@ body.map-labels-hidden .loc-node text,body.map-labels-hidden .town-node text{dis
 .chars-met-badge{font-size:.48rem;padding:2px 7px;letter-spacing:1px;border:1px solid;margin-left:auto;}
 .chars-met{color:var(--g);border-color:var(--g);}
 .chars-unmet{color:var(--wgdd);border-color:var(--wgdd);}
-.chars-cards{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+.chars-cards{display:grid;grid-template-columns:1fr;gap:4px;}
 .char-card{background:#000;border:1px solid var(--gd);padding:9px 11px;}
 .char-card.char-unknown{opacity:.42;border-style:dashed;}
 .char-card.char-leader{border-color:var(--a);border-style:solid;}

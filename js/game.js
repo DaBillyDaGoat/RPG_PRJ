@@ -118,6 +118,7 @@ const SETTINGS_DEFS=[
   {key:'amishClock',   label:'AMISH CLOCK',        opts:['visible','hidden'],             default:'visible'},
   {key:'mapLabels',    label:'MAP LABELS',         opts:['show','hide'],                  default:'show'},
   {key:'textSize',     label:'TEXT SIZE',          opts:['small','normal','large'],       default:'normal'},
+  {key:'mapStyle',     label:'MAP STYLE',          opts:['classic','county'],             default:'classic'},
 ];
 let GAME_SETTINGS={};
 function loadSettings(){
@@ -142,6 +143,8 @@ function applySettings(){
   else if(GAME_SETTINGS.textSize==='large') document.body.classList.add('txt-lg');
   // Map labels
   document.body.classList.toggle('map-labels-hidden',GAME_SETTINGS.mapLabels==='hide');
+  // Map style
+  rebuildMapLayout();
 }
 function renderSettingsTab(){
   const el=document.getElementById('stab-settings');
@@ -315,8 +318,8 @@ function getRelState(f){
 
 // SKILLS — 5 merged trees: Force, Wit, Influence, Shadow, Grit
 const SKILLS={
-  force:{name:'FORCE',icon:'&#9876;',
-    desc:'Fighting, intimidation, troop command. Brutality made useful.',
+  force:{name:'FORCE',icon:'💪',
+    desc:'Raw power and military authority. When diplomacy fails, this doesn\'t.',
     perks:[
       {lvl:3, t:'DIRTY FIGHTER: Always get one extra brutal option in physical confrontations.'},
       {lvl:6, t:'TURNPIKE VETERAN: Outnumbered 2:1? You still see real fight options.'},
@@ -330,8 +333,8 @@ const SKILLS={
       {lvl:38,t:'PINE BARRENS LEGEND: Hostile factions lose 5 relation with each other just from knowing you exist.'},
     ],xp:0,ap:0,forkChoice:null},
 
-  wit:{name:'WIT',icon:'&#128161;',
-    desc:'Cunning, trade, engineering. Outsmarting opponents, running deals, building things.',
+  wit:{name:'WIT',icon:'🧠',
+    desc:'Outsmarting everyone in the room, and profiting from it.',
     perks:[
       {lvl:3, t:'ANGLE FINDER: +1 trade option in every economic interaction.'},
       {lvl:6, t:'SCRAP ECONOMIST: Salvage yields 15% more supplies.'},
@@ -345,8 +348,8 @@ const SKILLS={
       {lvl:38,t:'MASTER OPERATOR: Your faction supply income doubles.'},
     ],xp:0,ap:0,forkChoice:null},
 
-  influence:{name:'INFLUENCE',icon:'&#127931;',
-    desc:'Charisma, diplomacy, leadership. Make people follow you, trust you, or not shoot first.',
+  influence:{name:'INFLUENCE',icon:'👑',
+    desc:'Making people follow you, trust you, or at least not shoot first.',
     perks:[
       {lvl:3, t:'JERSEY CHARM: Every faction conversation starts with one bonus response option.'},
       {lvl:6, t:'READ THE ROOM: See a faction leader mood before committing to an approach.'},
@@ -360,8 +363,8 @@ const SKILLS={
       {lvl:38,t:'ARCHITECT OF THE NEW JERSEY: Allied faction troops are yours to request.'},
     ],xp:0,ap:0,forkChoice:null},
 
-  shadow:{name:'SHADOW',icon:'&#128373;',
-    desc:'Stealth, subterfuge, information warfare. Operating between what people know and what is actually happening.',
+  shadow:{name:'SHADOW',icon:'🌑',
+    desc:'Operating in the space between what people know and what\'s actually happening.',
     perks:[
       {lvl:3, t:'GRAY MAN: One free non-combat approach per session in hostile territory.'},
       {lvl:6, t:'COVER IDENTITY: Maintain a secondary persona with one faction.'},
@@ -375,8 +378,8 @@ const SKILLS={
       {lvl:38,t:'BLIND SPOT: Even fully hostile factions treat you as low priority. They will regret this.'},
     ],xp:0,ap:0,forkChoice:null},
 
-  grit:{name:'GRIT',icon:'&#9935;',
-    desc:'Survival, endurance, scavenging. The stubborn Jersey refusal to die.',
+  grit:{name:'GRIT',icon:'🔥',
+    desc:'The stubborn Jersey refusal to die, no matter the odds.',
     perks:[
       {lvl:3, t:'JERSEY STUBBORN: When HP drops below 25, get one extra survival option that was not there before.'},
       {lvl:6, t:'WASTELAND PALATE: Survive in irradiated terrain at half the normal supply cost.'},
@@ -574,9 +577,42 @@ const LOCATIONS={
   dunellen:{name:'Dunellen',shortName:'DUNLN',ctrl:'neutral',faction:null,secondary:true,svgX:264,svgY:192,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Abandoned town','One lit house','No one comes back'],flavor:'An abandoned town where one house always has its lights on. Everyone who goes to investigate never reports back.',randomEncounter:'The player sees the lit house in Dunellen. The light is on. The door is slightly open. This is a random encounter \u2014 generate a tense, atmospheric scene approaching the house. Make the outcome genuinely dangerous. Provide 3 choices.'},
   manville:{name:'Manville',shortName:'MNVLL',ctrl:'neutral',faction:null,secondary:true,svgX:238,svgY:210,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Roadside shrine to 2041','Offerings from miles around','Absolute silence on the subject'],flavor:"A roadside shrine to an unnamed event from 2041 that locals from miles around leave offerings at \u2014 but nobody will discuss what happened.",randomEncounter:"The player finds the Manville shrine. Fresh offerings. A local is placing something at the base and won't meet the player's eyes. This is a random encounter \u2014 generate a scene where the player tries to learn what happened in 2041. The locals will not say. Provide 3 choices."},
   netcong:{name:'Netcong',shortName:'NTCNG',ctrl:'neutral',faction:null,secondary:true,svgX:224,svgY:124,travelDays:2,travelSupplies:8,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Crossroads bulletin board','Always current regional intel','No one has seen the updater'],flavor:'A crossroads bulletin board with always-accurate, current regional intelligence. Nobody has ever seen who updates it.',randomEncounter:"The player reads the Netcong bulletin board. There's a note addressed to them by name \u2014 dated today. This is a random encounter \u2014 generate a tense, mysterious scene around the board. Provide 3 choices."},
+  // ── NEW COUNTY TOWNS ────────────────────────────────────────────────────────
+  newton:{name:'Newton',shortName:'NWTN',ctrl:'neutral',faction:null,secondary:true,svgX:170,svgY:72,travelDays:3,travelSupplies:12,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Mountain trading post','Fur trapper community','High-altitude crops'],flavor:'A mountain trading post where Sussex County trappers barter pelts and rumors. Cold up here. Quiet. They like it that way.',randomEncounter:'The player arrives in Newton. A trapper caravan has come down from High Point with something unusual to sell. This is a random encounter \u2014 generate a scene around the trade. Provide 3 choices.'},
+  paterson:{name:'Paterson',shortName:'PTRN',ctrl:'neutral',faction:null,secondary:true,svgX:290,svgY:100,travelDays:2,travelSupplies:8,travelTroopRisk:true,raidRisk:3,supplyPerTurn:0,features:['Great Falls hydropower','Factory ruins','Three rival gangs'],flavor:'The Great Falls still thunder. Three gangs fight over the hydroelectric plant that somehow still works. Paterson is loud, violent, and electrified.',randomEncounter:'The player enters Paterson. Two of the three gangs are in a standoff at the Falls. The power grid flickers. This is a random encounter \u2014 generate a tense scene. Provide 3 choices.'},
+  hackensack:{name:'Hackensack',shortName:'HCKNSK',ctrl:'neutral',faction:null,secondary:true,svgX:340,svgY:90,travelDays:2,travelSupplies:7,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Suburban fortress','HOA militia','Preserved pre-collapse homes'],flavor:'The homeowners association survived the apocalypse and became a militia. White picket fences reinforced with steel. Lawns still mowed. Trespassers prosecuted.',randomEncounter:'The player approaches Hackensack. An HOA patrol in matching uniforms demands a residency permit. This is a random encounter \u2014 generate a scene with the HOA militia. Provide 3 choices.'},
+  belvidere:{name:'Belvidere',shortName:'BLVDR',ctrl:'neutral',faction:null,secondary:true,svgX:140,svgY:115,travelDays:2,travelSupplies:10,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Delaware River crossing','PA border watch','Bridge toll operation'],flavor:'The last bridge over the Delaware that still holds weight. Belvidere collects tolls and watches the Pennsylvania side with growing unease.',randomEncounter:'The player reaches Belvidere. The bridge watchers have spotted movement on the PA side \u2014 black-hat silhouettes. This is a random encounter \u2014 generate a tense border scene. Provide 3 choices.'},
+  morristown:{name:'Morristown',shortName:'MRTWN',ctrl:'neutral',faction:null,secondary:true,svgX:255,svgY:120,travelDays:2,travelSupplies:8,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Washington\'s Winter HQ','Historical preservation cult','Weapons cache in museum'],flavor:'A preservation cult maintains the Revolutionary War sites as if Washington might return. The museum is their armory. History is a religion here.',randomEncounter:'The player visits Morristown. The Preservationists are holding a ceremony at Washington\'s Headquarters. They notice the player watching. This is a random encounter \u2014 generate a scene with the history cult. Provide 3 choices.'},
+  jersey_city:{name:'Jersey City',shortName:'JRCTY',ctrl:'neutral',faction:null,secondary:true,svgX:370,svgY:130,travelDays:2,travelSupplies:8,travelTroopRisk:true,raidRisk:3,supplyPerTurn:0,features:['NYC skyline view','Warlord border zone','Black market corridor'],flavor:'The last stop before the New York warlord state. Nobody crosses the Hudson anymore. Jersey City survives by being too useful to destroy \u2014 the black market corridor.',randomEncounter:'The player enters Jersey City. A NYC warlord envoy has crossed the Hudson in an armored barge. Nobody expected this. This is a random encounter \u2014 generate a tense diplomatic scene. Provide 3 choices.'},
+  flemington:{name:'Flemington',shortName:'FLMTN',ctrl:'neutral',faction:null,secondary:true,svgX:165,svgY:210,travelDays:2,travelSupplies:7,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Courthouse still in use','Frontier justice','Weekly trials'],flavor:'The courthouse still holds trials every Thursday. Judge Marta Cole runs frontier justice \u2014 fair, fast, and final. Appeals are not a concept she entertains.',randomEncounter:'The player arrives on trial day in Flemington. Judge Cole is sentencing a scavenger for border theft. She spots the player. This is a random encounter \u2014 generate a courtroom scene. Provide 3 choices.'},
+  somerville:{name:'Somerville',shortName:'SMRVL',ctrl:'neutral',faction:null,secondary:true,svgX:225,svgY:195,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Trading crossroads','Weekly market','Information hub'],flavor:'Sits at the crossroads where three old highways meet. The weekly market draws traders from every faction. Information moves here faster than anywhere in NJ.',randomEncounter:'The player arrives at the Somerville market. A trader is selling intelligence about an upcoming faction move. The price is steep. This is a random encounter \u2014 generate a market scene. Provide 3 choices.'},
+  new_brunswick:{name:'New Brunswick',shortName:'NWBRK',ctrl:'neutral',faction:null,secondary:true,svgX:275,svgY:205,travelDays:1,travelSupplies:6,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Rutgers University ruins','Library archives','Student commune'],flavor:'The Rutgers campus is a commune now. They still hold classes \u2014 practical ones. Engineering, agriculture, combat medicine. The library is the most valuable building in central Jersey.',randomEncounter:'The player enters the Rutgers ruins. The commune is debating whether to share their medical knowledge with outsiders. This is a random encounter \u2014 generate a scene at the old university. Provide 3 choices.'},
+  freehold:{name:'Freehold',shortName:'FRHOLD',ctrl:'neutral',faction:null,secondary:true,svgX:328,svgY:260,travelDays:2,travelSupplies:9,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Horse cavalry','Open grassland','Mounted patrols'],flavor:'Horse country. The Freehold cavalry are the fastest mounted force in NJ \u2014 descendants of equestrian families who bred through the collapse. They hire out as mercenaries.',randomEncounter:'The player encounters a Freehold cavalry patrol. The captain offers a deal \u2014 service for protection. This is a random encounter \u2014 generate a scene with the mounted riders. Provide 3 choices.'},
+  mount_holly:{name:'Mount Holly',shortName:'MTHLY',ctrl:'neutral',faction:null,secondary:true,svgX:195,svgY:345,travelDays:2,travelSupplies:8,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Burlington county seat','Agricultural hub','Grain storage'],flavor:'The old Burlington County seat. Mount Holly sits on the richest farmland south of Trenton. The grain silos are the real power here.',randomEncounter:'The player arrives in Mount Holly. The grain council is meeting about a supply dispute with a neighboring settlement. This is a random encounter \u2014 generate a scene about the food chain. Provide 3 choices.'},
+  toms_river:{name:'Toms River',shortName:'TMSRV',ctrl:'neutral',faction:null,secondary:true,svgX:338,svgY:355,travelDays:2,travelSupplies:10,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Coastal fishing fleet','Boat repair','River mouth trade'],flavor:'A fishing settlement at the river mouth. Toms River builds boats and catches what the ocean gives. Pragmatic, salt-weathered, suspicious of inland politics.',randomEncounter:'The player arrives at the docks. A fishing crew has pulled something from the ocean floor that is not fish. This is a random encounter \u2014 generate a scene at the docks. Provide 3 choices.'},
+  camden:{name:'Camden',shortName:'CMDN',ctrl:'neutral',faction:null,secondary:true,svgX:148,svgY:370,travelDays:3,travelSupplies:14,travelTroopRisk:true,raidRisk:4,supplyPerTurn:0,features:['Philly border zone','Extremely dangerous','Scavenger gangs'],flavor:'Directly across the Delaware from Philadelphia. Camden makes the Pine Barrens look inviting. The scavenger gangs here are feral. Nobody comes to Camden on purpose.',randomEncounter:'The player has entered Camden. This was a mistake. Three scavenger crews have noticed them simultaneously. This is a random encounter \u2014 generate a very dangerous scene. Combat is likely. Provide 3 choices.'},
+  woodbury:{name:'Woodbury',shortName:'WDBRY',ctrl:'neutral',faction:null,secondary:true,svgX:135,svgY:395,travelDays:2,travelSupplies:9,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Quiet survivor town','Underground bunkers','Radio station'],flavor:'A quiet town that survived by digging in. The bunker network is extensive. They run a radio station that broadcasts static and coded messages nobody has cracked.',randomEncounter:'The player arrives in Woodbury. The radio station is broadcasting something different today \u2014 a voice, not static. Residents are gathered around speakers. This is a random encounter \u2014 generate a scene. Provide 3 choices.'},
+  salem:{name:'Salem',shortName:'SALEM',ctrl:'neutral',faction:null,secondary:true,svgX:80,svgY:435,travelDays:3,travelSupplies:14,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Ancient community','Oak tree older than America','Sealed archives'],flavor:'Salem has been here since 1675. The oak tree is older than the United States was. The community is insular, strange, and deeply private about their sealed archives.',randomEncounter:'The player enters Salem. The elders are conducting a ceremony around the ancient oak. They stop when they see you. This is a random encounter \u2014 generate an unsettling scene. Provide 3 choices.'},
+  bridgeton:{name:'Bridgeton',shortName:'BRGTN',ctrl:'neutral',faction:null,secondary:true,svgX:120,svgY:465,travelDays:3,travelSupplies:12,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Glass factory ruins','Master crafters','Artisan trade'],flavor:'The glass factories still run \u2014 small scale, handblown. Bridgeton crafters make the finest glass in the wasteland. Lenses, bottles, weapon scopes. Everything has a price.',randomEncounter:'The player visits Bridgeton. A master glassblower has created something unusual \u2014 a device, not a vessel. They want to show you. This is a random encounter \u2014 generate a scene in the glass works. Provide 3 choices.'},
+  mays_landing:{name:'Mays Landing',shortName:'MYSLND',ctrl:'neutral',faction:null,secondary:true,svgX:235,svgY:445,travelDays:2,travelSupplies:10,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['River junction','Inland port','Halfway house to AC'],flavor:'The Great Egg Harbor River runs through here. Mays Landing is the last stop before Atlantic City \u2014 a waypoint where travelers rest, resupply, and reconsider.',randomEncounter:'The player stops in Mays Landing. A group of Atlantic City casino refugees is warning people not to go south. This is a random encounter \u2014 generate a scene at the waypoint. Provide 3 choices.'},
   // ── ATLANTIC CITY ─────────────────────────────────────────────────────────
   atlantic_city:{name:'Atlantic City Casino',shortName:'ATLCT',ctrl:'neutral',faction:'subnet',svgX:268,svgY:475,travelDays:3,travelSupplies:14,travelTroopRisk:false,raidRisk:1,supplyPerTurn:4,casinoEntry:true,features:['The Boardwalk Grand Casino','Subnet-operated autonomous staff','Neutral ground \u2014 all weapons checked'],flavor:"The only fully-lit building on the Jersey Shore. Subnet runs it autonomously \u2014 the staff were hired through intermediaries and have never met their employer. The chips are real gold. The drinks are real. The odds are... managed."},
 };
+// County map alternate coordinates for all locations
+const COUNTY_COORDS={
+  newark:{cX:320,cY:120},mountainside:{cX:280,cY:148},tcnj:{cX:145,cY:260},trenton:{cX:135,cY:270},
+  mcguire:{cX:230,cY:330},lbi:{cX:370,cY:355},meridian_biolabs:{cX:85,cY:125},pine_barrens:{cX:265,cY:400},
+  atlantic_city:{cX:315,cY:450},cape_may:{cX:178,cY:535},
+  hoboken:{cX:352,cY:108},port_elizabeth:{cX:315,cY:145},newark_airport:{cX:330,cY:130},
+  middlesex:{cX:270,cY:195},asbury_ruins:{cX:372,cY:238},bound_brook:{cX:225,cY:183},
+  metuchen:{cX:290,cY:198},dunellen:{cX:255,cY:190},manville:{cX:210,cY:192},netcong:{cX:180,cY:95},
+  newton:{cX:140,cY:58},paterson:{cX:270,cY:92},hackensack:{cX:320,cY:82},belvidere:{cX:80,cY:118},
+  morristown:{cX:232,cY:120},jersey_city:{cX:350,cY:118},flemington:{cX:128,cY:200},somerville:{cX:200,cY:185},
+  new_brunswick:{cX:265,cY:208},freehold:{cX:305,cY:252},mount_holly:{cX:185,cY:340},toms_river:{cX:330,cY:350},
+  camden:{cX:108,cY:360},woodbury:{cX:98,cY:388},salem:{cX:48,cY:430},bridgeton:{cX:100,cY:468},
+  mays_landing:{cX:220,cY:445}
+};
+Object.entries(COUNTY_COORDS).forEach(([k,v])=>{if(LOCATIONS[k])Object.assign(LOCATIONS[k],v);});
 // Passive gold income per controlled location per turn
 const LOC_GOLD_PER_TURN={
   newark:4, mountainside:3, tcnj:2, trenton:4, mcguire:3, lbi:5,
@@ -613,7 +649,7 @@ const state={
   factionName:'',ownFaction:false,
   history:[],currentChoices:[],isLoading:false,
   currentLocation:'tcnj',
-  days:0,supplies:50,troops:0,gold:0,
+  days:0,supplies:50,troops:0,gold:0,deathRiskMod:0,
   garrison:{},           // locId -> troop count stationed there
   selectedLocation:null,activeTab:'story',
   activeFactionDlg:null,dlgHistory:[],
@@ -623,14 +659,14 @@ const state={
   metFactions:[],   // faction IDs where player has opened dialogue (reveals their NPCs)
   sessionId:'',     // unique session ID for dev log grouping
 };
-let skillAllocRemaining=5;
+let skillAllocRemaining=10;
 const skillAlloc={force:0,wit:0,influence:0,shadow:0,grit:0};
 let lastRelChangeFid=null;
 
 // TABS
 function switchTab(tab){
   state.activeTab=tab;
-  ['story','map','factions','skills','tasks','chars'].forEach(t=>{
+  ['story','map','factions','skills','tasks'].forEach(t=>{
     const v=document.getElementById(t+'-view');
     if(v) v.style.display=t===tab?'block':'none';
     const tb=document.getElementById('tab-'+t);
@@ -641,7 +677,6 @@ function switchTab(tab){
   if(tab==='factions'){renderFactions();}
   if(tab==='skills'){renderSkills();}
   if(tab==='tasks'){renderTasks();}
-  if(tab==='chars'){renderChars();}
 }
 
 // SETUP
@@ -713,7 +748,7 @@ function beginGame(){
   state.apiKey=apiKey; state.factionName=fName;
   state.character={name,class:cc.dataset.class};
   state.hp=100; state.maxHp=100; state.turn=1; state.history=[];
-  state.days=0; state.supplies=50; state.troops=0; state.gold=0; state.garrison={};
+  state.days=0; state.supplies=50; state.troops=0; state.gold=0; state.garrison={}; state.deathRiskMod=0;
   state.ownFaction=false; state.originFaction=null; state.classPerk='';
   // Apply skill point allocation from setup screen
   const STAT_TO_SKILL={brutality:'force',cunning:'wit',charisma:'influence',depravity:'shadow'};
@@ -751,7 +786,7 @@ function beginGame(){
   }
   // Reset skill alloc for next new game
   Object.keys(skillAlloc).forEach(k=>skillAlloc[k]=0);
-  skillAllocRemaining=5;
+  skillAllocRemaining=10;
   localStorage.setItem(API_KEY,apiKey);
   document.getElementById('panel-name').textContent=name;
   document.getElementById('panel-class').textContent=CLASSES[cc.dataset.class]?.name||cc.dataset.class;
@@ -769,7 +804,7 @@ function beginGame(){
 const _el={};
 function _initElCache(){
   ['hp-bar','hp-text','res-days','res-supplies','res-troops','res-gold','res-territories',
-   'map-day','map-sup','map-trp','map-gold','panel-loc','res-amish','amish-chip','turn-counter',
+   'map-day','map-sup','map-trp','map-gold','panel-loc','res-amish','amish-chip','res-travel','travel-chip','turn-counter',
    'game-error','story-text','choices-container','open-wrap','turn-delta-bar',
    'load-overlay','load-msg','load-sub','load-ico','load-prog','load-turn-lbl']
   .forEach(id=>{_el[id]=document.getElementById(id);});
@@ -799,6 +834,14 @@ function updateRes(){
     _el['amish-chip'].classList.remove('amish-warn','amish-critical');
     if(daysLeft<=10) _el['amish-chip'].classList.add('amish-critical');
     else if(daysLeft<=30) _el['amish-chip'].classList.add('amish-warn');
+  }
+  // Travel method + fuel indicator
+  const tm=TRAVEL_METHODS[state.travelMethod||'foot'];
+  if(_el['res-travel']){
+    _el['res-travel'].textContent=tm.fuelCost>0?tm.label+' \u26FD'+tm.fuelCost+'g':tm.label;
+  }
+  if(_el['travel-chip']){
+    _el['travel-chip'].classList.toggle('travel-fuel',tm.fuelCost>0);
   }
 }
 
@@ -1068,56 +1111,6 @@ function renderTasks(){
   el.appendChild(terrGrid);
 }
 
-// CHARACTERS RENDER
-function renderChars(){
-  const el=document.getElementById('chars-list'); if(!el)return;
-  el.innerHTML='';
-  Object.values(FACTIONS).forEach(f=>{
-    const met=state.metFactions.includes(f.id);
-    const rel=getRelState(f);
-    const fcolor=FACTION_CLASSES[f.id]?.color||'var(--a)';
-    const sec=document.createElement('div'); sec.className='chars-section';
-    let charCards='';
-    if(f.id==='subnet'){
-      charCards=`<div class="char-card ${met?'':'char-unknown'}">
-        <div class="char-name">THE ARCHITECT</div>
-        <div class="char-role">[ RECORDS CLASSIFIED ]</div>
-        <div class="char-faction" style="color:${fcolor}">${f.name}</div>
-        ${met?'<div class="char-voice">Signal detected. Identity unverifiable. Watching.</div>':''}
-      </div>`;
-    } else if(f.characters&&f.characters.length){
-      // Leader always visible with status
-      charCards+=`<div class="char-card char-leader">
-        <div class="char-name">${f.leader}</div>
-        <div class="char-role">${f.leaderTitle||'Leader'}</div>
-        <div class="char-faction" style="color:${fcolor}">${f.name}</div>
-        <div class="char-rel" style="color:${rel.color}">${rel.label} &bull; ${f.relationScore}/100</div>
-      </div>`;
-      f.characters.forEach(c=>{
-        if(met){
-          charCards+=`<div class="char-card">
-            <div class="char-name">${c.name}</div>
-            <div class="char-role">${c.role}</div>
-            <div class="char-faction" style="color:${fcolor}">${f.name}</div>
-            <div class="char-voice">"${c.voice.length>90?c.voice.substring(0,90)+'...':c.voice}"</div>
-          </div>`;
-        } else {
-          charCards+=`<div class="char-card char-unknown">
-            <div class="char-name">???</div>
-            <div class="char-role">[ INTEL LOCKED &mdash; open dialogue to reveal ]</div>
-            <div class="char-faction" style="color:${fcolor}">${f.name}</div>
-          </div>`;
-        }
-      });
-    }
-    sec.innerHTML=`<div class="chars-faction-hdr">${f.icon} ${f.name}
-      <span class="chars-rel-badge" style="color:${rel.color};border-color:${rel.color}">${rel.label}</span>
-      <span class="chars-met-badge ${met?'chars-met':'chars-unmet'}">${met?'CONTACTED':'UNKNOWN'}</span></div>
-      <div class="chars-cards">${charCards}</div>`;
-    el.appendChild(sec);
-  });
-}
-
 // DIALOGUE
 function openDialogue(fid){
   const f=FACTIONS[fid]; if(!f)return;
@@ -1139,7 +1132,7 @@ function openDialogue(fid){
   relEl.textContent=rel.label; relEl.style.color=rel.color; relEl.style.borderColor=rel.color;
   const dlgWrap=document.querySelector('#dialogue-screen .dlg-wrap');
   if(dlgWrap) dlgWrap.style.borderColor=f.color||'';
-  ['story','map','factions','skills','tasks','chars'].forEach(t=>{const v=document.getElementById(t+'-view');if(v)v.style.display='none';});
+  ['story','map','factions','skills','tasks'].forEach(t=>{const v=document.getElementById(t+'-view');if(v)v.style.display='none';});
   document.getElementById('dialogue-screen').style.display='block';
   document.getElementById('dlg-choices').innerHTML='';
   document.getElementById('dlg-text').textContent='...';
@@ -1374,6 +1367,7 @@ TROOP CONTEXT: ${state.troops} mobile troops with player. More troops = brutal c
 CONSEQUENCE RULE: The world does not bend to the player. Factions resist. No choice is ever fully safe.
 COMBAT DAMAGE (hp_change negative): Graze: -5 to -12 | Standard fight: -12 to -22 | Outnumbered/ambushed: -22 to -35 | Overwhelmed: -35 to -50 | Use -99 for obvious death trap at low HP. When player troops=0 vs hostile: -20 to -35. When player hp<=25 in combat: -25 to -40. Fatal outcomes are intentional.
 LOOT RULE: Combat wins = include positive resource_change.gold (5–25 based on enemy strength/faction wealth). Robberies, raids, and ambushes against player = negative resource_change.gold. Trade deals and briberies = also reflected in resource_change.gold. Scavenging scenes may include small supplies/gold finds.
+NARRATIVE TRAVEL RULE: When the player's chosen action PHYSICALLY MOVES them to a different named location, you MUST: (1) Set location_change.location to the destination key (newark, mountainside, tcnj, trenton, mcguire, lbi, meridian_biolabs, cape_may, pine_barrens, atlantic_city, hoboken, port_elizabeth, newark_airport, middlesex, asbury_ruins, bound_brook, metuchen, dunellen, manville, netcong). (2) Set location_change.ctrl to whoever CURRENTLY controls that location — check the Map line above. Do NOT change ctrl just because the player visited. (3) Deduct resource_change.supplies -3 to -8 as travel cost. NEVER narrate the player arriving somewhere new without setting location_change. If they stay put, leave location_change.location as "none".
 VICTORY: Win by (A) controlling ALL 10 primary locations, OR (B) every faction resolved — allied (rel 66+) or eliminated (rel 0 + home captured). Any mix of ally/destroy works. Secondary towns (small diamonds on map) do NOT count for victory.
 WRITING FORMAT:
 - *italics* for actions: *smoke pours from the factory stack.* *He doesn't look up.*
@@ -1591,7 +1585,7 @@ function adjustCombatDamage(rawDmg){
   const troopMult=troops===0?1.6:troops<=2?1.3:troops<=5?1.0:troops<=10?0.80:0.65;
   const hpMult=hpPct<0.20?1.5:hpPct<0.40?1.25:1.0;
   const adjusted=Math.round(rawDmg*troopMult*hpMult);
-  if(state.hp<=15&&adjusted<=-12&&Math.random()<0.40) return -(state.hp+5);
+  if(state.hp<=20&&adjusted<=-12&&Math.random()<(0.40+(state.deathRiskMod||0))) return -(state.hp+5);
   if(troopMult>=1.6) showNotif('NO COVER \u2014 EXPOSED');
   else if(troopMult>=1.3) showNotif('THIN ESCORT');
   if(hpMult>=1.5) showNotif('CRITICAL STATE');
@@ -1600,16 +1594,53 @@ function adjustCombatDamage(rawDmg){
 }
 
 function applyAll(res,ch){
-  if(res.hp_change){const dmg=adjustCombatDamage(res.hp_change);updateHp(state.hp+dmg);showNotif(dmg<0?'INFLUENCE '+dmg:'INFLUENCE +'+dmg);}
+  if(res.hp_change){const dmg=adjustCombatDamage(res.hp_change);updateHp(state.hp+dmg);showNotif(dmg<0?'INFLUENCE '+dmg:'INFLUENCE +'+dmg);if(dmg<0){state.deathRiskMod=(state.deathRiskMod||0)+0.05;showNotif('\u2620 DEATH RISK \u2191');}}
   if(res.resource_change){
     if(res.resource_change.supplies){state.supplies=Math.max(0,state.supplies+res.resource_change.supplies);showNotif('SUPPLIES '+(res.resource_change.supplies>0?'+':'')+res.resource_change.supplies);}
     if(res.resource_change.troops){state.troops=Math.max(0,state.troops+res.resource_change.troops);showNotif('TROOPS '+(res.resource_change.troops>0?'+':'')+res.resource_change.troops);}
     if(res.resource_change.gold){state.gold=Math.max(0,state.gold+res.resource_change.gold);showNotif('GOLD '+(res.resource_change.gold>0?'+':'')+parseFloat(res.resource_change.gold).toFixed(1)+'g');}
   }
   if(res.location_change&&res.location_change.location!=='none'&&LOCATIONS[res.location_change.location]){
-    LOCATIONS[res.location_change.location].ctrl=res.location_change.ctrl;
-    showNotif(LOCATIONS[res.location_change.location].name+' -> '+res.location_change.ctrl.toUpperCase());
-    state.currentLocation=res.location_change.location;
+    const dest=LOCATIONS[res.location_change.location];
+    const destId=res.location_change.location;
+    // Only update territory control if AI explicitly changed it from current
+    if(res.location_change.ctrl&&res.location_change.ctrl!==dest.ctrl){
+      dest.ctrl=res.location_change.ctrl;
+      showNotif(dest.name+' \u2192 '+res.location_change.ctrl.toUpperCase());
+    }
+    // Update player position if actually moving
+    if(destId!==state.currentLocation){
+      state.currentLocation=destId;
+      if(!state.visitedLocations) state.visitedLocations=[];
+      if(!state.visitedLocations.includes(destId)) state.visitedLocations.push(destId);
+      document.getElementById('panel-loc').textContent=dest.shortName;
+      showNotif('ARRIVED \u2192 '+dest.name.toUpperCase());
+    }
+  } else if(res.story){
+    // Safety net: detect narrative travel when AI omitted location_change
+    const storyLow=(res.story||'').toLowerCase();
+    const curLoc=state.currentLocation;
+    let detected=null;
+    for(const [k,loc] of Object.entries(LOCATIONS)){
+      if(k===curLoc) continue;
+      const nm=loc.name.toLowerCase();
+      const idx=storyLow.indexOf(nm);
+      if(idx>-1){
+        const before=storyLow.slice(Math.max(0,idx-80),idx);
+        if(/\b(arriv|reach|enter|pull.into|make.it.to|ride.into|walk.into|step.into|journey|travel.to|head.to|roll.into|cross.into|set.out.for)\w*/i.test(before)){
+          if(!detected){detected={id:k,loc:loc};}
+          else{detected=null;break;} // multiple matches = ambiguous, skip
+        }
+      }
+    }
+    if(detected){
+      state.currentLocation=detected.id;
+      if(!state.visitedLocations) state.visitedLocations=[];
+      if(!state.visitedLocations.includes(detected.id)) state.visitedLocations.push(detected.id);
+      state.supplies=Math.max(0,state.supplies-4);
+      document.getElementById('panel-loc').textContent=detected.loc.shortName;
+      showNotif('TRAVELED \u2192 '+detected.loc.name.toUpperCase());
+    }
   }
   if(res.faction_rel_change&&res.faction_rel_change.faction!=='none'&&FACTIONS[res.faction_rel_change.faction]){
     FACTIONS[res.faction_rel_change.faction].relationScore=Math.max(0,Math.min(100,FACTIONS[res.faction_rel_change.faction].relationScore+(res.faction_rel_change.delta||0)));
@@ -1638,7 +1669,6 @@ function applyAll(res,ch){
   const t=state.activeTab;
   if(t==='factions') renderFactions();
   if(t==='tasks') renderTasks();
-  if(t==='chars') renderChars();
 }
 
 function buildDeltaBar(res){
@@ -1780,6 +1810,38 @@ function showErr(el,msg){el.textContent=msg;el.style.display='block';}
 function showNotif(msg){const n=document.createElement('div');n.className='notif';n.textContent=msg;document.body.appendChild(n);setTimeout(()=>n.remove(),3000);}
 
 // MAP
+function rebuildMapLayout(){
+  const isCounty=GAME_SETTINGS.mapStyle==='county';
+  const bgC=document.getElementById('map-bg-classic');
+  const bgR=document.getElementById('map-bg-county');
+  const rdC=document.getElementById('map-roads-classic');
+  const rdR=document.getElementById('map-roads-county');
+  if(bgC) bgC.style.display=isCounty?'none':'';
+  if(bgR) bgR.style.display=isCounty?'':'none';
+  if(rdC) rdC.style.display=isCounty?'none':'';
+  if(rdR) rdR.style.display=isCounty?'':'none';
+  // Reposition all nodes
+  Object.entries(LOCATIONS).forEach(([id,loc])=>{
+    const node=document.getElementById('node-'+id); if(!node)return;
+    const x=isCounty?(loc.cX||loc.svgX):loc.svgX;
+    const y=isCounty?(loc.cY||loc.svgY):loc.svgY;
+    node.setAttribute('transform','translate('+x+','+y+')');
+  });
+  // Build county roads dynamically
+  if(isCounty&&rdR&&!rdR.hasChildNodes()){
+    Object.entries(ROAD_CONNECTIONS).forEach(([roadId,[a,b]])=>{
+      const la=LOCATIONS[a],lb=LOCATIONS[b]; if(!la||!lb)return;
+      const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.id=roadId+'-county';
+      line.setAttribute('x1',la.cX||la.svgX); line.setAttribute('y1',la.cY||la.svgY);
+      line.setAttribute('x2',lb.cX||lb.svgX); line.setAttribute('y2',lb.cY||lb.svgY);
+      line.setAttribute('class','road county-road');
+      rdR.appendChild(line);
+    });
+  }
+  document.body.classList.toggle('map-county-mode',isCounty);
+  refreshMap();
+}
 function refreshMap(){
   Object.entries(LOCATIONS).forEach(([id,loc])=>{
     const node=document.getElementById('node-'+id); if(!node)return;
@@ -1812,10 +1874,16 @@ function refreshMap(){
 let patrolAnimating=false;
 function animatePatrols(){
   if(!patrolAnimating){patrolAnimating=true;}
+  const ic=GAME_SETTINGS.mapStyle==='county';
+  const nk=LOCATIONS.newark,tc=LOCATIONS.tcnj,mc=LOCATIONS.mcguire,tr=LOCATIONS.trenton;
+  const nkx=ic?(nk.cX||nk.svgX):nk.svgX,nky=ic?(nk.cY||nk.svgY):nk.svgY;
+  const tcx=ic?(tc.cX||tc.svgX):tc.svgX,tcy=ic?(tc.cY||tc.svgY):tc.svgY;
+  const mcx=ic?(mc.cX||mc.svgX):mc.svgX,mcy=ic?(mc.cY||mc.svgY):mc.svgY;
+  const trx=ic?(tr.cX||tr.svgX):tr.svgX,try_=ic?(tr.cY||tr.svgY):tr.svgY;
   const p1=document.getElementById('patrol1');
-  if(p1){const t=(Date.now()/4500)%1;p1.setAttribute('cx',(332+(187-332)*t).toFixed(1));p1.setAttribute('cy',(149+(259-149)*t).toFixed(1));}
+  if(p1){const t=(Date.now()/4500)%1;p1.setAttribute('cx',(nkx+(tcx-nkx)*t).toFixed(1));p1.setAttribute('cy',(nky+(tcy-nky)*t).toFixed(1));}
   const p2=document.getElementById('patrol2');
-  if(p2){const t=(Date.now()/5500)%1;p2.setAttribute('cx',(231+(196-231)*t).toFixed(1));p2.setAttribute('cy',(321+(273-321)*t).toFixed(1));}
+  if(p2){const t=(Date.now()/5500)%1;p2.setAttribute('cx',(mcx+(trx-mcx)*t).toFixed(1));p2.setAttribute('cy',(mcy+(try_-mcy)*t).toFixed(1));}
   if(document.getElementById('map-view').style.display!=='none') requestAnimationFrame(animatePatrols);
   else patrolAnimating=false;
 }
@@ -1829,11 +1897,14 @@ function clickLoc(locId){
   const svgEl=document.getElementById('campaign-svg');
   const svgRect=svgEl.getBoundingClientRect();
   const scaleX=svgRect.width/400, scaleY=svgRect.height/580;
-  let px=(loc.svgX*scaleX)+svgRect.left-mapRect.left;
-  let py=(loc.svgY*scaleY)+svgRect.top-mapRect.top+20;
+  const isCounty=GAME_SETTINGS.mapStyle==='county';
+  const lx=isCounty?(loc.cX||loc.svgX):loc.svgX;
+  const ly=isCounty?(loc.cY||loc.svgY):loc.svgY;
+  let px=(lx*scaleX)+svgRect.left-mapRect.left;
+  let py=(ly*scaleY)+svgRect.top-mapRect.top+20;
   if(px+190>mapRect.width-5) px=mapRect.width-195;
   if(px<5) px=5;
-  if(py+250>mapRect.height) py=Math.max(5,(loc.svgY*scaleY)-260);
+  if(py+250>mapRect.height) py=Math.max(5,(ly*scaleY)-260);
   const fd=loc.faction&&loc.faction!=='player'?FACTIONS[loc.faction]:null;
   const rel=fd?getRelState(fd):null;
   document.getElementById('lpop-tb').textContent=loc.name;
@@ -2290,7 +2361,7 @@ function saveGame(html){
       character:state.character,factionName:state.factionName,
       hp:state.hp,maxHp:state.maxHp,turn:state.turn,
       history:state.history,currentChoices:state.currentChoices,lastStoryHTML:html,
-      days:state.days,supplies:state.supplies,troops:state.troops,gold:state.gold||0,
+      days:state.days,supplies:state.supplies,troops:state.troops,gold:state.gold||0,deathRiskMod:state.deathRiskMod||0,
       currentLocation:state.currentLocation,metFactions:state.metFactions||[],sessionId:state.sessionId,
       travelMethod:state.travelMethod||'foot',amishContactMade:state.amishContactMade||false,amishDealMade:state.amishDealMade||false,
       visitedLocations:state.visitedLocations||[state.currentLocation],
@@ -2308,7 +2379,7 @@ function resumeGame(save){
   state.character=save.character; state.factionName=save.factionName||'Unknown Faction';
   state.hp=save.hp; state.maxHp=save.maxHp; state.turn=save.turn;
   state.history=save.history||[]; state.currentChoices=save.currentChoices||[];
-  state.days=save.days||0; state.supplies=save.supplies||50; state.troops=save.troops||10; state.gold=save.gold||0;
+  state.days=save.days||0; state.supplies=save.supplies||50; state.troops=save.troops||10; state.gold=save.gold||0; state.deathRiskMod=save.deathRiskMod||0;
   state.currentLocation=save.currentLocation||'tcnj';
   state.metFactions=save.metFactions||[];
   state.travelMethod=save.travelMethod||'foot';
@@ -2432,9 +2503,9 @@ function selectStory(id){
 function backToStories(){
   // Reset skill allocation so returning to setup screen starts fresh
   Object.keys(skillAlloc).forEach(k=>skillAlloc[k]=0);
-  skillAllocRemaining=5;
+  skillAllocRemaining=10;
   Object.keys(skillAlloc).forEach(k=>{const e=document.getElementById('alloc-'+k);if(e)e.textContent='0';});
-  const ptsEl=document.getElementById('skill-pts-left');if(ptsEl)ptsEl.textContent='5';
+  const ptsEl=document.getElementById('skill-pts-left');if(ptsEl)ptsEl.textContent='10';
   showScreen('home');
 }
 
