@@ -72,7 +72,7 @@
         <div class="desktop-meta-chip settings-chip" onclick="openSettings();settingsTab('tutorial')">HOW TO PLAY<span>Tutorial</span></div>
       </div>
       <div id="home-continue-row" style="display:none;margin-top:14px;width:100%;gap:8px;flex-wrap:wrap;">
-        <button class="desktop-save-btn" onclick="resumeGame(window._ps)">&#9654; CONTINUE LAST SAVE</button>
+        <button class="desktop-save-btn" onclick="showContinue(window._ps)">&#9654; CONTINUE LAST SAVE</button>
       </div>
     </div>
   </div>
@@ -297,7 +297,6 @@
       <div class="wtb"><div class="wtt"><span>&#128221;</span> <span id="story-win-title">NARRATIVE_ENGINE.EXE</span></div><div class="wbs"><div class="wbtn">?</div></div></div>
       <div class="wi" style="min-height:180px;"><div id="story-text"></div></div>
     </div>
-    <div class="dos-loading" id="dos-loading">&gt; PROCESSING DECISION TREE</div>
     <div class="err" id="game-error"></div>
     <div id="turn-delta-bar" style="display:none;"></div>
     <div class="choices-container" id="choices-container"></div>

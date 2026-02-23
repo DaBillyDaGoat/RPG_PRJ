@@ -444,9 +444,9 @@ body.map-county-mode .road.patrolled{stroke:var(--blood);}
 
 /* ── TEXT SIZE ── */
 body.txt-sm{font-size:11px;}
-body.txt-sm .stab-content,.txt-sm .story-text,.txt-sm .choice-btn{font-size:.58rem;}
+body.txt-sm .stab-content{font-size:.58rem;}
 body.txt-lg{font-size:15px;}
-body.txt-lg .stab-content,.txt-lg .story-text,.txt-lg .choice-btn{font-size:.72rem;}
+body.txt-lg .stab-content{font-size:.72rem;}
 
 /* ── MAP LABELS HIDE ── */
 body.map-labels-hidden .loc-node text,body.map-labels-hidden .town-node text{display:none;}
@@ -642,3 +642,47 @@ body.map-labels-hidden .loc-node text,body.map-labels-hidden .town-node text{dis
 .splash-ok-btn{background:var(--wg);border-top:2px solid var(--ww);border-left:2px solid var(--ww);border-right:2px solid var(--wgd);border-bottom:2px solid var(--wgd);padding:5px 16px;font-family:'Share Tech Mono',monospace;font-size:.65rem;letter-spacing:1px;color:var(--wk);cursor:pointer;}
 .splash-ok-btn:hover{background:#d4d0c8;}
 .splash-ok-btn:active{border-top:2px solid var(--wgd);border-left:2px solid var(--wgd);border-right:2px solid var(--ww);border-bottom:2px solid var(--ww);}
+
+/* ── MOBILE TOUCH & INTERACTION IMPROVEMENTS ── */
+@media (hover:none) and (pointer:coarse){
+  /* Bigger touch targets on mobile */
+  .choice-btn{min-height:48px;padding:11px 14px;}
+  .lpop-btn{min-height:44px;padding:6px 8px;font-size:.56rem;}
+  .tm-btn{min-height:44px;padding:6px 8px;}
+  .sopt-btn{min-height:40px;padding:5px 10px;}
+  .sk-alloc-btn{width:48px;height:48px;font-size:1.1rem;}
+  .search-btn{min-height:44px;}
+  /* Prevent text selection on interactive elements */
+  .tab,.choice-btn,.begin-btn,.lpop-btn,.arch-card,.class-card,.tm-btn,.sopt-btn{-webkit-user-select:none;user-select:none;}
+  /* Prevent accidental zoom on double-tap */
+  .tab-bar,.res-row,.ap-row{touch-action:manipulation;}
+}
+
+/* ── 680px ADDITIONS — CHARACTER PANEL ── */
+@media (max-width:680px){
+  .char-hdr{font-size:.48rem;line-height:1.9;}
+  .ap-row{gap:5px;}
+  .ap-chip{padding:2px 4px;}
+  .apv{font-size:.95rem;}
+  .apl{font-size:.4rem;}
+  /* Notification: full width at bottom on mobile */
+  .notif{right:8px;left:8px;max-width:none;bottom:10px;font-size:.58rem;padding:6px 10px;}
+  /* Location popup: ensure it doesn't overflow */
+  .loc-popup-inner{min-width:160px;max-width:85vw;}
+  /* Dialogue text: constrained height on mobile */
+  .dlg-text{max-height:45vh;overflow-y:auto;}
+  /* Map legend smaller on mobile */
+  .map-legend{font-size:5px;padding:3px 5px;}
+  /* Loading overlay text */
+  .load-status{font-size:clamp(.5rem,2.5vw,.7rem);}
+  .load-sub{font-size:clamp(.42rem,2vw,.55rem);}
+  /* Continue dialog: responsive on mobile */
+  .cont-dlg{margin:6px;}
+  .dlg-body-save{flex-direction:column;gap:8px;padding:10px;}
+}
+
+/* ── TEXT SIZE CLASSES ── */
+body.txt-sm #story-text{font-size:.66rem;line-height:1.7;}
+body.txt-sm .choice-btn{font-size:.62rem;}
+body.txt-lg #story-text{font-size:.88rem;line-height:2;}
+body.txt-lg .choice-btn{font-size:.82rem;}

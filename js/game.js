@@ -153,13 +153,13 @@ function renderSettingsTab(){
   el.innerHTML=settingRows+`<div class="setting-danger-zone"><div class="setting-danger-hdr">&#9888; SESSION</div><button class="setting-reboot-btn" onclick="confirmReboot()">[ REBOOT / NEW GAME ]</button><div class="setting-danger-note">Wipes current save. Cannot be undone.</div></div>`;
 }
 function openSettingsModal(){
-  const existing=document.getElementById('settings-modal');
+  const existing=document.getElementById('ingame-settings-modal');
   if(existing){existing.remove();return;}
   const modal=document.createElement('div');
-  modal.id='settings-modal';
+  modal.id='ingame-settings-modal';
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
   const settingRows=SETTINGS_DEFS.map(d=>`<div class="setting-row"><div class="setting-label">${d.label}</div><div class="setting-opts">${d.opts.map(o=>`<button class="sopt-btn${GAME_SETTINGS[d.key]===o?' sopt-active':''}" onclick="setSettingModal('${d.key}','${o}')">${o.toUpperCase()}</button>`).join('')}</div></div>`).join('');
-  modal.innerHTML=`<div style="background:var(--p);border:1px solid var(--gd);padding:20px;max-width:360px;width:90%;max-height:80vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><span style="font-family:Share Tech Mono;color:var(--g);font-size:.7rem;letter-spacing:2px;">SETTINGS</span><button onclick="document.getElementById('settings-modal').remove()" style="background:none;border:1px solid var(--gd);color:var(--g);cursor:pointer;font-family:Share Tech Mono;padding:2px 8px;">X</button></div><div id="modal-settings-content">${settingRows}</div></div>`;
+  modal.innerHTML=`<div style="background:var(--p);border:1px solid var(--gd);padding:20px;max-width:360px;width:90%;max-height:80vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><span style="font-family:Share Tech Mono;color:var(--g);font-size:.7rem;letter-spacing:2px;">SETTINGS</span><button onclick="document.getElementById('ingame-settings-modal').remove()" style="background:none;border:1px solid var(--gd);color:var(--g);cursor:pointer;font-family:Share Tech Mono;padding:2px 8px;">X</button></div><div id="modal-settings-content">${settingRows}</div></div>`;
   document.body.appendChild(modal);
   modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
 }
@@ -860,7 +860,7 @@ function beginGame(){
   localStorage.setItem(API_KEY,apiKey);
   document.getElementById('panel-name').textContent=name;
   document.getElementById('panel-class').textContent=CLASSES[cc.dataset.class]?.name||cc.dataset.class;
-  document.getElementById('panel-faction').textContent=fName;
+  document.getElementById('panel-faction').textContent=state.factionName;
   document.getElementById('panel-loc').textContent=LOCATIONS[state.currentLocation]?.shortName||'TCNJ';
   updateHp(100); updateRes(); renderAPRow();
   state.sessionId=Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -875,8 +875,7 @@ const _el={};
 function _initElCache(){
   ['hp-bar','hp-text','res-days','res-supplies','res-troops','res-gold','res-territories',
    'map-day','map-sup','map-trp','map-gold','panel-loc','res-amish','amish-chip','res-travel','travel-chip','turn-counter',
-   'game-error','story-text','choices-container','open-wrap','turn-delta-bar',
-   'load-overlay','load-msg','load-sub','load-ico','load-prog','load-turn-lbl']
+   'game-error','story-text','choices-container','open-wrap','turn-delta-bar']
   .forEach(id=>{_el[id]=document.getElementById(id);});
 }
 
@@ -1893,12 +1892,15 @@ function stopLoad(){
 function setLoad(v){
   state.isLoading=v;
   const bb=document.getElementById('begin-btn');if(bb)bb.disabled=v;
-  const dos=document.getElementById('dos-loading');if(dos)dos.style.display='none';
   if(v) startLoad(LOAD_MSGS,'TURN '+String(state.turn).padStart(3,'0'));
   else stopLoad();
 }
 function showErr(el,msg){el.textContent=msg;el.style.display='block';}
-function showNotif(msg){const n=document.createElement('div');n.className='notif';n.textContent=msg;document.body.appendChild(n);setTimeout(()=>n.remove(),3000);}
+function showNotif(msg){
+  // Remove any existing notif to prevent stacking
+  const prev=document.querySelector('.notif');if(prev)prev.remove();
+  const n=document.createElement('div');n.className='notif';n.textContent=msg;document.body.appendChild(n);setTimeout(()=>{if(n.parentNode)n.remove();},3000);
+}
 
 // MAP
 function rebuildMapLayout(){
@@ -1964,19 +1966,23 @@ function refreshMap(){
 
 let patrolAnimating=false;
 function animatePatrols(){
-  if(!patrolAnimating){patrolAnimating=true;}
-  const ic=GAME_SETTINGS.mapStyle==='county';
-  const nk=LOCATIONS.newark,tc=LOCATIONS.tcnj,mc=LOCATIONS.mcguire,tr=LOCATIONS.trenton;
-  const nkx=ic?(nk.cX||nk.svgX):nk.svgX,nky=ic?(nk.cY||nk.svgY):nk.svgY;
-  const tcx=ic?(tc.cX||tc.svgX):tc.svgX,tcy=ic?(tc.cY||tc.svgY):tc.svgY;
-  const mcx=ic?(mc.cX||mc.svgX):mc.svgX,mcy=ic?(mc.cY||mc.svgY):mc.svgY;
-  const trx=ic?(tr.cX||tr.svgX):tr.svgX,try_=ic?(tr.cY||tr.svgY):tr.svgY;
-  const p1=document.getElementById('patrol1');
-  if(p1){const t=(Date.now()/4500)%1;p1.setAttribute('cx',(nkx+(tcx-nkx)*t).toFixed(1));p1.setAttribute('cy',(nky+(tcy-nky)*t).toFixed(1));}
-  const p2=document.getElementById('patrol2');
-  if(p2){const t=(Date.now()/5500)%1;p2.setAttribute('cx',(mcx+(trx-mcx)*t).toFixed(1));p2.setAttribute('cy',(mcy+(try_-mcy)*t).toFixed(1));}
-  if(document.getElementById('map-view').style.display!=='none') requestAnimationFrame(animatePatrols);
-  else patrolAnimating=false;
+  if(patrolAnimating) return; // Prevent duplicate loops from multiple refreshMap calls
+  patrolAnimating=true;
+  function _patrolFrame(){
+    const ic=GAME_SETTINGS.mapStyle==='county';
+    const nk=LOCATIONS.newark,tc=LOCATIONS.tcnj,mc=LOCATIONS.mcguire,tr=LOCATIONS.trenton;
+    const nkx=ic?(nk.cX||nk.svgX):nk.svgX,nky=ic?(nk.cY||nk.svgY):nk.svgY;
+    const tcx=ic?(tc.cX||tc.svgX):tc.svgX,tcy=ic?(tc.cY||tc.svgY):tc.svgY;
+    const mcx=ic?(mc.cX||mc.svgX):mc.svgX,mcy=ic?(mc.cY||mc.svgY):mc.svgY;
+    const trx=ic?(tr.cX||tr.svgX):tr.svgX,try_=ic?(tr.cY||tr.svgY):tr.svgY;
+    const p1=document.getElementById('patrol1');
+    if(p1){const t=(Date.now()/4500)%1;p1.setAttribute('cx',(nkx+(tcx-nkx)*t).toFixed(1));p1.setAttribute('cy',(nky+(tcy-nky)*t).toFixed(1));}
+    const p2=document.getElementById('patrol2');
+    if(p2){const t=(Date.now()/5500)%1;p2.setAttribute('cx',(mcx+(trx-mcx)*t).toFixed(1));p2.setAttribute('cy',(mcy+(try_-mcy)*t).toFixed(1));}
+    if(document.getElementById('map-view').style.display!=='none') requestAnimationFrame(_patrolFrame);
+    else patrolAnimating=false;
+  }
+  _patrolFrame();
 }
 
 function clickLoc(locId){
