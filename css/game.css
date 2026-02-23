@@ -275,7 +275,7 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
 .sk-alloc-val{font-family:'VT323',monospace;font-size:1.4rem;color:var(--a);min-width:22px;text-align:center;}
 .sk-alloc-hint{font-size:.48rem;color:var(--gd);letter-spacing:.5px;line-height:1.4;}
 /* Campaign card consistency */
-.sc-title-red{color:#cc4422;}
+.sc-title-red{color:#cc4422!important;}
 .sc-desc-dim{color:#cc4422;}
 .dlg-text em{color:var(--gd);font-style:italic;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
