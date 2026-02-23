@@ -4,34 +4,34 @@
 const FACTIONS={
   iron_syndicate:{id:'iron_syndicate',name:'Iron Syndicate',territory:'Newark',icon:'&#129967;',
     relationScore:10,
-    leader:'Commissioner Vera Stahl',leaderTitle:'Commissioner of Industrial Operations, Newark',
+    leader:'Mayor Jennifer Stahl',leaderTitle:'Mayor of Newark, Iron Syndicate',
     leaderPortrait:'+--------+\n| /\\__/\\ |\n| (o  o) |\n| =====  |\n| [CORP] |\n+--------+',
     voice:'Cold, corporate, condescending. Speaks in quarterly reports. Three husbands. None survived.',
-    desc:"Pre-collapse corporate descendants who turned Newark's factories into a militarized production state. They believe capitalism never died -- it just got more honest.",
+    desc:"Pre-collapse descendants who turned Newark's factories into a militarized production state. They believe capitalism and democracy never died \u2014 it just got more honest.",
     wants:'Tribute, trade exclusivity, and for everyone to stop touching their equipment.',
-    fears:'Labor organizing. Democracy. Running out of ammunition.'},
+    fears:'Labor organizing. Running out of ammunition.'},
   rust_eagles:{id:'rust_eagles',name:'Rust Eagles',territory:'McGuire AFB',icon:'&#9992;',
     relationScore:15,
     leader:'General "Tombstone" Rusk',leaderTitle:'Commanding General, McGuire Combat Theater',
     leaderPortrait:'+--------+\n| [HELM] |\n| (>_<)  |\n| XXXXXX |\n| [RANK] |\n+--------+',
     voice:'Loud, military, theatrical. Calls everything a theater of operations. Genuinely believes he rules NJ.',
-    desc:"Descendants of pre-collapse Air Force personnel who never left McGuire AFB. They still have aircraft. The fuel situation is classified.",
+    desc:"Descendants of pre-collapse Air Force personnel who never left McGuire AFB. They still have military hardware. The fuel situation is classified.",
     wants:'Expansion, tribute, and for the fuel situation to resolve itself.',
     fears:'Running out of fuel. Anyone finding out about the fuel.'},
   mountain_covenant:{id:'mountain_covenant',name:'Mountain Covenant',territory:'Mountainside',icon:'&#9968;',
     relationScore:45,
-    leader:'High Keeper Aldous Finn',leaderTitle:'High Keeper of the Springs, Mountainside Sanctuary',
+    leader:'Reverend Aldous Finn',leaderTitle:'Reverend, Mountain Covenant',
     leaderPortrait:'+--------+\n|  /\\    |\n| /  \\   |\n|(o..o)  |\n| ~water~|\n+--------+',
     voice:'Serene, cryptic, mentions prophecy often. Controls the only clean water. Very aware of this.',
-    desc:'Isolationist religious community built around the natural springs of the Watchung Mountains. They worship water and consider the collapse divine punishment for pollution.',
+    desc:'Isolationist Catholic religious community built around the natural springs of the Watchung Mountains. Heavily fortified, naturally protected, and experts in guerilla warfare.',
     wants:'To be left alone. Clean water kept clean. Pilgrims who pay tribute.',
     fears:'Contamination. Outsiders. Industrial runoff.'},
   trenton_collective:{id:'trenton_collective',name:'Trenton Collective',territory:'Trenton',icon:'&#127807;',
     relationScore:50,
-    leader:'Chair Marta Osei',leaderTitle:'Elected Chair, Trenton Agricultural Collective',
+    leader:'Chair Jameer King',leaderTitle:'Elected Chair, Trenton Agricultural Collective',
     leaderPortrait:'+--------+\n| [BERET]|\n| (^_^)  |\n| ~~~~~  |\n|COMRADE |\n+--------+',
-    voice:'Direct, warm but firm. Uses "comrade" un-ironically. Elected 8 times. Suspects the last 3 were rigged. By herself.',
-    desc:"Agrarian communist collective controlling NJ's remaining farmland. They feed half the wasteland and are aggressively neutral.",
+    voice:'Direct, warm but firm. Uses "comrade" un-ironically. Elected 8 times. Suspects the last 3 were rigged. By himself.',
+    desc:"Agrarian communist collective controlling most of Jersey's remaining farmland. They feed half the wasteland and are aggressively neutral, because nobody wants their cold shoulder.",
     wants:'Food security, fair trade, no wars near the crops.',
     fears:'Famine, exploitation, anyone claiming the land.'},
   coastal_brotherhood:{id:'coastal_brotherhood',name:'Coastal Brotherhood',territory:'LBI/Seaside',icon:'&#9875;',
@@ -39,7 +39,7 @@ const FACTIONS={
     leader:'Captain Dez Salieri',leaderTitle:'Captain of the Brotherhood, LBI Harbor Authority',
     leaderPortrait:'+--------+\n|~ (^) ~ |\n| (o_o)  |\n| ~~~~   |\n|CAPTAIN |\n+--------+',
     voice:'Charming, amoral, always negotiating. Treats everything as a transaction. Probably has your wallet.',
-    desc:'Organized crime family turned maritime trade network. Control the coast and most smuggling routes. Cheerfully non-ideological.',
+    desc:'Pre-collapse descendants of fishermen and surfers. Some refer to them as a bunch of drunks, others a crime family of smugglers who drink as well.',
     wants:'Profit. Safe trade routes. A cut of everything that moves.',
     fears:'Nothing. They work with everyone. Except the Hollowed.'},
   the_hollowed:{id:'the_hollowed',name:'The Hollowed',territory:'Roaming/Pine Barrens',icon:'&#128128;',
@@ -50,9 +50,9 @@ const FACTIONS={
     desc:"Roaming cannibal raiders from the Pine Barrens. They don't hold territory -- they consume it. Negotiation is technically possible but inadvisable.",
     wants:'Meat. Expansion. To not be called zombies.',
     fears:'Fire. Organized resistance. Being called zombies (they hate that).'},
-  subnet:{id:'subnet',name:'Subnet',territory:'Underground',icon:'&#128190;',
+  subnet:{id:'subnet',name:'Subnet',territory:'Underground Bunker Network',icon:'&#128190;',
     relationScore:40,
-    leader:'Architect 7',leaderTitle:'Node Architect, Subnet Infrastructure Division',
+    leader:'The Architect',leaderTitle:'The Architect, Subnet',
     leaderPortrait:'+--------+\n|01010101|\n|1(o_o)01|\n|01010101|\n| SUBNET |\n+--------+',
     voice:'Speaks in system metaphors. Refers to humans as wetware. Has not been above ground in 11 years.',
     desc:"Underground network of engineers and hackers who maintain pre-collapse infrastructure. They know where every pipe and cable runs.",
@@ -331,19 +331,19 @@ Object.values(FACTION_CLASSES).forEach(f=>{
 // STATE
 const state={
   apiKey:'',turn:1,hp:100,maxHp:100,
-  character:{name:'',class:'',brutality:3,cunning:3,charisma:3,depravity:3},
+  character:{name:'',class:''},
   factionName:'',ownFaction:false,
   history:[],currentChoices:[],isLoading:false,
-  stats:{brutality:3,cunning:3,charisma:3,depravity:3},
   currentLocation:'tcnj',
-  days:0,supplies:50,troops:0,
+  days:0,supplies:50,troops:0,gold:0,
   garrison:{},           // locId -> troop count stationed there
   selectedLocation:null,activeTab:'story',
   activeFactionDlg:null,dlgHistory:[],
   boostedSkill:null,
   originFaction:null,classPerk:'',
 };
-let pointsRemaining=5;
+let skillAllocRemaining=5;
+const skillAlloc={force:0,wit:0,influence:0,shadow:0,grit:0};
 
 // TABS
 function switchTab(tab){
@@ -361,15 +361,15 @@ function switchTab(tab){
 }
 
 // SETUP
-function adjustStat(s,e){
-  const r=e.currentTarget.getBoundingClientRect();
-  const v=Math.max(1,Math.min(10,Math.round(Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*10)));
-  const d=v-state.stats[s];
-  if(d>0&&d>pointsRemaining)return;
-  pointsRemaining-=d; state.stats[s]=v;
-  document.getElementById('bar-'+s).style.width=(v/10*100)+'%';
-  document.getElementById('val-'+s).textContent=v;
-  document.getElementById('points-left').textContent=pointsRemaining;
+function allocSkill(k,delta){
+  const cur=skillAlloc[k]||0;
+  const nv=cur+delta;
+  if(nv<0||nv>3)return;
+  if(delta>0&&skillAllocRemaining<=0)return;
+  skillAlloc[k]=nv;
+  skillAllocRemaining-=delta;
+  document.getElementById('alloc-'+k).textContent=nv;
+  document.getElementById('skill-pts-left').textContent=skillAllocRemaining;
 }
 
 function selectClass(el){
@@ -432,19 +432,23 @@ function beginGame(){
   if(!cc){showErr(err,'SELECT CLASS.');return;}
   err.style.display='none';
   state.apiKey=apiKey; state.factionName=fName;
-  state.character={name,class:cc.dataset.class,...state.stats};
+  state.character={name,class:cc.dataset.class};
   state.hp=100; state.maxHp=100; state.turn=1; state.history=[];
-  state.days=0; state.supplies=50; state.troops=0; state.garrison={};
+  state.days=0; state.supplies=50; state.troops=0; state.gold=0; state.garrison={};
   state.ownFaction=false; state.originFaction=null; state.classPerk='';
+  // Apply skill point allocation from setup screen
+  const STAT_TO_SKILL={brutality:'force',cunning:'wit',charisma:'influence',depravity:'shadow'};
+  Object.entries(skillAlloc).forEach(([k,v])=>{if(SKILLS[k])SKILLS[k].ap+=v;});
   // Apply class bonuses from CLASSES data
   const cls=CLASSES[cc.dataset.class];
   // Starting location based on origin faction
   const originFdata=cls?FACTION_CLASSES[cls.factionId]:null;
   state.currentLocation=originFdata?.startLocation||'tcnj';
   if(cls){
-    // Stat bonuses
+    // Stat bonuses remapped to skill AP
     Object.entries(cls.statBonus).forEach(([s,v])=>{
-      state.character[s]=Math.max(1,Math.min(10,(state.character[s]||3)+v));
+      const sk=STAT_TO_SKILL[s]||s;
+      if(SKILLS[sk])SKILLS[sk].ap+=v;
     });
     // Skill AP bonuses
     Object.entries(cls.skillBonus).forEach(([sk,v])=>{if(SKILLS[sk])SKILLS[sk].ap+=v;});
@@ -461,27 +465,31 @@ function beginGame(){
     state.originFaction=originFid;
     state.classPerk=cls.classPerk;
   }
+  // Reset skill alloc for next new game
+  Object.keys(skillAlloc).forEach(k=>skillAlloc[k]=0);
+  skillAllocRemaining=5;
   localStorage.setItem(API_KEY,apiKey);
   document.getElementById('panel-name').textContent=name;
   document.getElementById('panel-class').textContent=CLASSES[cc.dataset.class]?.name||cc.dataset.class;
   document.getElementById('panel-faction').textContent=fName;
-  document.getElementById('panel-loc').textContent='TCNJ';
-  updateStatDisplay(); updateHp(100); updateRes(); renderAPRow();
+  document.getElementById('panel-loc').textContent=LOCATIONS[state.currentLocation]?.shortName||'TCNJ';
+  updateHp(100); updateRes(); renderAPRow();
   showScreen('game-screen');
   switchTab('story');
   startStory();
 }
 
-function updateStatDisplay(){['brutality','cunning','charisma','depravity'].forEach(s=>document.getElementById('g-'+s).textContent=state.character[s]);}
 function updateHp(v){state.hp=Math.max(0,Math.min(state.maxHp,v));document.getElementById('hp-bar').style.width=(state.hp/state.maxHp*100)+'%';document.getElementById('hp-text').textContent=state.hp+'/'+state.maxHp;}
 function updateRes(){
   document.getElementById('res-days').textContent=state.days;
   document.getElementById('res-supplies').textContent=state.supplies;
   document.getElementById('res-troops').textContent=state.troops;
+  document.getElementById('res-gold').textContent=state.gold;
   document.getElementById('res-territories').textContent=Object.values(LOCATIONS).filter(l=>l.ctrl==='player').length;
   document.getElementById('map-day').textContent=state.days;
   document.getElementById('map-sup').textContent=state.supplies;
   document.getElementById('map-trp').textContent=state.troops;
+  document.getElementById('map-gold').textContent=state.gold;
 }
 
 // AP SYSTEM
@@ -792,7 +800,7 @@ async function callClaude(msg){
 JERSEY WASTELAND 2999. NJ year 2999. Rich fled off-world 2669. Warring city-states. Irradiated Pine Barrens. Jersey slang + 330yr drift. Dark comedy, political gore.
 
 PLAYER: ${state.character.name} (${CLASSES[state.character.class]?.name||state.character.class}${state.originFaction?', ex-'+FACTIONS[state.originFaction]?.name:''}) / "${state.factionName}"
-BRU${state.character.brutality} CUN${state.character.cunning} CHA${state.character.charisma} DEP${state.character.depravity} | HP:${state.hp} Day:${state.days} Sup:${state.supplies} Troops(mobile):${state.troops} | @${LOCATIONS[state.currentLocation]?.name||state.currentLocation}
+HP:${state.hp} Day:${state.days} Sup:${state.supplies} Troops(mobile):${state.troops} Gold:${state.gold} | @${LOCATIONS[state.currentLocation]?.name||state.currentLocation}
 Garrisons: ${Object.entries(state.garrison).filter(([k,v])=>v>0).map(([k,v])=>LOCATIONS[k]?.shortName+':'+v).join(', ')||'none'} | OwnFaction:${state.ownFaction}
 Perk: ${state.classPerk||'—'} | Skills: ${skSum}
 Map: ${lSum} | Factions: ${fSum}
@@ -803,10 +811,11 @@ WRITING FORMAT:
 - *italics* for actions: *smoke pours from the factory stack.* *He doesn't look up.*
 - Named quotes for speech: "Vera Stahl: That's not how Newark works."
 - 2-3 tight paragraphs. Earned gore. No fluff.
-- NPCs stay in voice: Vera=cold. Tombstone=loud bluster. Finn=cryptic. Marta=direct warmth. Salieri=charming criminal. The Mouth=eloquent cannibal. Architect 7=systems metaphors.
+- NPCs stay in voice: Vera=cold. Tombstone=loud bluster. Finn=cryptic. Jameer=direct warmth. Salieri=charming criminal. The Mouth=eloquent cannibal. The Architect=systems metaphors.
+- Put each character quote on its own line. Be concise — 2 tight paragraphs max per scene.
 ${boost?'- BOOSTED: 4th [STAR] choice using '+state.boostedSkill+' with extra impact.':''}
 
-{"story":"narrative","choices":[{"label":"A","text":"action","flavor":"hint","skill":"force|wit|influence|shadow|grit","ap_reward":1},{"label":"B","text":"action","flavor":"hint","skill":"...","ap_reward":1},{"label":"C","text":"action","flavor":"hint","skill":"...","ap_reward":1}${boost?',{"label":"STAR","text":"boosted action","flavor":"BOOSTED '+state.boostedSkill+'","skill":"'+state.boostedSkill+'","ap_reward":0}':''}],"hp_change":0,"stat_change":{"stat":"none","delta":0},"location_change":{"location":"none","ctrl":"player"},"resource_change":{"supplies":0,"troops":0},"faction_rel_change":{"faction":"none","delta":0},"event_title":"Title"}`;  const r=await fetch('https://airpg-api-proxi.billybuteau.workers.dev/',{
+{"story":"narrative","choices":[{"label":"A","text":"action","flavor":"hint","skill":"force|wit|influence|shadow|grit","ap_reward":1},{"label":"B","text":"action","flavor":"hint","skill":"...","ap_reward":1},{"label":"C","text":"action","flavor":"hint","skill":"...","ap_reward":1}${boost?',{"label":"STAR","text":"boosted action","flavor":"BOOSTED '+state.boostedSkill+'","skill":"'+state.boostedSkill+'","ap_reward":0}':''}],"hp_change":0,"stat_change":{"stat":"none","delta":0},"location_change":{"location":"none","ctrl":"player"},"resource_change":{"supplies":0,"troops":0,"gold":0},"faction_rel_change":{"faction":"none","delta":0},"event_title":"Title"}`;  const r=await fetch('https://airpg-api-proxi.billybuteau.workers.dev/',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1400,system:sys,messages:[...state.history,{role:'user',content:msg}]})
@@ -818,7 +827,7 @@ ${boost?'- BOOSTED: 4th [STAR] choice using '+state.boostedSkill+' with extra im
 
 async function startStory(){
   setLoad(true); clearChoices();
-  const p=`BEGIN. ${state.character.name} is a ${state.character.class} who just founded "${state.factionName}" at the empty TCNJ campus. Open with a vivid scene establishing the world: Iron Syndicate threatens from Newark to the north, Rust Eagles loom from McGuire to the south, the Hollowed roam the Pine Barrens to the east. Set the stakes of the campaign to unite or dominate the New Jersey wasteland. Put the player in immediate political danger.`;
+  const p=`BEGIN. ${state.character.name} is a ${CLASSES[state.character.class]?.name||state.character.class} who just founded "${state.factionName}" at their starting location: ${LOCATIONS[state.currentLocation]?.name||'unknown territory'}. Open with a vivid scene establishing the world: Iron Syndicate threatens from Newark to the north, Rust Eagles loom from McGuire to the south, the Hollowed roam the Pine Barrens to the east. Set the stakes of the campaign to unite or dominate the New Jersey wasteland. Put the player in immediate political danger.`;
   try{
     const res=await callClaude(p);
     state.history.push({role:'user',content:p},{role:'assistant',content:JSON.stringify(res)});
@@ -854,7 +863,6 @@ async function submitOpen(){
   setLoad(true); disableChoices(true); clearStory();
   document.getElementById('open-wrap').style.display='none';
   const sk=detectSkill(text);
-  if(sk) earnAP(sk,2);
   const p=`Player chose a CUSTOM action (typed themselves): "${text}". This bypasses the given options. React honestly -- if clever let it work, if insane let it be equally insane. Continue the story.`;
   try{
     const res=await callClaude(p);
@@ -884,10 +892,14 @@ function applyAll(res,ch){
   if(res.resource_change){
     if(res.resource_change.supplies){state.supplies=Math.max(0,state.supplies+res.resource_change.supplies);showNotif('SUPPLIES '+(res.resource_change.supplies>0?'+':'')+res.resource_change.supplies);}
     if(res.resource_change.troops){state.troops=Math.max(0,state.troops+res.resource_change.troops);showNotif('TROOPS '+(res.resource_change.troops>0?'+':'')+res.resource_change.troops);}
+    if(res.resource_change.gold){state.gold=Math.max(0,state.gold+res.resource_change.gold);showNotif('GOLD '+(res.resource_change.gold>0?'+':'')+res.resource_change.gold);}
   }
   if(res.location_change&&res.location_change.location!=='none'&&LOCATIONS[res.location_change.location]){
     LOCATIONS[res.location_change.location].ctrl=res.location_change.ctrl;
     showNotif(LOCATIONS[res.location_change.location].name+' -> '+res.location_change.ctrl.toUpperCase());
+    state.currentLocation=res.location_change.location;
+    const locEl=document.getElementById('panel-loc');
+    if(locEl) locEl.textContent=LOCATIONS[res.location_change.location].shortName||res.location_change.location.toUpperCase();
     if(document.getElementById('map-view').style.display!=='none') refreshMap();
   }
   if(res.faction_rel_change&&res.faction_rel_change.faction!=='none'&&FACTIONS[res.faction_rel_change.faction]){
@@ -979,7 +991,7 @@ function startLoad(msgs, label){
     document.getElementById('pip-label').textContent=m[2];
     document.getElementById('load-bar-fill').style.width=m[3]+'%';
     _loadStep++;
-    if(_loadStep<msgs.length) _loadTmr=setTimeout(tick,800+Math.random()*500);
+    if(_loadStep<msgs.length) _loadTmr=setTimeout(tick,1400+Math.random()*800);
   }
   tick();
 }
@@ -1368,7 +1380,7 @@ function saveGame(html){
       character:state.character,factionName:state.factionName,
       hp:state.hp,maxHp:state.maxHp,turn:state.turn,
       history:state.history,currentChoices:state.currentChoices,lastStoryHTML:html,
-      days:state.days,supplies:state.supplies,troops:state.troops,
+      days:state.days,supplies:state.supplies,troops:state.troops,gold:state.gold||0,
       currentLocation:state.currentLocation,locStates,fRels,skData,savedAt:Date.now()
     }));
   }catch(e){}
@@ -1380,7 +1392,7 @@ function resumeGame(save){
   state.character=save.character; state.factionName=save.factionName||'Unknown Faction';
   state.hp=save.hp; state.maxHp=save.maxHp; state.turn=save.turn;
   state.history=save.history||[]; state.currentChoices=save.currentChoices||[];
-  state.days=save.days||0; state.supplies=save.supplies||50; state.troops=save.troops||10;
+  state.days=save.days||0; state.supplies=save.supplies||50; state.troops=save.troops||10; state.gold=save.gold||0;
   state.currentLocation=save.currentLocation||'tcnj';
   state.apiKey=localStorage.getItem(API_KEY)||'';
   if(save.locStates) Object.entries(save.locStates).forEach(([k,v])=>{if(LOCATIONS[k])LOCATIONS[k].ctrl=v;});
@@ -1390,7 +1402,7 @@ function resumeGame(save){
   document.getElementById('panel-class').textContent=state.character.class;
   document.getElementById('panel-faction').textContent=state.factionName;
   document.getElementById('panel-loc').textContent=LOCATIONS[state.currentLocation]?.shortName||'TCNJ';
-  updateStatDisplay(); updateHp(state.hp); updateRes(); renderAPRow();
+  updateHp(state.hp); updateRes(); renderAPRow();
   document.getElementById('turn-counter').textContent='> TURN '+String(state.turn).padStart(3,'0');
   if(save.lastStoryHTML) document.getElementById('story-text').innerHTML=save.lastStoryHTML;
   if(state.currentChoices.length) renderChoices(state.currentChoices);
@@ -1437,7 +1449,7 @@ function restartGame(){
 const STORIES={
   jersey:{
     id:'jersey',
-    name:'JERSEY WASTELAND 2999',
+    name:'2999',
     tag:'Post-Apoc NJ // Political Gore Comedy',
     setupHint:'TCNJ IS EMPTY. YOU ARE BUILDING SOMETHING FROM NOTHING.',
     factionPlaceholder:'e.g. The New Jersey Accord',

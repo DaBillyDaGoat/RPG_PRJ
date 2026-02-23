@@ -222,9 +222,7 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
 .desktop-save-btn.secondary:hover{background:#d4d0c8;}
 .space-card{border:1px solid #7b2fbe!important;background:var(--wg);}
 .space-banner{background:linear-gradient(135deg,#0d001a 0%,#3d0070 40%,#00d4ff 70%,#ff6ec7 100%)!important;height:8px;}
-.space-title{font-family:'VT323',monospace;font-size:1rem!important;background:linear-gradient(to right,#00d4ff,#ff6ec7,#ffe66d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.space-tagline{color:#9b59b6!important;font-size:.52rem!important;}
-.space-desc{color:var(--wgdd)!important;font-size:.55rem!important;font-style:italic;}
+.space-desc{color:var(--wgdd)!important;}
 .sc-status.coming-soon{background:#3d0070;color:#ffe66d;padding:2px 6px;font-size:.5rem;letter-spacing:1px;border:1px solid #7b2fbe;}
 .space-select-btn{background:#1a0033!important;color:#7b2fbe!important;border:1px solid #7b2fbe!important;cursor:not-allowed!important;opacity:.6;}
 .notif{position:fixed;bottom:18px;right:14px;background:var(--wg);border-top:2px solid var(--ww);border-left:2px solid var(--ww);border-right:2px solid var(--wgd);border-bottom:2px solid var(--wgd);padding:7px 14px;font-family:'Share Tech Mono',monospace;font-size:.62rem;color:var(--wk);z-index:1000;max-width:260px;box-shadow:2px 2px 0 rgba(0,0,0,.5);animation:nIn .2s ease,nOut .3s ease 2.5s forwards;}
@@ -263,8 +261,21 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
 .load-dots::after{content:'';animation:ld 1s steps(4,end) infinite;}
 @keyframes ld{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
 #story-text em{color:var(--gd);font-style:italic;}
-.npc-quote{display:inline;color:var(--g);}
-.npc-name{color:var(--a);font-weight:bold;}
+.npc-quote{display:block;margin:8px 0;padding:5px 10px;border-left:2px solid var(--gd);color:var(--g);font-style:italic;}
+.npc-name{color:var(--a);font-weight:bold;font-style:normal;display:inline-block;margin-right:4px;}
+/* Skill allocation UI */
+.skill-alloc-grid{display:grid;gap:8px;}
+.skill-alloc-row{display:grid;grid-template-columns:110px auto 1fr;align-items:center;gap:8px;}
+.skill-alloc-nm{font-size:.62rem;color:var(--g);text-transform:uppercase;letter-spacing:1px;}
+.sk-alloc-btns{display:flex;align-items:center;gap:6px;}
+.sk-alloc-btn{background:var(--wg);border-top:1px solid var(--ww);border-left:1px solid var(--ww);border-right:1px solid var(--wgd);border-bottom:1px solid var(--wgd);width:22px;height:22px;font-family:'Share Tech Mono',monospace;font-size:.82rem;color:var(--wk);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sk-alloc-btn:hover{background:#d4d0c8;}
+.sk-alloc-btn:disabled{opacity:.4;cursor:not-allowed;}
+.sk-alloc-val{font-family:'VT323',monospace;font-size:1.4rem;color:var(--a);min-width:22px;text-align:center;}
+.sk-alloc-hint{font-size:.48rem;color:var(--gd);letter-spacing:.5px;line-height:1.4;}
+/* Campaign card consistency */
+.sc-title-red{color:#cc4422;}
+.sc-desc-dim{color:#888;}
 .dlg-text em{color:var(--gd);font-style:italic;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 @keyframes sFlash{0%{color:#fff}100%{color:var(--g)}}
