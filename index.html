@@ -173,9 +173,15 @@
       <div class="fw"><div class="dos-label">SURVIVOR DESIGNATION</div>
         <input type="text" class="dos-input" id="char-name" placeholder="e.g. Governor Skeez Malvetti" maxlength="40"/>
       </div>
-      <div class="fw"><div class="dos-label">YOUR FACTION NAME</div>
-        <input type="text" class="dos-input" id="faction-name-input" placeholder="e.g. The New Jersey Accord" maxlength="40"/>
-        <div class="dos-hint">&gt; TCNJ IS EMPTY. YOU ARE BUILDING SOMETHING FROM NOTHING.</div>
+      <div class="fw"><div class="dos-label">YOUR FACTION: OLD JERSEY</div>
+        <div class="dos-hint" style="color:var(--g);margin-bottom:6px;">&gt; TCNJ IS EMPTY. YOU ARE BUILDING OLD JERSEY FROM NOTHING.</div>
+      </div>
+      <div class="fw"><div class="dos-label">USERNAME</div>
+        <input type="text" class="dos-input" id="username-input" placeholder="Choose a username" maxlength="24"/>
+      </div>
+      <div class="fw"><div class="dos-label">4-DIGIT LOGIN CODE</div>
+        <input type="text" class="dos-input" id="login-code-input" placeholder="Create a 4-digit code (e.g. 1234)" maxlength="4" pattern="[0-9]*" inputmode="numeric"/>
+        <div class="dos-hint">&gt; REMEMBER THIS CODE TO LOG BACK IN.</div>
       </div>
       <div class="fw"><div class="dos-label">FACTION CLASS</div>
         <!-- STEP 1: PICK ORIGIN FACTION -->
@@ -257,7 +263,8 @@
 </div>
 
 <div id="game-screen">
-  <div class="char-panel">
+  <div class="char-panel" style="position:relative;">
+    <div id="settings-gear" onclick="openSettingsModal()" style="position:absolute;top:4px;right:8px;cursor:pointer;font-size:14px;opacity:0.5;z-index:10;" title="Settings">&#9881;</div>
     <div class="char-hdr">
       SURVIVOR: <span id="panel-name">-</span> &nbsp;|&nbsp; CLASS: <span id="panel-class">-</span><br>
       FACTION: <span id="panel-faction">-</span> &nbsp;|&nbsp; LOCATION: <span id="panel-loc">TCNJ</span>
@@ -318,275 +325,281 @@
             <defs>
               <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(0,255,65,0.04)" stroke-width="0.4"/></pattern>
               <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-              <clipPath id="nj-clip"><path d="M135,98 C152,68 182,42 218,25 C252,12 306,4 365,6 C382,8 392,20 393,44 C393,70 388,100 382,128 C377,148 370,162 365,178 C361,192 360,206 370,225 C374,240 374,260 373,276 C370,292 366,310 360,328 C356,344 350,364 338,388 C322,415 306,438 288,464 C272,486 250,506 226,526 C206,540 186,558 168,571 C155,578 143,582 130,581 C116,580 100,573 84,562 C65,547 48,526 32,504 C20,486 10,464 4,442 C0,426 0,408 2,390 C6,370 18,344 36,316 C56,286 76,260 88,234 C95,212 96,190 98,168 C100,150 108,132 118,118 C126,108 132,102 135,98 Z"/></clipPath>
+              <clipPath id="nj-clip"><path d="M208,24 L232,18 C255,20 280,35 305,52 C325,65 348,78 365,88 L378,95 L385,104 C384,115 382,125 378,135 C374,145 370,152 365,158 C360,164 356,168 352,172 C346,177 340,181 334,185 C326,190 318,195 312,200 C325,206 345,214 358,220 C364,224 368,230 370,238 C370,252 370,265 368,280 C366,298 362,315 358,332 C354,348 350,362 346,374 C340,390 330,410 318,428 C308,444 296,456 282,468 C268,480 252,494 238,506 C224,518 210,530 196,540 C186,548 176,553 165,557 L148,554 C132,548 115,540 100,530 C80,518 58,504 40,488 C30,478 22,468 18,458 C15,448 14,438 14,428 C14,420 16,414 22,408 C30,398 42,388 56,378 C72,368 86,360 100,354 C108,350 114,344 118,338 C130,322 150,308 170,296 C180,290 188,284 193,276 C186,266 174,256 164,248 C152,240 142,234 132,228 C124,220 118,212 114,204 C108,196 102,192 96,188 C94,180 93,174 93,168 C94,156 96,146 100,138 C106,128 114,118 122,108 C132,96 144,82 156,70 C168,58 180,46 192,36 C200,30 204,27 208,24 Z"/></clipPath>
             </defs>
             <!-- ═══ CLASSIC BACKGROUND ═══ -->
             <g id="map-bg-classic">
               <rect width="400" height="580" fill="#000814"/>
-              <text x="370" y="280" font-family="Share Tech Mono" font-size="5.5" fill="rgba(0,80,180,0.2)" text-anchor="middle" transform="rotate(90,370,280)">ATLANTIC OCEAN</text>
-              <text x="30" y="520" font-family="Share Tech Mono" font-size="5" fill="rgba(0,80,180,0.18)" text-anchor="middle" transform="rotate(-10,30,520)">DELAWARE BAY</text>
+              <text x="385" y="320" font-family="Share Tech Mono" font-size="5.5" fill="rgba(0,80,180,0.2)" text-anchor="middle" transform="rotate(90,385,320)">ATLANTIC OCEAN</text>
+              <text x="60" y="500" font-family="Share Tech Mono" font-size="5" fill="rgba(0,80,180,0.18)" text-anchor="middle" transform="rotate(-20,60,500)">DELAWARE BAY</text>
               <g clip-path="url(#nj-clip)">
                 <rect width="400" height="580" fill="#050f05"/>
                 <rect width="400" height="580" fill="url(#grid)"/>
-                <ellipse cx="295" cy="390" rx="75" ry="65" fill="rgba(0,255,65,0.04)" stroke="rgba(0,255,65,0.07)" stroke-width="1" stroke-dasharray="4,6"/>
-                <text x="295" y="386" font-family="Share Tech Mono" font-size="5.5" fill="rgba(0,255,65,0.18)" text-anchor="middle">PINE BARRENS</text>
-                <text x="295" y="394" font-family="Share Tech Mono" font-size="4.5" fill="rgba(0,255,65,0.12)" text-anchor="middle">[CONTAMINATED]</text>
-                <circle cx="270" cy="400" r="1.5" fill="rgba(0,255,65,0.15)"/><circle cx="300" cy="415" r="1" fill="rgba(0,255,65,0.12)"/><circle cx="315" cy="380" r="1.5" fill="rgba(0,255,65,0.1)"/>
+                <path d="M200,350 C220,340 260,335 310,345 C340,355 355,370 360,395 C365,420 350,445 330,460 C310,472 280,480 250,478 C220,475 190,465 170,445 C155,430 150,410 155,390 C160,370 178,358 200,350 Z" fill="rgba(0,255,65,0.04)" stroke="rgba(0,255,65,0.07)" stroke-width="1" stroke-dasharray="4,6"/>
+                <text x="265" y="400" font-family="Share Tech Mono" font-size="5.5" fill="rgba(0,255,65,0.18)" text-anchor="middle">PINE BARRENS</text>
+                <text x="265" y="408" font-family="Share Tech Mono" font-size="4.5" fill="rgba(0,255,65,0.12)" text-anchor="middle">[CONTAMINATED]</text>
+                <circle cx="240" cy="390" r="1.5" fill="rgba(0,255,65,0.15)"/><circle cx="280" cy="420" r="1" fill="rgba(0,255,65,0.12)"/><circle cx="310" cy="385" r="1.5" fill="rgba(0,255,65,0.1)"/>
               </g>
-              <path d="M135,98 C152,68 182,42 218,25 C252,12 306,4 365,6 C382,8 392,20 393,44 C393,70 388,100 382,128 C377,148 370,162 365,178 C361,192 360,206 370,225 C374,240 374,260 373,276 C370,292 366,310 360,328 C356,344 350,364 338,388 C322,415 306,438 288,464 C272,486 250,506 226,526 C206,540 186,558 168,571 C155,578 143,582 130,581 C116,580 100,573 84,562 C65,547 48,526 32,504 C20,486 10,464 4,442 C0,426 0,408 2,390 C6,370 18,344 36,316 C56,286 76,260 88,234 C95,212 96,190 98,168 C100,150 108,132 118,118 C126,108 132,102 135,98 Z" fill="none" stroke="rgba(0,255,65,0.35)" stroke-width="1.5"/>
+              <path d="M208,24 L232,18 C255,20 280,35 305,52 C325,65 348,78 365,88 L378,95 L385,104 C384,115 382,125 378,135 C374,145 370,152 365,158 C360,164 356,168 352,172 C346,177 340,181 334,185 C326,190 318,195 312,200 C325,206 345,214 358,220 C364,224 368,230 370,238 C370,252 370,265 368,280 C366,298 362,315 358,332 C354,348 350,362 346,374 C340,390 330,410 318,428 C308,444 296,456 282,468 C268,480 252,494 238,506 C224,518 210,530 196,540 C186,548 176,553 165,557 L148,554 C132,548 115,540 100,530 C80,518 58,504 40,488 C30,478 22,468 18,458 C15,448 14,438 14,428 C14,420 16,414 22,408 C30,398 42,388 56,378 C72,368 86,360 100,354 C108,350 114,344 118,338 C130,322 150,308 170,296 C180,290 188,284 193,276 C186,266 174,256 164,248 C152,240 142,234 132,228 C124,220 118,212 114,204 C108,196 102,192 96,188 C94,180 93,174 93,168 C94,156 96,146 100,138 C106,128 114,118 122,108 C132,96 144,82 156,70 C168,58 180,46 192,36 C200,30 204,27 208,24 Z" fill="none" stroke="rgba(0,255,65,0.35)" stroke-width="1.5"/>
               <g transform="translate(32,32)"><text x="0" y="-10" font-family="Share Tech Mono" font-size="7" fill="rgba(0,255,65,0.4)" text-anchor="middle">N</text><line x1="0" y1="-8" x2="0" y2="8" stroke="rgba(0,255,65,0.3)" stroke-width="1"/><line x1="-8" y1="0" x2="8" y2="0" stroke="rgba(0,255,65,0.3)" stroke-width="1"/></g>
-              <text x="360" y="50" font-family="Share Tech Mono" font-size="5" fill="rgba(255,255,255,0.08)" text-anchor="middle">NEW YORK</text>
-              <text x="90" y="185" font-family="Share Tech Mono" font-size="5" fill="rgba(255,255,255,0.08)" text-anchor="middle">PENNSYLVANIA</text>
+              <text x="340" y="50" font-family="Share Tech Mono" font-size="5" fill="rgba(255,255,255,0.08)" text-anchor="middle">NEW YORK</text>
+              <text x="60" y="240" font-family="Share Tech Mono" font-size="5" fill="rgba(255,255,255,0.08)" text-anchor="middle">PENNSYLVANIA</text>
             </g>
             <!-- ═══ COUNTY BACKGROUND ═══ -->
             <g id="map-bg-county" style="display:none">
               <rect width="400" height="580" fill="#0a1628"/>
-              <text x="380" y="280" font-family="Share Tech Mono" font-size="6" fill="rgba(60,130,200,0.25)" text-anchor="middle" transform="rotate(90,380,280)">ATLANTIC OCEAN</text>
-              <text x="28" y="518" font-family="Share Tech Mono" font-size="5" fill="rgba(60,130,200,0.22)" text-anchor="middle" transform="rotate(-10,28,518)">DELAWARE BAY</text>
+              <text x="390" y="320" font-family="Share Tech Mono" font-size="6" fill="rgba(60,130,200,0.25)" text-anchor="middle" transform="rotate(90,390,320)">ATLANTIC OCEAN</text>
+              <text x="60" y="500" font-family="Share Tech Mono" font-size="5" fill="rgba(60,130,200,0.22)" text-anchor="middle" transform="rotate(-20,60,500)">DELAWARE BAY</text>
               <g clip-path="url(#nj-clip)">
                 <rect width="400" height="580" fill="#1a1814"/>
-                <!-- ── County fills (21 counties, very subtle tints) ── -->
+                <!-- ── County fills (21 counties, accurate to new outline) ── -->
                 <!-- Sussex -->
-                <path d="M135,98 C152,68 182,42 218,25 C240,16 255,12 262,14 L248,52 L238,82 L168,96 L135,98Z" fill="rgba(120,160,100,0.07)"/>
+                <path d="M208,24 L232,18 C255,20 270,28 285,38 L270,58 L240,80 L195,90 L175,70 C185,50 195,35 208,24Z" fill="rgba(120,160,100,0.07)"/>
                 <!-- Passaic -->
-                <path d="M262,14 C275,10 290,8 308,8 L302,38 L295,68 L238,82 L248,52Z" fill="rgba(180,130,110,0.06)"/>
+                <path d="M285,38 C300,48 315,56 330,66 L340,75 L320,95 L290,100 L240,80 L270,58Z" fill="rgba(180,130,110,0.06)"/>
                 <!-- Bergen -->
-                <path d="M308,8 C340,5 365,6 382,8 C390,14 393,28 393,48 L388,68 L380,85 L350,88 L302,72 L302,38Z" fill="rgba(190,150,90,0.06)"/>
+                <path d="M340,75 C355,82 368,88 378,95 L385,104 C384,115 382,125 378,135 L365,140 L340,130 L320,120 L320,95Z" fill="rgba(190,150,90,0.06)"/>
                 <!-- Warren -->
-                <path d="M135,98 L168,96 L168,148 L102,148 L98,168 C100,150 108,132 118,118 L126,108 L132,102Z" fill="rgba(140,160,120,0.06)"/>
+                <path d="M175,70 L195,90 L195,140 L130,140 C130,128 122,108 132,96 C144,82 156,70 168,58 L175,70Z" fill="rgba(140,160,120,0.06)"/>
                 <!-- Morris -->
-                <path d="M168,96 L238,82 L295,68 L302,72 L292,98 L288,128 L258,148 L198,155 L168,148Z" fill="rgba(180,130,140,0.06)"/>
+                <path d="M195,90 L240,80 L290,100 L320,95 L320,120 L300,140 L260,155 L220,158 L195,140Z" fill="rgba(180,130,140,0.06)"/>
                 <!-- Essex -->
-                <path d="M292,98 L350,88 L375,95 L368,128 L340,132 L288,128Z" fill="rgba(170,150,120,0.06)"/>
+                <path d="M320,120 L340,130 L365,140 L358,160 L330,165 L300,155 L300,140 L320,120Z" fill="rgba(170,150,120,0.06)"/>
                 <!-- Hudson -->
-                <path d="M350,88 L380,85 C388,90 388,100 385,115 L382,128 L372,145 L368,128 L340,132 L350,110Z" fill="rgba(180,120,120,0.06)"/>
+                <path d="M340,130 L365,140 C370,148 365,158 358,166 C356,168 352,172 348,175 L340,170 L330,165 L358,160 L365,140Z" fill="rgba(180,120,120,0.06)"/>
                 <!-- Hunterdon -->
-                <path d="M102,148 L168,148 L198,155 L178,210 L95,232 L92,210 C95,195 96,178 98,168Z" fill="rgba(180,155,120,0.06)"/>
+                <path d="M130,140 L195,140 L220,158 L200,210 L145,230 C138,232 132,228 128,234 C127,218 126,204 114,204 C108,196 102,192 96,188 C94,180 93,174 93,168 C94,156 96,146 100,138Z" fill="rgba(180,155,120,0.06)"/>
                 <!-- Somerset -->
-                <path d="M198,155 L258,148 L260,172 L232,218 L178,210Z" fill="rgba(150,130,110,0.06)"/>
+                <path d="M220,158 L260,155 L270,175 L245,220 L200,210Z" fill="rgba(150,130,110,0.06)"/>
                 <!-- Union -->
-                <path d="M258,148 L288,128 L340,132 L368,128 L372,145 L370,168 L365,178 L340,178 L295,172 L260,172Z" fill="rgba(170,120,140,0.06)"/>
+                <path d="M260,155 L300,140 L300,155 L330,165 L340,170 L348,175 L350,185 L340,195 L310,185 L270,175Z" fill="rgba(170,120,140,0.06)"/>
                 <!-- Middlesex -->
-                <path d="M260,172 L295,172 L340,178 L365,178 C361,192 360,206 365,215 L375,225 L270,235 L232,218Z" fill="rgba(170,140,150,0.06)"/>
+                <path d="M270,175 L310,185 L340,195 L350,185 C352,192 358,210 363,225 L280,240 L245,220Z" fill="rgba(170,140,150,0.06)"/>
                 <!-- Mercer -->
-                <path d="M92,232 L178,210 L232,218 L270,235 L252,268 L80,268 C82,258 86,245 88,234Z" fill="rgba(140,120,160,0.06)"/>
+                <path d="M145,230 L200,210 L245,220 L280,240 L260,270 L193,276 C186,266 174,256 164,248 C152,240 142,234 138,232Z" fill="rgba(140,120,160,0.06)"/>
                 <!-- Monmouth -->
-                <path d="M270,235 L375,225 C374,240 374,260 373,276 L370,292 L322,290 L252,268Z" fill="rgba(170,150,110,0.06)"/>
+                <path d="M280,240 L363,225 C368,230 370,238 370,252 C370,265 368,280 366,298 L340,295 L260,270Z" fill="rgba(170,150,110,0.06)"/>
                 <!-- Burlington -->
-                <path d="M80,268 L252,268 L322,290 L295,380 L158,378 L125,352 L52,315 C60,295 70,278 76,268Z" fill="rgba(120,150,120,0.06)"/>
+                <path d="M193,276 L260,270 L340,295 L310,385 L170,380 L135,355 L118,338 C130,322 150,308 170,296 C180,290 188,284 193,276Z" fill="rgba(120,150,120,0.06)"/>
                 <!-- Ocean -->
-                <path d="M322,290 L370,292 C366,310 360,328 356,344 L350,364 L338,388 L330,408 L295,380Z" fill="rgba(180,130,120,0.06)"/>
+                <path d="M340,295 L366,298 C362,315 358,332 354,348 C350,362 346,374 340,390 L335,405 L310,385Z" fill="rgba(180,130,120,0.06)"/>
                 <!-- Camden -->
-                <path d="M52,315 L125,352 L125,365 L80,352 L42,338 C45,325 48,320 52,315Z" fill="rgba(170,120,140,0.06)"/>
+                <path d="M118,338 L135,355 L135,370 L95,358 L75,350 C80,344 90,340 100,336Z" fill="rgba(170,120,140,0.06)"/>
                 <!-- Gloucester -->
-                <path d="M42,338 L80,352 L125,365 L158,378 L142,440 L68,425 L22,395 C28,375 35,358 42,338Z" fill="rgba(160,145,110,0.06)"/>
+                <path d="M75,350 L95,358 L135,370 L170,380 L155,435 L80,420 L42,400 C48,388 56,378 65,370Z" fill="rgba(160,145,110,0.06)"/>
                 <!-- Salem -->
-                <path d="M22,395 L68,425 L68,458 L25,465 C15,450 8,438 4,442 C2,420 8,405 15,395Z" fill="rgba(170,160,90,0.06)"/>
+                <path d="M42,400 L80,420 L80,448 L35,455 C25,445 18,438 16,428 C14,420 16,414 22,408 C30,398 35,395 42,400Z" fill="rgba(170,160,90,0.06)"/>
                 <!-- Cumberland -->
-                <path d="M68,458 L142,440 L178,488 L125,542 L75,545 C55,530 38,510 25,490 L25,465Z" fill="rgba(170,160,95,0.06)"/>
+                <path d="M80,448 L155,435 L190,490 L138,530 L85,535 C65,520 45,500 35,480 L35,455Z" fill="rgba(170,160,95,0.06)"/>
                 <!-- Atlantic -->
-                <path d="M142,440 L158,378 L295,380 L330,408 C322,415 306,438 295,458 L275,482 L178,488Z" fill="rgba(120,155,120,0.06)"/>
+                <path d="M155,435 L170,380 L310,385 L335,405 C330,410 318,428 308,444 L296,456 L282,468 L190,490Z" fill="rgba(120,155,120,0.06)"/>
                 <!-- Cape May -->
-                <path d="M125,542 L178,488 L275,482 C268,490 258,498 248,508 L226,526 C206,540 186,558 168,571 C155,578 143,582 130,581 L125,574Z" fill="rgba(170,130,145,0.06)"/>
-                <!-- ── County boundary lines (traced from reference) ── -->
+                <path d="M138,530 L190,490 L282,468 C268,480 252,494 238,506 C224,518 210,530 196,540 C186,548 176,553 165,557 L148,554 C140,550 138,540 138,530Z" fill="rgba(170,130,145,0.06)"/>
+                <!-- ── County boundary lines (matched to new outline) ── -->
                 <g stroke="rgba(200,180,140,0.2)" stroke-width="0.7" fill="none">
                   <!-- Sussex / Passaic -->
-                  <path d="M262,14 L248,52 L238,82"/>
+                  <path d="M285,38 L270,58 L240,80"/>
                   <!-- Passaic / Bergen -->
-                  <path d="M308,8 L302,38 L302,72 L295,68"/>
-                  <!-- Sussex-Passaic / Morris (northern tier) -->
-                  <path d="M168,96 L210,88 L238,82 L295,68 L292,98"/>
+                  <path d="M340,75 L320,95"/>
+                  <!-- Sussex-Passaic / Morris -->
+                  <path d="M195,90 L240,80 L290,100 L320,95 L320,120"/>
                   <!-- Bergen / Hudson -->
-                  <path d="M350,88 L350,110 L340,132"/>
+                  <path d="M340,130 L365,140"/>
                   <!-- Morris / Essex -->
-                  <path d="M292,98 L315,110 L340,132"/>
-                  <!-- Warren / Morris-Hunterdon (west side) -->
-                  <path d="M102,148 L168,148"/>
+                  <path d="M320,120 L300,140 L300,155"/>
                   <!-- Warren / Sussex -->
-                  <path d="M135,98 L168,96 L168,148"/>
-                  <!-- Morris / Somerset-Union (central) -->
-                  <path d="M198,155 L228,150 L258,148 L288,128"/>
+                  <path d="M175,70 L195,90 L195,140"/>
+                  <!-- Warren / Hunterdon -->
+                  <path d="M130,140 L195,140"/>
+                  <!-- Morris / Somerset-Union -->
+                  <path d="M220,158 L260,155 L300,140"/>
                   <!-- Essex-Hudson / Union -->
-                  <path d="M288,128 L340,132 L368,128 L372,145 L370,168"/>
+                  <path d="M300,155 L330,165 L340,170 L348,175 L350,185"/>
                   <!-- Hunterdon / Somerset -->
-                  <path d="M198,155 L178,210"/>
+                  <path d="M220,158 L200,210"/>
                   <!-- Somerset / Middlesex -->
-                  <path d="M258,148 L260,172 L270,190"/>
+                  <path d="M260,155 L270,175"/>
                   <!-- Union / Middlesex -->
-                  <path d="M260,172 L295,172 L340,178 L365,178"/>
+                  <path d="M270,175 L310,185 L340,195 L350,185"/>
                   <!-- Hunterdon-Somerset / Mercer -->
-                  <path d="M92,232 L140,218 L178,210 L232,218"/>
+                  <path d="M145,230 L200,210 L245,220"/>
                   <!-- Middlesex / Mercer-Monmouth -->
-                  <path d="M232,218 L270,235"/>
-                  <!-- Mercer / Monmouth-Burlington -->
-                  <path d="M270,235 L252,268"/>
-                  <!-- Mercer / Burlington (Delaware to central) -->
-                  <path d="M80,268 L170,268 L252,268"/>
-                  <!-- Monmouth / Ocean-Burlington -->
-                  <path d="M252,268 L290,278 L322,290"/>
-                  <!-- Monmouth / Ocean (coast split) -->
-                  <path d="M322,290 L348,305 L370,292"/>
+                  <path d="M245,220 L280,240"/>
+                  <!-- Mercer / Burlington -->
+                  <path d="M193,276 L260,270"/>
+                  <!-- Monmouth / Burlington -->
+                  <path d="M260,270 L340,295"/>
+                  <!-- Monmouth / Ocean -->
+                  <path d="M340,295 L366,298"/>
                   <!-- Burlington / Ocean -->
-                  <path d="M322,290 L295,380"/>
+                  <path d="M340,295 L310,385"/>
                   <!-- Burlington / Camden -->
-                  <path d="M52,315 L90,338 L125,352"/>
+                  <path d="M118,338 L135,355"/>
                   <!-- Camden / Gloucester -->
-                  <path d="M42,338 L60,345 L80,352 L125,365"/>
+                  <path d="M75,350 L95,358 L135,370"/>
                   <!-- Burlington / Gloucester-Atlantic -->
-                  <path d="M125,365 L142,378 L158,378"/>
+                  <path d="M135,370 L155,378 L170,380"/>
                   <!-- Gloucester / Salem -->
-                  <path d="M22,395 L45,412 L68,425"/>
+                  <path d="M42,400 L60,412 L80,420"/>
                   <!-- Gloucester / Cumberland-Atlantic -->
-                  <path d="M68,425 L105,435 L142,440"/>
+                  <path d="M80,420 L118,430 L155,435"/>
                   <!-- Salem / Cumberland -->
-                  <path d="M68,458 L68,425"/>
-                  <path d="M25,465 L68,458"/>
-                  <!-- Burlington-Atlantic / Ocean (south split) -->
-                  <path d="M295,380 L315,400 L330,408"/>
+                  <path d="M80,448 L80,420"/>
+                  <path d="M35,455 L80,448"/>
+                  <!-- Burlington-Atlantic / Ocean -->
+                  <path d="M310,385 L325,395 L335,405"/>
                   <!-- Atlantic / Cumberland-Cape May -->
-                  <path d="M142,440 L162,465 L178,488"/>
+                  <path d="M155,435 L175,465 L190,490"/>
                   <!-- Cape May / Atlantic (coast) -->
-                  <path d="M178,488 L225,485 L275,482"/>
-                  <!-- Cape May / Cumberland (bay side) -->
-                  <path d="M125,542 L150,518 L178,488"/>
+                  <path d="M190,490 L235,480 L282,468"/>
+                  <!-- Cape May / Cumberland (bay) -->
+                  <path d="M138,530 L165,510 L190,490"/>
                 </g>
                 <!-- ── County name labels ── -->
                 <g font-family="Share Tech Mono" fill="rgba(200,180,140,0.14)" text-anchor="middle" font-size="4.5">
-                  <text x="190" y="58">SUSSEX</text>
-                  <text x="275" y="50">PASSAIC</text>
-                  <text x="350" y="52">BERGEN</text>
-                  <text x="130" y="128">WARREN</text>
-                  <text x="235" y="118">MORRIS</text>
-                  <text x="320" y="112">ESSEX</text>
-                  <text x="372" y="116" font-size="3.5">HUDSON</text>
-                  <text x="140" y="185">HUNTERDON</text>
-                  <text x="225" y="185">SOMERSET</text>
-                  <text x="310" y="155">UNION</text>
-                  <text x="310" y="200">MIDDLESEX</text>
-                  <text x="168" y="248">MERCER</text>
-                  <text x="328" y="258">MONMOUTH</text>
-                  <text x="195" y="328">BURLINGTON</text>
-                  <text x="340" y="338">OCEAN</text>
-                  <text x="82" y="340">CAMDEN</text>
-                  <text x="100" y="398">GLOUCESTER</text>
-                  <text x="42" y="445">SALEM</text>
-                  <text x="100" y="488">CUMBERLAND</text>
-                  <text x="230" y="435">ATLANTIC</text>
-                  <text x="195" y="528">CAPE MAY</text>
+                  <text x="220" y="62">SUSSEX</text>
+                  <text x="295" y="72">PASSAIC</text>
+                  <text x="355" y="112">BERGEN</text>
+                  <text x="155" y="118">WARREN</text>
+                  <text x="255" y="125">MORRIS</text>
+                  <text x="330" y="148">ESSEX</text>
+                  <text x="352" y="168" font-size="3.5">HUDSON</text>
+                  <text x="155" y="195">HUNTERDON</text>
+                  <text x="235" y="192">SOMERSET</text>
+                  <text x="315" y="172">UNION</text>
+                  <text x="310" y="210">MIDDLESEX</text>
+                  <text x="215" y="255">MERCER</text>
+                  <text x="330" y="268">MONMOUTH</text>
+                  <text x="220" y="335">BURLINGTON</text>
+                  <text x="345" y="348">OCEAN</text>
+                  <text x="110" y="350">CAMDEN</text>
+                  <text x="110" y="395">GLOUCESTER</text>
+                  <text x="48" y="430">SALEM</text>
+                  <text x="108" y="480">CUMBERLAND</text>
+                  <text x="245" y="435">ATLANTIC</text>
+                  <text x="195" y="525">CAPE MAY</text>
                 </g>
                 <!-- Pine Barrens contamination zone -->
-                <ellipse cx="265" cy="400" rx="80" ry="55" fill="rgba(80,60,30,0.12)" stroke="rgba(120,100,60,0.12)" stroke-width="1" stroke-dasharray="4,6"/>
-                <text x="265" y="398" font-family="Share Tech Mono" font-size="5.5" fill="rgba(200,180,140,0.15)" text-anchor="middle">PINE BARRENS</text>
-                <text x="265" y="407" font-family="Share Tech Mono" font-size="4" fill="rgba(200,180,140,0.10)" text-anchor="middle">[CONTAMINATED]</text>
+                <path d="M200,350 C220,340 260,335 310,345 C340,355 355,370 360,395 C365,420 350,445 330,460 C310,472 280,480 250,478 C220,475 190,465 170,445 C155,430 150,410 155,390 C160,370 178,358 200,350 Z" fill="rgba(80,60,30,0.12)" stroke="rgba(120,100,60,0.12)" stroke-width="1" stroke-dasharray="4,6"/>
+                <text x="265" y="400" font-family="Share Tech Mono" font-size="5.5" fill="rgba(200,180,140,0.15)" text-anchor="middle">PINE BARRENS</text>
+                <text x="265" y="409" font-family="Share Tech Mono" font-size="4" fill="rgba(200,180,140,0.10)" text-anchor="middle">[CONTAMINATED]</text>
               </g>
               <!-- State outline -->
-              <path d="M135,98 C152,68 182,42 218,25 C252,12 306,4 365,6 C382,8 392,20 393,44 C393,70 388,100 382,128 C377,148 370,162 365,178 C361,192 360,206 370,225 C374,240 374,260 373,276 C370,292 366,310 360,328 C356,344 350,364 338,388 C322,415 306,438 288,464 C272,486 250,506 226,526 C206,540 186,558 168,571 C155,578 143,582 130,581 C116,580 100,573 84,562 C65,547 48,526 32,504 C20,486 10,464 4,442 C0,426 0,408 2,390 C6,370 18,344 36,316 C56,286 76,260 88,234 C95,212 96,190 98,168 C100,150 108,132 118,118 C126,108 132,102 135,98 Z" fill="none" stroke="rgba(200,180,140,0.45)" stroke-width="1.5"/>
+              <path d="M208,24 L232,18 C255,20 280,35 305,52 C325,65 348,78 365,88 L378,95 L385,104 C384,115 382,125 378,135 C374,145 370,152 365,158 C360,164 356,168 352,172 C346,177 340,181 334,185 C326,190 318,195 312,200 C325,206 345,214 358,220 C364,224 368,230 370,238 C370,252 370,265 368,280 C366,298 362,315 358,332 C354,348 350,362 346,374 C340,390 330,410 318,428 C308,444 296,456 282,468 C268,480 252,494 238,506 C224,518 210,530 196,540 C186,548 176,553 165,557 L148,554 C132,548 115,540 100,530 C80,518 58,504 40,488 C30,478 22,468 18,458 C15,448 14,438 14,428 C14,420 16,414 22,408 C30,398 42,388 56,378 C72,368 86,360 100,354 C108,350 114,344 118,338 C130,322 150,308 170,296 C180,290 188,284 193,276 C186,266 174,256 164,248 C152,240 142,234 132,228 C124,220 118,212 114,204 C108,196 102,192 96,188 C94,180 93,174 93,168 C94,156 96,146 100,138 C106,128 114,118 122,108 C132,96 144,82 156,70 C168,58 180,46 192,36 C200,30 204,27 208,24 Z" fill="none" stroke="rgba(200,180,140,0.45)" stroke-width="1.5"/>
               <!-- Neighboring state labels -->
-              <text x="365" y="42" font-family="Share Tech Mono" font-size="5.5" fill="rgba(200,180,140,0.15)" text-anchor="end">NEW YORK</text>
-              <text x="68" y="175" font-family="Share Tech Mono" font-size="5.5" fill="rgba(200,180,140,0.15)" text-anchor="middle">PENNSYLVANIA</text>
-              <text x="40" y="530" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,180,140,0.12)" text-anchor="middle">DELAWARE</text>
+              <text x="340" y="50" font-family="Share Tech Mono" font-size="5.5" fill="rgba(200,180,140,0.15)" text-anchor="end">NEW YORK</text>
+              <text x="60" y="240" font-family="Share Tech Mono" font-size="5.5" fill="rgba(200,180,140,0.15)" text-anchor="middle">PENNSYLVANIA</text>
+              <text x="30" y="490" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,180,140,0.12)" text-anchor="middle">DELAWARE</text>
             </g>
             <!-- ═══ CLASSIC ROADS ═══ -->
             <g id="map-roads-classic">
-              <line x1="200" y1="112" x2="332" y2="149" class="road" id="road-meridian-newark" stroke-dasharray="4,6"/>
-              <line x1="200" y1="112" x2="288" y2="163" class="road" id="road-meridian-mountainside" stroke-dasharray="4,6"/>
-              <path d="M192,493 C200,460 210,410 225,365 C240,325 275,330 355,338" fill="none" class="road" id="road-capemay-lbi" stroke-dasharray="3,8"/>
-              <line x1="332" y1="149" x2="288" y2="163" class="road" id="road-newark-mountainside"/>
-              <path d="M332,153 C310,180 270,210 240,235 C215,255 200,258 187,259" fill="none" class="road" id="road-newark-tcnj"/>
-              <path d="M288,167 C260,190 230,220 210,245 C200,252 193,256 187,259" fill="none" class="road" id="road-mside-tcnj"/>
-              <line x1="187" y1="263" x2="196" y2="273" class="road" id="road-tcnj-trenton"/>
-              <path d="M196,276 C205,295 218,310 228,319" fill="none" class="road" id="road-trenton-mcguire"/>
-              <line x1="190" y1="263" x2="231" y2="321" class="road" id="road-tcnj-mcguire"/>
-              <path d="M238,323 C270,325 310,330 355,337" fill="none" class="road" id="road-mcguire-lbi"/>
-              <path d="M338,155 C350,200 362,270 360,337" fill="none" class="road" id="road-newark-lbi" stroke-dasharray="5,7"/>
-              <path d="M234,324 C255,350 280,385 302,408" fill="none" class="road" id="road-mcguire-pine_barrens" stroke-dasharray="3,5"/>
-              <path d="M357,340 C340,360 325,385 308,408" fill="none" class="road" id="road-lbi-pine_barrens" stroke-dasharray="3,5"/>
+              <line x1="195" y1="119" x2="323" y2="159" class="road" id="road-meridian-newark" stroke-dasharray="4,6"/>
+              <line x1="195" y1="119" x2="281" y2="174" class="road" id="road-meridian-mountainside" stroke-dasharray="4,6"/>
+              <line x1="323" y1="159" x2="281" y2="174" class="road" id="road-newark-mountainside"/>
+              <path d="M323,163 C300,190 260,220 230,245 C210,255 198,260 188,262" fill="none" class="road" id="road-newark-tcnj"/>
+              <path d="M281,178 C255,200 225,230 205,250 C196,258 192,260 188,262" fill="none" class="road" id="road-mside-tcnj"/>
+              <line x1="188" y1="266" x2="192" y2="272" class="road" id="road-tcnj-trenton"/>
+              <path d="M192,276 C200,290 215,305 225,314" fill="none" class="road" id="road-trenton-mcguire"/>
+              <line x1="190" y1="266" x2="228" y2="316" class="road" id="road-tcnj-mcguire"/>
+              <path d="M232,318 C265,340 305,370 342,398" fill="none" class="road" id="road-mcguire-lbi"/>
+              <path d="M328,165 C340,220 352,310 348,398" fill="none" class="road" id="road-newark-lbi" stroke-dasharray="5,7"/>
+              <path d="M230,320 C248,345 260,365 270,384" fill="none" class="road" id="road-mcguire-pine_barrens" stroke-dasharray="3,5"/>
+              <path d="M342,402 C320,400 300,395 275,388" fill="none" class="road" id="road-lbi-pine_barrens" stroke-dasharray="3,5"/>
+              <path d="M275,390 C275,420 272,445 268,458" fill="none" class="road" id="road-pine_barrens-atlantic_city" stroke-dasharray="3,5"/>
+              <path d="M268,390 C240,430 200,490 162,548" fill="none" class="road" id="road-pine_barrens-cape_may" stroke-dasharray="3,8"/>
             </g>
             <!-- ═══ COUNTY ROADS (populated by JS) ═══ -->
             <g id="map-roads-county" style="display:none"></g>
             <!-- ═══ PRIMARY LOCATION NODES ═══ -->
-            <g class="loc-node ctrl-hostile" id="node-newark" onclick="clickLoc('newark')" transform="translate(332,149)">
+            <g class="loc-node ctrl-hostile" id="node-newark" onclick="clickLoc('newark')" transform="translate(323,159)">
               <circle class="outer" cx="0" cy="0" r="13" filter="url(#glow)"/><circle class="inner" cx="0" cy="0" r="6"/>
               <text x="0" y="-18" font-family="Share Tech Mono" font-size="6.5" text-anchor="middle" class="node-lbl">NEWARK</text>
               <text x="0" y="-10" font-family="Share Tech Mono" font-size="4" text-anchor="middle" class="node-sub">[IRON SYNDICATE]</text>
             </g>
-            <g class="loc-node ctrl-neutral" id="node-mountainside" onclick="clickLoc('mountainside')" transform="translate(288,163)">
+            <g class="loc-node ctrl-neutral" id="node-mountainside" onclick="clickLoc('mountainside')" transform="translate(281,174)">
               <circle class="outer" cx="0" cy="0" r="11"/><circle class="inner" cx="0" cy="0" r="5.5"/>
               <text x="-15" y="5" font-family="Share Tech Mono" font-size="5.5" text-anchor="end" class="node-lbl">MTNSIDE</text>
               <text x="-15" y="12" font-family="Share Tech Mono" font-size="4" text-anchor="end" class="node-sub">[COVENANT]</text>
             </g>
-            <g class="loc-node ctrl-player current-loc" id="node-tcnj" onclick="clickLoc('tcnj')" transform="translate(187,259)">
+            <g class="loc-node ctrl-player current-loc" id="node-tcnj" onclick="clickLoc('tcnj')" transform="translate(188,262)">
               <circle class="outer" cx="0" cy="0" r="14" filter="url(#glow)"/><circle class="inner" cx="0" cy="0" r="7"/>
               <text x="0" y="-19" font-family="Share Tech Mono" font-size="7" text-anchor="middle" class="node-lbl">TCNJ</text>
               <text x="0" y="-11" font-family="Share Tech Mono" font-size="4" text-anchor="middle" class="node-sub">[YOUR BASE]</text>
             </g>
-            <g class="loc-node ctrl-neutral" id="node-trenton" onclick="clickLoc('trenton')" transform="translate(196,273)">
+            <g class="loc-node ctrl-neutral" id="node-trenton" onclick="clickLoc('trenton')" transform="translate(192,272)">
               <circle class="outer" cx="0" cy="0" r="11"/><circle class="inner" cx="0" cy="0" r="5.5"/>
               <text x="15" y="5" font-family="Share Tech Mono" font-size="5.5" text-anchor="start" class="node-lbl">TRENTON</text>
               <text x="15" y="12" font-family="Share Tech Mono" font-size="4" text-anchor="start" class="node-sub">[COLLECTIVE]</text>
             </g>
-            <g class="loc-node ctrl-hostile" id="node-mcguire" onclick="clickLoc('mcguire')" transform="translate(231,321)">
+            <g class="loc-node ctrl-hostile" id="node-mcguire" onclick="clickLoc('mcguire')" transform="translate(228,316)">
               <circle class="outer" cx="0" cy="0" r="13" filter="url(#glow)"/><circle class="inner" cx="0" cy="0" r="6.5"/>
               <text x="-16" y="4" font-family="Share Tech Mono" font-size="5.5" text-anchor="end" class="node-lbl">McGUIRE</text>
               <text x="-16" y="11" font-family="Share Tech Mono" font-size="4" text-anchor="end" class="node-sub">[RUST EAGLES]</text>
             </g>
-            <g class="loc-node ctrl-neutral" id="node-lbi" onclick="clickLoc('lbi')" transform="translate(358,338)">
+            <g class="loc-node ctrl-neutral" id="node-lbi" onclick="clickLoc('lbi')" transform="translate(345,400)">
               <circle class="outer" cx="0" cy="0" r="11"/><circle class="inner" cx="0" cy="0" r="5.5"/>
               <text x="0" y="-16" font-family="Share Tech Mono" font-size="5.5" text-anchor="middle" class="node-lbl">LBI</text>
               <text x="0" y="-9" font-family="Share Tech Mono" font-size="4" text-anchor="middle" class="node-sub">[BROTHERHOOD]</text>
             </g>
-            <g class="loc-node ctrl-unclaimed" id="node-meridian_biolabs" onclick="clickLoc('meridian_biolabs')" transform="translate(200,108)">
+            <g class="loc-node ctrl-unclaimed" id="node-meridian_biolabs" onclick="clickLoc('meridian_biolabs')" transform="translate(195,115)">
               <circle class="outer" cx="0" cy="0" r="11"/><circle class="inner" cx="0" cy="0" r="5.5"/>
               <text x="-13" y="4" font-family="Share Tech Mono" font-size="5.5" text-anchor="end" class="node-lbl">BRANTOVER</text>
               <text x="-13" y="11" font-family="Share Tech Mono" font-size="4" text-anchor="end" class="node-sub">[AI-LABS]</text>
             </g>
-            <g class="loc-node ctrl-neutral" id="node-cape_may" onclick="clickLoc('cape_may')" transform="translate(190,490)">
+            <g class="loc-node ctrl-neutral" id="node-cape_may" onclick="clickLoc('cape_may')" transform="translate(159,552)">
               <circle class="outer" cx="0" cy="0" r="11"/><circle class="inner" cx="0" cy="0" r="5.5"/>
               <text x="0" y="-16" font-family="Share Tech Mono" font-size="5.5" text-anchor="middle" class="node-lbl">CAPE MAY</text>
               <text x="0" y="-9" font-family="Share Tech Mono" font-size="4" text-anchor="middle" class="node-sub">[MUNICIPAL]</text>
             </g>
-            <g class="loc-node ctrl-hostile" id="node-pine_barrens" onclick="clickLoc('pine_barrens')" transform="translate(305,410)">
+            <g class="loc-node ctrl-hostile" id="node-pine_barrens" onclick="clickLoc('pine_barrens')" transform="translate(272,386)">
               <circle class="outer" cx="0" cy="0" r="12" filter="url(#glow)"/><circle class="inner" cx="0" cy="0" r="5.5"/>
               <text x="15" y="0" font-family="Share Tech Mono" font-size="5.5" text-anchor="start" class="node-lbl">PINE BARRENS</text>
               <text x="15" y="7" font-family="Share Tech Mono" font-size="4" text-anchor="start" class="node-sub">[HOLLOWED / &#9888; DEVIL]</text>
             </g>
-            <g class="loc-node ctrl-neutral" id="node-atlantic_city" onclick="clickLoc('atlantic_city')" transform="translate(268,475)">
+            <g class="loc-node ctrl-neutral" id="node-atlantic_city" onclick="clickLoc('atlantic_city')" transform="translate(268,460)">
               <circle class="outer" cx="0" cy="0" r="11"/><circle class="inner" cx="0" cy="0" r="5.5"/>
               <text x="0" y="-16" font-family="Share Tech Mono" font-size="5.5" text-anchor="middle" class="node-lbl">ATLCT</text>
               <text x="0" y="-9" font-family="Share Tech Mono" font-size="4" text-anchor="middle" class="node-sub">[SUBNET CASINO]</text>
             </g>
             <!-- ═══ SECONDARY TOWNS (original) ═══ -->
-            <g class="town-node" id="node-hoboken" onclick="clickLoc('hoboken')" transform="translate(369,152)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="0" y="-12" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="middle">HBKN</text></g>
-            <g class="town-node" id="node-port_elizabeth" onclick="clickLoc('port_elizabeth')" transform="translate(330,172)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="14" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">PRTELZ</text></g>
-            <g class="town-node" id="node-newark_airport" onclick="clickLoc('newark_airport')" transform="translate(346,164)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="0" y="-12" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="middle">NWKAIR</text></g>
-            <g class="town-node" id="node-middlesex" onclick="clickLoc('middlesex')" transform="translate(258,196)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">MDLSX</text></g>
-            <g class="town-node" id="node-asbury_ruins" onclick="clickLoc('asbury_ruins')" transform="translate(368,278)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">ASBRY</text></g>
-            <g class="town-node" id="node-bound_brook" onclick="clickLoc('bound_brook')" transform="translate(245,202)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="0" y="-12" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="middle">BNDBRK</text></g>
-            <g class="town-node" id="node-metuchen" onclick="clickLoc('metuchen')" transform="translate(292,204)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">MTCHN</text></g>
-            <g class="town-node" id="node-dunellen" onclick="clickLoc('dunellen')" transform="translate(264,192)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="0" y="-12" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="middle">DUNLN</text></g>
-            <g class="town-node" id="node-manville" onclick="clickLoc('manville')" transform="translate(238,210)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">MNVLL</text></g>
-            <g class="town-node" id="node-netcong" onclick="clickLoc('netcong')" transform="translate(224,124)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">NTCNG</text></g>
+            <g class="town-node" id="node-hoboken" onclick="clickLoc('hoboken')" transform="translate(354,159)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="0" y="-12" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="middle">HBKN</text></g>
+            <g class="town-node" id="node-port_elizabeth" onclick="clickLoc('port_elizabeth')" transform="translate(314,176)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="14" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">PRTELZ</text></g>
+            <g class="town-node" id="node-newark_airport" onclick="clickLoc('newark_airport')" transform="translate(323,170)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="0" y="-12" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="middle">NWKAIR</text></g>
+            <g class="town-node" id="node-middlesex" onclick="clickLoc('middlesex')" transform="translate(250,196)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">MDLSX</text></g>
+            <g class="town-node" id="node-asbury_ruins" onclick="clickLoc('asbury_ruins')" transform="translate(358,272)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">ASBRY</text></g>
+            <g class="town-node" id="node-bound_brook" onclick="clickLoc('bound_brook')" transform="translate(241,196)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="0" y="-12" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="middle">BNDBRK</text></g>
+            <g class="town-node" id="node-metuchen" onclick="clickLoc('metuchen')" transform="translate(281,203)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">MTCHN</text></g>
+            <g class="town-node" id="node-dunellen" onclick="clickLoc('dunellen')" transform="translate(256,192)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="0" y="-12" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="middle">DUNLN</text></g>
+            <g class="town-node" id="node-manville" onclick="clickLoc('manville')" transform="translate(230,203)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">MNVLL</text></g>
+            <g class="town-node" id="node-netcong" onclick="clickLoc('netcong')" transform="translate(203,124)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">NTCNG</text></g>
             <!-- ═══ NEW COUNTY TOWNS ═══ -->
-            <g class="town-node" id="node-newton" onclick="clickLoc('newton')" transform="translate(170,72)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="0" y="-12" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="middle">NWTN</text></g>
-            <g class="town-node" id="node-paterson" onclick="clickLoc('paterson')" transform="translate(290,100)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="0" y="-12" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="middle">PTRN</text></g>
-            <g class="town-node" id="node-hackensack" onclick="clickLoc('hackensack')" transform="translate(340,90)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">HCKNSK</text></g>
-            <g class="town-node" id="node-belvidere" onclick="clickLoc('belvidere')" transform="translate(140,115)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">BLVDR</text></g>
-            <g class="town-node" id="node-morristown" onclick="clickLoc('morristown')" transform="translate(255,120)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="0" y="-12" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="middle">MRTWN</text></g>
-            <g class="town-node" id="node-jersey_city" onclick="clickLoc('jersey_city')" transform="translate(370,130)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">JRCTY</text></g>
-            <g class="town-node" id="node-flemington" onclick="clickLoc('flemington')" transform="translate(165,210)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">FLMTN</text></g>
-            <g class="town-node" id="node-somerville" onclick="clickLoc('somerville')" transform="translate(225,195)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="0" y="-12" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="middle">SMRVL</text></g>
-            <g class="town-node" id="node-new_brunswick" onclick="clickLoc('new_brunswick')" transform="translate(275,205)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">NWBRK</text></g>
-            <g class="town-node" id="node-freehold" onclick="clickLoc('freehold')" transform="translate(328,260)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">FRHOLD</text></g>
-            <g class="town-node" id="node-mount_holly" onclick="clickLoc('mount_holly')" transform="translate(195,345)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">MTHLY</text></g>
-            <g class="town-node" id="node-toms_river" onclick="clickLoc('toms_river')" transform="translate(338,355)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">TMSRV</text></g>
-            <g class="town-node" id="node-camden" onclick="clickLoc('camden')" transform="translate(148,370)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">CMDN</text></g>
-            <g class="town-node" id="node-woodbury" onclick="clickLoc('woodbury')" transform="translate(135,395)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">WDBRY</text></g>
-            <g class="town-node" id="node-salem" onclick="clickLoc('salem')" transform="translate(80,435)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">SALEM</text></g>
-            <g class="town-node" id="node-bridgeton" onclick="clickLoc('bridgeton')" transform="translate(120,465)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">BRGTN</text></g>
-            <g class="town-node" id="node-mays_landing" onclick="clickLoc('mays_landing')" transform="translate(235,445)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">MYSLND</text></g>
+            <g class="town-node" id="node-newton" onclick="clickLoc('newton')" transform="translate(194,89)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="0" y="-12" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="middle">NWTN</text></g>
+            <g class="town-node" id="node-paterson" onclick="clickLoc('paterson')" transform="translate(323,120)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="0" y="-12" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="middle">PTRN</text></g>
+            <g class="town-node" id="node-hackensack" onclick="clickLoc('hackensack')" transform="translate(352,126)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">HCKNSK</text></g>
+            <g class="town-node" id="node-belvidere" onclick="clickLoc('belvidere')" transform="translate(121,139)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">BLVDR</text></g>
+            <g class="town-node" id="node-morristown" onclick="clickLoc('morristown')" transform="translate(256,146)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="0" y="-12" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="middle">MRTWN</text></g>
+            <g class="town-node" id="node-jersey_city" onclick="clickLoc('jersey_city')" transform="translate(360,161)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">JRCTY</text></g>
+            <g class="town-node" id="node-flemington" onclick="clickLoc('flemington')" transform="translate(170,209)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">FLMTN</text></g>
+            <g class="town-node" id="node-somerville" onclick="clickLoc('somerville')" transform="translate(225,196)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="0" y="-12" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="middle">SMRVL</text></g>
+            <g class="town-node" id="node-new_brunswick" onclick="clickLoc('new_brunswick')" transform="translate(261,214)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">NWBRK</text></g>
+            <g class="town-node" id="node-freehold" onclick="clickLoc('freehold')" transform="translate(301,264)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">FRHOLD</text></g>
+            <g class="town-node" id="node-mount_holly" onclick="clickLoc('mount_holly')" transform="translate(186,323)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">MTHLY</text></g>
+            <g class="town-node" id="node-toms_river" onclick="clickLoc('toms_river')" transform="translate(316,331)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">TMSRV</text></g>
+            <g class="town-node" id="node-camden" onclick="clickLoc('camden')" transform="translate(112,336)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">CMDN</text></g>
+            <g class="town-node" id="node-woodbury" onclick="clickLoc('woodbury')" transform="translate(106,355)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">WDBRY</text></g>
+            <g class="town-node" id="node-salem" onclick="clickLoc('salem')" transform="translate(35,414)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">SALEM</text></g>
+            <g class="town-node" id="node-bridgeton" onclick="clickLoc('bridgeton')" transform="translate(88,445)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">BRGTN</text></g>
+            <g class="town-node" id="node-mays_landing" onclick="clickLoc('mays_landing')" transform="translate(199,441)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">MYSLND</text></g>
+            <!-- ═══ NEW PHASE 3 TOWNS ═══ -->
+            <g class="town-node" id="node-summit" onclick="clickLoc('summit')" transform="translate(290,162)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="0" y="-12" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="middle">SUMMT</text></g>
+            <g class="town-node" id="node-berkeley_heights" onclick="clickLoc('berkeley_heights')" transform="translate(268,168)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">BRKHT</text></g>
+            <g class="town-node" id="node-westfield" onclick="clickLoc('westfield')" transform="translate(295,178)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">WSTFD</text></g>
+            <g class="town-node" id="node-warren_twp" onclick="clickLoc('warren_twp')" transform="translate(245,183)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="-12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="end">WARRN</text></g>
+            <g class="town-node" id="node-union_twp" onclick="clickLoc('union_twp')" transform="translate(303,168)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">UNION</text></g>
+            <g class="town-node" id="node-stafford_twp" onclick="clickLoc('stafford_twp')" transform="translate(301,386)"><rect class="town-diamond" x="-5" y="-5" width="10" height="10" transform="rotate(45)"/><text x="12" y="4" font-family="Share Tech Mono" font-size="4.5" fill="rgba(200,200,200,0.55)" text-anchor="start">STFRD</text></g>
             <!-- ═══ PATROL DOTS ═══ -->
-            <circle class="patrol-dot" id="patrol1" cx="332" cy="149" r="3.5"/>
-            <circle class="patrol-dot" id="patrol2" cx="231" cy="321" r="3.5"/>
+            <circle class="patrol-dot" id="patrol1" cx="323" cy="159" r="3.5"/>
+            <circle class="patrol-dot" id="patrol2" cx="228" cy="316" r="3.5"/>
           </svg>
           <div class="map-legend">
             <div><div class="leg-dot" style="background:var(--g)"></div>PLAYER</div>
