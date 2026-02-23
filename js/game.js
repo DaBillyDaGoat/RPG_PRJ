@@ -1756,9 +1756,7 @@ function settingsTab(tab){
 // ── DEV LOGGING ──
 const LOG_KEY='wc_devlog_v1';
 const LOG_MAX=800;
-// Paste your Cloudflare Worker URL here after setup (see workers/logger.js for instructions)
-// Example: 'https://projectleroy-logger.YOUR.workers.dev'
-const LOG_REMOTE_URL='';
+const LOG_REMOTE_URL='https://projectleroy-logger.billybuteau.workers.dev';
 
 function logEvent(type,data){
   try{
