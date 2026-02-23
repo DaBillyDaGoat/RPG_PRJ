@@ -599,7 +599,7 @@ const LOCATIONS={
   trenton:{name:'Trenton',shortName:'TRENT',ctrl:'neutral',faction:'trenton_collective',svgX:192,svgY:272,travelDays:1,travelSupplies:8,travelTroopRisk:false,raidRisk:1,supplyPerTurn:10,features:['Farmland','Food stores','Collective governance'],flavor:'The breadbasket of NJ 2999. Chair King runs it by committee. It somehow works.'},
   mcguire:{name:'McGuire AFB',shortName:'MCGRE',ctrl:'hostile',faction:'rust_eagles',svgX:228,svgY:316,travelDays:2,travelSupplies:12,travelTroopRisk:true,raidRisk:3,supplyPerTurn:10,features:['Military airstrip','Armory','Aircraft (fuel unknown)'],flavor:'Three generations of Air Force descendants who never left. General Rusk still runs daily drills.'},
   lbi:{name:'LBI Harbor',shortName:'LBI',ctrl:'neutral',faction:'coastal_brotherhood',svgX:345,svgY:400,travelDays:3,travelSupplies:18,travelTroopRisk:false,raidRisk:2,supplyPerTurn:9,features:['Harbor','Trade routes','Smuggling network'],flavor:'Long Beach Island. Captain Salieri runs the most profitable port on the coast. Everything moves through here \u2014 for a price.'},
-  meridian_biolabs:{name:'Brantover AI-Powered Biolabs',shortName:'BRNVR',ctrl:'unclaimed',faction:'player',svgX:195,svgY:115,travelDays:3,travelSupplies:16,travelTroopRisk:false,raidRisk:2,supplyPerTurn:7,claimable:true,features:['Pharmaceutical production lines','Abandoned AI-managed research labs','Bio-synthesis equipment'],flavor:"Pre-collapse AI-operated pharmaceutical campus in Warren County. Brantover's automated systems ran mid-production when the evacuation orders came — and kept running for decades after. The labs are still stocked. The contamination that flows into the Pine Barrens from these grounds has been flowing for 330 years."},
+  meridian_biolabs:{name:'Abandoned Facility',shortName:'???',ctrl:'unclaimed',faction:'player',svgX:195,svgY:115,travelDays:3,travelSupplies:16,travelTroopRisk:false,raidRisk:2,supplyPerTurn:7,claimable:true,revealName:'Brantover AI-Powered Biolabs',features:['Unknown — requires investigation'],flavor:"Something is out here in Warren County. The locals won't go near it. The contamination that poisons the Pine Barrens flows from this direction. Whatever this place is, it's been running on its own for a very long time."},
   pine_barrens:{name:'Pine Barrens',shortName:'PNBRN',ctrl:'hostile',faction:'the_hollowed',svgX:272,svgY:386,travelDays:2,travelSupplies:12,travelTroopRisk:true,raidRisk:5,supplyPerTurn:0,features:['Brantover contamination zones','Hollowed hunting grounds','Chemical bog terrain'],flavor:"330 years of Brantover runoff pooling into the aquifer. The trees are wrong — too tall, too quiet, colors that have no name. The Hollowed call this home. Something else does too. Something that has been mutating here since before living memory.",jerseyDevil:true},
   cape_may:{name:'Cape May Municipal',shortName:'CAPMY',ctrl:'neutral',faction:'subnet',svgX:159,svgY:552,travelDays:4,travelSupplies:22,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Underground bunker entrance','NJ-ADMIN-7 access terminal','Subnet relay nodes'],flavor:"Cape May Municipal Building \u2014 condemned since 2715. Three sub-basement levels below the public record. The Architect receives visitors, when it chooses to."},
   // ── SECONDARY LOCATIONS ──────────────────────────────────────────────────
@@ -1692,6 +1692,18 @@ function applyAll(res,ch){
       state.currentLocation=destId;
       if(!state.visitedLocations) state.visitedLocations=[];
       if(!state.visitedLocations.includes(destId)) state.visitedLocations.push(destId);
+      // Reveal hidden location names on first visit
+      if(dest.revealName&&dest.name!==dest.revealName){
+        dest.name=dest.revealName;
+        dest.shortName='BRNVR';
+        dest.features=['Pharmaceutical production lines','Abandoned AI-managed research labs','Bio-synthesis equipment'];
+        dest.flavor="Pre-collapse AI-operated pharmaceutical campus in Warren County. Brantover's automated systems ran mid-production when the evacuation orders came \u2014 and kept running for decades after. The labs are still stocked. The contamination that flows into the Pine Barrens from these grounds has been flowing for 330 years.";
+        const lbl=document.querySelector('#node-'+destId+' .node-lbl');
+        const sub=document.querySelector('#node-'+destId+' .node-sub');
+        if(lbl) lbl.textContent='BRANTOVER';
+        if(sub) sub.textContent='[AI-LABS]';
+        showNotif('\u26a0 LOCATION REVEALED: BRANTOVER AI-POWERED BIOLABS');
+      }
       document.getElementById('panel-loc').textContent=dest.shortName;
       showNotif('ARRIVED \u2192 '+dest.name.toUpperCase());
     }
