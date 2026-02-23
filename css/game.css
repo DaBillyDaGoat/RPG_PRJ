@@ -495,9 +495,6 @@ body.map-labels-hidden .loc-node text,body.map-labels-hidden .town-node text{dis
   .settings-win{width:98%;max-width:98%;}
   .stab-content{font-size:.6rem;}
 
-  /* Chars: single column on mobile */
-  .chars-cards{grid-template-columns:1fr;}
-
   /* Faction cards: reduce NPC voice quote size on mobile */
   .fc-npc-voice{font-size:.52rem;}
   .fc-desc{font-size:.6rem;}
@@ -507,6 +504,9 @@ body.map-labels-hidden .loc-node text,body.map-labels-hidden .town-node text{dis
 
   /* Faction card NPC blocks: tighter on mobile */
   .fc-npc{padding:6px 8px;}
+
+  /* Skill allocation: bigger touch targets on mobile */
+  .sk-alloc-btn{width:44px;height:44px;font-size:1rem;}
 }
 
 /* ── FACTION CARD NPC CONTACTS ── */
@@ -576,29 +576,11 @@ body.map-labels-hidden .loc-node text,body.map-labels-hidden .town-node text{dis
 @keyframes relFlash{0%{background:#000;box-shadow:none;}30%{background:rgba(0,255,65,.08);box-shadow:0 0 12px rgba(0,255,65,.3);}100%{background:#000;box-shadow:none;}}
 .faction-card.rel-flash{animation:relFlash 2s ease forwards;}
 
-/* ── CHARACTERS / PEOPLE TAB ── */
-.chars-section{margin-bottom:12px;}
-.chars-faction-hdr{font-size:.63rem;color:var(--a);letter-spacing:1px;padding:6px 10px;background:#000;border:1px solid var(--gd);display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;}
-.chars-rel-badge{font-size:.45rem;padding:2px 6px;border:1px solid;letter-spacing:1px;}
-.chars-met-badge{font-size:.48rem;padding:2px 7px;letter-spacing:1px;border:1px solid;margin-left:auto;}
-.chars-met{color:var(--g);border-color:var(--g);}
-.chars-unmet{color:var(--wgdd);border-color:var(--wgdd);}
-.chars-cards{display:grid;grid-template-columns:1fr;gap:4px;}
-.char-card{background:#000;border:1px solid var(--gd);padding:9px 11px;}
-.char-card.char-unknown{opacity:.42;border-style:dashed;}
-.char-card.char-leader{border-color:var(--a);border-style:solid;}
-.char-name{font-size:.65rem;color:var(--g);margin-bottom:2px;letter-spacing:.5px;}
-.char-role{font-size:.55rem;color:var(--gd);font-style:italic;margin-bottom:3px;}
-.char-faction{font-size:.5rem;letter-spacing:1px;margin-bottom:4px;text-transform:uppercase;}
-.char-rel{font-size:.5rem;letter-spacing:1px;margin-top:2px;}
-.char-voice{font-size:.52rem;color:var(--wgdd);line-height:1.55;border-top:1px solid rgba(255,255,255,.05);padding-top:4px;margin-top:2px;}
-
 /* ── TINY PHONE (<375px) — tab bar scrolls horizontally ── */
 @media (max-width:375px){
   .tab-bar{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   .tab-bar::-webkit-scrollbar{display:none;}
   .tab{flex-shrink:0;font-size:.48rem;padding:5px 7px;}
-  .chars-cards{grid-template-columns:1fr;}
   .wi{padding:8px;}
 }
 
@@ -624,6 +606,19 @@ body.map-labels-hidden .loc-node text,body.map-labels-hidden .town-node text{dis
 .dev-type-choice{color:#00ff41!important;}.dev-type-custom{color:#00bbff!important;}.dev-type-session{color:#ffb000!important;}
 .dev-type-game{color:#ff44aa!important;}.dev-type-api{color:#cc0000!important;}.dev-type-turn{color:#2a2a2a!important;}
 .dev-type-faction{color:#bb44ff!important;}.dev-type-travel{color:#ffaa00!important;}
+.dev-quick-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;margin-bottom:12px;}
+.dev-qs{background:#0d0d0d;border:1px solid #1a1a1a;border-left:2px solid #00ff41;padding:6px 8px;text-align:center;}
+.dev-qs-val{font-size:1.1rem;color:#00ff41;font-weight:bold;line-height:1.2;}
+.dev-qs-lbl{font-size:.42rem;color:#333;letter-spacing:1px;text-transform:uppercase;}
+.dev-qs.amber{border-left-color:#ffb000;}.dev-qs.amber .dev-qs-val{color:#ffb000;}
+.dev-qs.red{border-left-color:#cc0000;}.dev-qs.red .dev-qs-val{color:#cc0000;}
+.dev-qs.purple{border-left-color:#bb44ff;}.dev-qs.purple .dev-qs-val{color:#bb44ff;}
+.dev-lb-section{margin-bottom:12px;}
+.dev-lb-hdr{font-size:.5rem;color:#ffb000;letter-spacing:2px;margin-bottom:4px;text-transform:uppercase;}
+.dev-lb-row{display:flex;align-items:center;gap:6px;font-size:.58rem;padding:2px 0;border-bottom:1px solid #111;}
+.dev-lb-rank{width:18px;text-align:center;flex-shrink:0;}
+.dev-lb-name{color:#00ff41;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dev-lb-val{color:#ffb000;font-weight:bold;flex-shrink:0;}
 
 /* ── SPLASH / BOOT SCREEN ── */
 #splash-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:9990;display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;transition:opacity .5s ease;}

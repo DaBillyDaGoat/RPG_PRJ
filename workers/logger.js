@@ -78,6 +78,50 @@ export default {
       }
     }
 
+    // GET /players — aggregate by codename: sessions, turns, API calls, last seen
+    if (url.pathname === '/players' && request.method === 'GET') {
+      try {
+        let allKeys = [];
+        let cursor;
+        do {
+          const list = await env.GAME_LOGS.list({ prefix: 'evt:', cursor, limit: 1000 });
+          allKeys = allKeys.concat(list.keys);
+          cursor = list.list_complete ? undefined : list.cursor;
+        } while (cursor);
+
+        const events = await Promise.all(
+          allKeys.map(k => env.GAME_LOGS.get(k.name).then(v => v ? JSON.parse(v) : null))
+        );
+
+        const players = {};
+        events.filter(Boolean).forEach(e => {
+          const cn = e.cn || 'Unknown';
+          if (!players[cn]) players[cn] = { codename: cn, sessions: new Set(), turns: 0, apiCalls: 0, firstSeen: e.ts, lastSeen: e.ts };
+          const p = players[cn];
+          if (e.sid) p.sessions.add(e.sid);
+          if (e.type === 'turn_end') p.turns++;
+          p.apiCalls++;
+          if (e.ts < p.firstSeen) p.firstSeen = e.ts;
+          if (e.ts > p.lastSeen) p.lastSeen = e.ts;
+        });
+
+        const result = Object.values(players).map(p => ({
+          codename: p.codename,
+          sessions: p.sessions.size,
+          turns: p.turns,
+          apiCalls: p.apiCalls,
+          firstSeen: p.firstSeen,
+          lastSeen: p.lastSeen,
+        })).sort((a, b) => b.lastSeen - a.lastSeen);
+
+        return new Response(JSON.stringify(result), {
+          headers: { ...CORS, 'Content-Type': 'application/json' },
+        });
+      } catch (e) {
+        return new Response('[]', { headers: { ...CORS, 'Content-Type': 'application/json' } });
+      }
+    }
+
     return new Response('not found', { status: 404, headers: CORS });
   },
 };

@@ -69,6 +69,7 @@
         <div class="desktop-meta-chip">STATUS<span>Early Access</span></div>
         <div class="desktop-meta-chip">BUILD<span>2999 Alpha</span></div>
         <div class="desktop-meta-chip settings-chip" onclick="openSettings()">SETTINGS<span>Options &amp; Lore</span></div>
+        <div class="desktop-meta-chip settings-chip" onclick="openSettings();settingsTab('tutorial')">HOW TO PLAY<span>Tutorial</span></div>
       </div>
       <div id="home-continue-row" style="display:none;margin-top:14px;width:100%;gap:8px;flex-wrap:wrap;">
         <button class="desktop-save-btn" onclick="resumeGame(window._ps)">&#9654; CONTINUE LAST SAVE</button>
@@ -714,8 +715,10 @@
         <!-- Populated by renderSettingsTab() -->
       </div>
       <div id="stab-tutorial" class="stab-content" style="display:none;">
+        <h3>&#9658; THE WORLD</h3>
+        In 2669, 92% of humanity evacuated Earth in an event known as &ldquo;The Departure.&rdquo; The 8% left behind in New Jersey have been on their own for 330 years. Technology froze at 2066. Six factions now control what remains of the Garden State. Pennsylvania is occupied by the Amish. New York severed all bridges and tunnels. You are on your own.
         <h3>&#9658; OBJECTIVE</h3>
-        Unite or dominate all factions of New Jersey 2999. Win by controlling all <strong>10 primary locations</strong> on the map, or by resolving every faction &mdash; ally them (Relation 66+) or conquer them (Relation 0 + their home territory captured). Any combination works. Your Influence hits 0% and you lose. The <span style="color:#c8a84b">Yee Amish</span> arrive on Day 120 regardless &mdash; resolve the state before then.
+        Unite or dominate all factions of New Jersey 2999. Win by controlling all <strong>10 primary locations</strong> on the map, or by resolving every faction &mdash; ally them (Relation 66+) or conquer them (Relation 0 + their home territory captured). Any combination works. Your HP hits 0 and you die. The <span style="color:#c8a84b">Yee Amish</span> arrive on Day 120 regardless &mdash; resolve the state before then.
         <h3>&#9658; AMISH CLOCK</h3>
         The <span style="color:#c8a84b">AMISH</span> chip in the resource bar counts down from Day 120. When it hits 0, Ezikio&rsquo;s forces cross the Delaware. If you brokered a deal with Ezikio earlier, there&rsquo;s a 50% chance they honor it. If not &mdash; it&rsquo;s over. Plan accordingly.
         <h3>&#9658; EACH TURN</h3>
@@ -726,19 +729,19 @@
         <span style="color:var(--g)">HORSE</span> &mdash; 45% faster. Costs slightly more supplies.<br>
         <span style="color:var(--g)">VEHICLE</span> &mdash; 80% faster. Costs 8 gold for fuel per trip.
         <h3>&#9658; SKILLS</h3>
-        FORCE &mdash; Combat, intimidation, troop command<br>
-        WIT &mdash; Trade, engineering, cunning plans<br>
-        INFLUENCE &mdash; Diplomacy, persuasion, politics<br>
-        SHADOW &mdash; Stealth, espionage, subterfuge<br>
-        GRIT &mdash; Survival, scavenging, endurance<br><br>
+        &#128170; FORCE &mdash; Combat, intimidation, troop command<br>
+        &#129504; WIT &mdash; Trade, engineering, cunning plans<br>
+        &#128081; INFLUENCE &mdash; Diplomacy, persuasion, politics<br>
+        &#127761; SHADOW &mdash; Stealth, espionage, subterfuge<br>
+        &#128293; GRIT &mdash; Survival, scavenging, endurance<br><br>
         Earn AP by choosing actions. Higher levels unlock Perks. Spend AP to boost your next relevant action.
         <h3>&#9658; RESOURCES</h3>
-        INFLUENCE &mdash; Your political health. Reaches 0% and you lose.<br>
+        HP &mdash; Your health. Reaches 0 and you die. Taking damage compounds your cumulative death risk &mdash; the more you&rsquo;ve been hurt throughout the campaign, the more dangerous each subsequent hit becomes.<br>
         SUPPLIES &mdash; Required for travel and operations.<br>
         TROOPS &mdash; Your military force. 0 troops limits options to stealth and diplomacy.<br>
         GOLD &mdash; Currency for trade, bribes, vehicle fuel, and the Atlantic City blackjack table.
         <h3>&#9658; FACTIONS</h3>
-        7 in-state factions plus the Yee Amish external threat. Visit the FACTIONS tab for direct dialogue with faction leaders. Relation score 0&ndash;100: hostile at 0, allied at 66+. <span style="color:#00ddff">Subnet</span> is only accessible after traveling to Cape May Municipal in person. <span style="color:var(--a)">Atlantic City Casino</span> is Subnet-run &mdash; neutral ground for all factions.
+        7 in-state factions plus the Yee Amish external threat. Visit the FACTIONS tab for direct dialogue with faction leaders. Relation score 0&ndash;100: hostile at 0, allied at 66+. <span style="color:#00ddff">Subnet</span> is only accessible after traveling to Cape May Municipal in person. <span style="color:var(--a)">Atlantic City Casino</span> is run by employees who have never met whoever owns the place &mdash; neutral ground for all factions.
         <h3>&#9658; MAP &amp; LOCATIONS</h3>
         Controlling a primary location earns passive supply and gold income every turn. Garrison troops there to defend while you are away. <span style="color:#66aaff">Brantover AI-Powered Biolabs</span> and <span style="color:var(--g)">TCNJ Campus</span> can be claimed without combat.
         <h3>&#9658; SAVE</h3>
@@ -763,12 +766,14 @@
         <span id="dev-event-count">0 events</span>
         <span class="dev-status">&#9679; DEV MODE ACTIVE</span>
       </div>
+      <div id="dev-quick-stats" class="dev-quick-stats"></div>
       <div class="dev-btns">
         <button class="dev-btn dev-btn-export" onclick="exportDevLog()">[ &#11015; EXPORT HTML REPORT ]</button>
         <button class="dev-btn dev-btn-clear" onclick="if(confirm('Clear all log data?'))clearDevLog()">[ &#10005; CLEAR LOG ]</button>
         <button class="dev-btn" onclick="closeDevPanel()">[ CLOSE ]</button>
       </div>
-      <div class="dev-recent-hdr">RECENT EVENTS (LAST 15)</div>
+      <div id="dev-leaderboard" class="dev-lb-section"></div>
+      <div class="dev-recent-hdr">RECENT EVENTS (LAST 20)</div>
       <div class="dev-table-wrap">
         <table id="dev-recent"></table>
       </div>

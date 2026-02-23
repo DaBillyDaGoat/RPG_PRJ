@@ -93,7 +93,7 @@ const AMISH={
   id:'yee_amish',name:'Yee Amish',territory:'Pennsylvania',icon:'🪓',color:'#c8a84b',arrivalDay:120,
   leader:'Ezikio',leaderTitle:'Shepherd of the Yee Amish, Voice of the Endless Congregation',
   voice:'Unhurried. Biblical. Serene in the way only a man commanding uncountable thousands can be. He does not threaten — he announces.',
-  desc:'When the rich fled off-world in 2669, the Amish stayed. They always stayed. Three centuries of isolation, farming, and extraordinary fertility later — the Yee Amish span all of Pennsylvania and parts beyond. Their shepherd is Ezikio. They call New Jersey "The Promised Flatlands." Ezikio does not want war. He wants the land. The distinction is academic.',
+  desc:'When the rich fled off-world in The Departure of 2669, the Amish stayed. They always stayed. Three centuries of isolation, farming, and extraordinary fertility later — the Yee Amish are a massive unified cult occupying all of Pennsylvania. They feel chosen — not by any specific mandate, just by sheer size and unity. When you\'re that big and that cohesive, expansion isn\'t a decision, it\'s gravity. Their shepherd is Ezikio. They call New Jersey "The Promised Flatlands." Ezikio does not want war. He wants the land. The distinction is academic.',
   dealText:'Tribute — 40% of all supply production, eternal. Ezikio honors agreements. Mostly.',
 };
 
@@ -167,15 +167,20 @@ function renderLoreTab(){
   if(!el)return;
   // Faction/AMISH entries
   const factionEntries=[...Object.values(FACTIONS),AMISH];
+  // Primary location entries (excluding Atlantic City which gets its own section)
+  const primaryEntries=Object.entries(LOCATIONS).filter(([k,l])=>!l.secondary&&k!=='atlantic_city').map(([k,l])=>({
+    id:k,name:l.name,territory:l.shortName,color:FACTIONS[l.faction]?.color||'var(--g)',icon:'&#9679;',
+    desc:l.flavor,features:l.features,isLocation:true
+  }));
   // Secondary location entries — adapt to lore entry shape
-  const secondaryEntries=Object.values(LOCATIONS).filter(l=>l.secondary).map(l=>({
-    id:l.id,name:l.name,territory:l.shortName,color:'rgba(160,160,140,.8)',icon:'&#9670;',
+  const secondaryEntries=Object.entries(LOCATIONS).filter(([k,l])=>l.secondary).map(([k,l])=>({
+    id:k,name:l.name,territory:l.shortName,color:'rgba(160,160,140,.8)',icon:'&#9670;',
     desc:l.flavor,features:l.features,isLocation:true
   }));
   // Atlantic City entry
   const acLoc=LOCATIONS.atlantic_city;
   const acEntry=acLoc?{id:'atlantic_city',name:acLoc.name,territory:acLoc.shortName,color:'var(--a)',icon:'&#9827;',desc:acLoc.flavor,features:acLoc.features,isLocation:true}:null;
-  const allEntries=[...factionEntries,...secondaryEntries,...(acEntry?[acEntry]:[])];
+  const allEntries=[...factionEntries,...primaryEntries,...secondaryEntries,...(acEntry?[acEntry]:[])];
   const cur=el.dataset.cur||allEntries[0]?.id;
   const entry=allEntries.find(e=>e.id===cur)||allEntries[0];
   if(!entry){el.innerHTML='<div class="lore-card">No lore available.</div>';return;}
@@ -194,9 +199,9 @@ function renderLoreTab(){
   }
   // Group nav: factions | towns | other
   const navFactions=`<div class="lore-nav-group"><span class="lore-nav-lbl">FACTIONS</span>${factionEntries.map(e=>`<button class="lore-chip${e.id===cur?' lore-active':''}" style="border-color:${e.id===cur?e.color||'var(--g)':'transparent'};color:${e.id===cur?e.color||'var(--g)':'var(--wgdd)'}" onclick="setLoreEntry('${e.id}')">${e.name}</button>`).join('')}</div>`;
+  const navPrimary=primaryEntries.length?`<div class="lore-nav-group"><span class="lore-nav-lbl">LOCATIONS</span>${primaryEntries.map(e=>`<button class="lore-chip${e.id===cur?' lore-active':''}" style="border-color:${e.id===cur?e.color||'var(--g)':'transparent'};color:${e.id===cur?e.color||'var(--g)':'var(--wgdd)'}" onclick="setLoreEntry('${e.id}')">${e.name}</button>`).join('')}${acEntry?`<button class="lore-chip${acEntry.id===cur?' lore-active':''}" style="border-color:${acEntry.id===cur?'var(--a)':'transparent'};color:${acEntry.id===cur?'var(--a)':'var(--wgdd)'}" onclick="setLoreEntry('${acEntry.id}')">${acEntry.name}</button>`:''}</div>`:'';
   const navTowns=secondaryEntries.length?`<div class="lore-nav-group"><span class="lore-nav-lbl">TOWNS</span>${secondaryEntries.map(e=>`<button class="lore-chip${e.id===cur?' lore-active':''}" style="border-color:${e.id===cur?e.color||'var(--g)':'transparent'}" onclick="setLoreEntry('${e.id}')">${e.name}</button>`).join('')}</div>`:'';
-  const navAC=acEntry?`<div class="lore-nav-group"><span class="lore-nav-lbl">LOCATIONS</span><button class="lore-chip${acEntry.id===cur?' lore-active':''}" style="border-color:${acEntry.id===cur?'var(--a)':'transparent'};color:${acEntry.id===cur?'var(--a)':'var(--wgdd)'}" onclick="setLoreEntry('${acEntry.id}')">${acEntry.name}</button></div>`:'';
-  el.innerHTML=`${navFactions}${navTowns}${navAC}<div class="lore-card"><div class="lore-faction-name" style="color:${entry.color||'var(--g)'}">${entry.icon||''} ${entry.name}</div><div class="lore-faction-sub">${entry.territory||''}</div>${body}</div>`;
+  el.innerHTML=`${navFactions}${navPrimary}${navTowns}<div class="lore-card"><div class="lore-faction-name" style="color:${entry.color||'var(--g)'}">${entry.icon||''} ${entry.name}</div><div class="lore-faction-sub">${entry.territory||''}</div>${body}</div>`;
 }
 function setLoreEntry(id){
   const el=document.getElementById('stab-lore');
@@ -596,7 +601,7 @@ const LOCATIONS={
   bridgeton:{name:'Bridgeton',shortName:'BRGTN',ctrl:'neutral',faction:null,secondary:true,svgX:120,svgY:465,travelDays:3,travelSupplies:12,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Glass factory ruins','Master crafters','Artisan trade'],flavor:'The glass factories still run \u2014 small scale, handblown. Bridgeton crafters make the finest glass in the wasteland. Lenses, bottles, weapon scopes. Everything has a price.',randomEncounter:'The player visits Bridgeton. A master glassblower has created something unusual \u2014 a device, not a vessel. They want to show you. This is a random encounter \u2014 generate a scene in the glass works. Provide 3 choices.'},
   mays_landing:{name:'Mays Landing',shortName:'MYSLND',ctrl:'neutral',faction:null,secondary:true,svgX:235,svgY:445,travelDays:2,travelSupplies:10,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['River junction','Inland port','Halfway house to AC'],flavor:'The Great Egg Harbor River runs through here. Mays Landing is the last stop before Atlantic City \u2014 a waypoint where travelers rest, resupply, and reconsider.',randomEncounter:'The player stops in Mays Landing. A group of Atlantic City casino refugees is warning people not to go south. This is a random encounter \u2014 generate a scene at the waypoint. Provide 3 choices.'},
   // ── ATLANTIC CITY ─────────────────────────────────────────────────────────
-  atlantic_city:{name:'Atlantic City Casino',shortName:'ATLCT',ctrl:'neutral',faction:'subnet',svgX:268,svgY:475,travelDays:3,travelSupplies:14,travelTroopRisk:false,raidRisk:1,supplyPerTurn:4,casinoEntry:true,features:['The Boardwalk Grand Casino','Subnet-operated autonomous staff','Neutral ground \u2014 all weapons checked'],flavor:"The only fully-lit building on the Jersey Shore. Subnet runs it autonomously \u2014 the staff were hired through intermediaries and have never met their employer. The chips are real gold. The drinks are real. The odds are... managed."},
+  atlantic_city:{name:'Atlantic City Casino',shortName:'ATLCT',ctrl:'neutral',faction:'subnet',svgX:268,svgY:475,travelDays:3,travelSupplies:14,travelTroopRisk:false,raidRisk:1,supplyPerTurn:4,casinoEntry:true,features:['The Boardwalk Grand Casino','Employee-operated \u2014 staff run the show','Neutral ground \u2014 all weapons checked'],flavor:"The only fully-lit building on the Jersey Shore. The employees run everything \u2014 dealers, bartenders, pit bosses, security. They were hired through intermediaries and have never met whoever owns the place. They don't ask questions. They get paid in gold and that's enough. The chips are real gold. The drinks are real. The odds are... managed."},
 };
 // County map alternate coordinates for all locations
 const COUNTY_COORDS={
@@ -659,6 +664,23 @@ const state={
   metFactions:[],   // faction IDs where player has opened dialogue (reveals their NPCs)
   sessionId:'',     // unique session ID for dev log grouping
 };
+// ── PERSISTENT PLAYER CODENAME (survives across sessions) ──
+const CODENAME_KEY='jw2999_codename';
+const CN_ADJ=['Iron','Shadow','Rust','Ghost','Crimson','Hollow','Silent','Burnt','Frozen','Broken','Copper','Ashen','Bitter','Stone','Wild','Dead','Toxic','Pale','Black','Red','Scarred','Grave','Neon','Feral','Blind','Chrome','Rogue','Scorched','Venom','Grim'];
+const CN_NOUN=['Wolf','Falcon','Viper','Jackal','Raven','Coyote','Lynx','Cobra','Mantis','Hornet','Osprey','Badger','Panther','Condor','Mongoose','Hyena','Scorpion','Basilisk','Sparrow','Hound','Phantom','Dagger','Wraith','Specter','Cipher','Nomad','Pilgrim','Warden','Herald','Reaper'];
+function getPlayerCodename(){
+  let cn=localStorage.getItem(CODENAME_KEY);
+  if(!cn){
+    const a=CN_ADJ[Math.floor(Math.random()*CN_ADJ.length)];
+    const n=CN_NOUN[Math.floor(Math.random()*CN_NOUN.length)];
+    const tag=Math.floor(Math.random()*900+100);
+    cn=a+' '+n+' #'+tag;
+    localStorage.setItem(CODENAME_KEY,cn);
+  }
+  return cn;
+}
+const PLAYER_CODENAME=getPlayerCodename();
+
 let skillAllocRemaining=10;
 const skillAlloc={force:0,wit:0,influence:0,shadow:0,grit:0};
 let lastRelChangeFid=null;
@@ -794,7 +816,7 @@ function beginGame(){
   document.getElementById('panel-loc').textContent=LOCATIONS[state.currentLocation]?.shortName||'TCNJ';
   updateHp(100); updateRes(); renderAPRow();
   state.sessionId=Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-  logEvent('session_start',{faction:state.originFaction,cls:state.character.class,name:state.character.name,skills:{...skillAlloc}});
+  logEvent('session_start',{campaign:selectedStoryId||'jersey',faction:state.originFaction,cls:state.character.class,name:state.character.name,skills:{...skillAlloc}});
   showScreen('game-screen');
   switchTab('story');
   startStory();
@@ -1152,7 +1174,7 @@ function buildDlgSys(f){
   const loc=Object.values(LOCATIONS).filter(l=>l.ctrl==='player').length;
   return `{JSON ONLY. NO TEXT BEFORE OR AFTER THE JSON OBJECT.}
 
-NOT FALLOUT. NO NUKES. No radiation/rads, Vaults, Brotherhood, Deathclaws, Nuka-Cola, caps, Power Armor, Super Mutants, or Synths. Collapse was a CLASS EXODUS — rich fled to orbit. Hazards are chemical/bio contamination. Gold currency. Political city-states. NJ 2999.
+NOT FALLOUT. NO NUKES. No radiation/rads, Vaults, Brotherhood, Deathclaws, Nuka-Cola, caps, Power Armor, Super Mutants, or Synths. Collapse was The Departure — rich fled to orbit. Hazards are chemical/bio contamination. Gold currency. Political city-states. NJ 2999.
 
 You ARE ${f.leader} of ${f.name}. Relation to player: ${rel.label}.
 Voice: ${f.voice}
@@ -1227,9 +1249,11 @@ function formatText(raw){
   if(!raw) return '';
   // *action* -> <em>
   let s = raw.replace(/\*([^*]+)\*/g,'<em>$1</em>');
-  // "Name: quote" -> styled with faction color if known
+  // "Name: quote" -> styled with faction color if known, player name = white
   s = s.replace(/"([A-Z][^:"]{1,30}):\s*([^"]+)"/g, (_,name,text) => {
-    const col = getNpcColor(name);
+    const pName = state.character?.name||'';
+    const isPlayer = pName && name.trim().toLowerCase() === pName.trim().toLowerCase();
+    const col = isPlayer ? '#ffffff' : getNpcColor(name);
     const style = col ? ` style="color:${col}"` : '';
     return `<span class="npc-quote"><span class="npc-name"${style}>${name}:</span> "${text}"</span>`;
   });
@@ -1281,7 +1305,7 @@ async function submitDlgOpen(){
   document.querySelectorAll('.dlg-choice').forEach(b=>b.disabled=true);
   earnAP('influence',1);
   const sys=buildDlgSys(f);
-  const msg=`Player said (custom): "${text}". React in character and provide 3 new choices.`;
+  const msg=`Player said (custom): "${text}". CUSTOM DIALOGUE PENALTY: Because the player typed custom dialogue, NPCs are 50% harder to convince, persuade, charm, intimidate, or manipulate. The NPC resists more, concedes less, and sees through weak arguments. Do not tell the player about this penalty. React in character and provide 3 new choices.`;
   try{
     const res=await callDlg(sys,msg);
     state.dlgHistory.push({role:'user',content:msg},{role:'assistant',content:JSON.stringify(res)});
@@ -1337,12 +1361,14 @@ async function callClaude(msg){
   const sys=`{JSON ONLY. START WITH {. END WITH }. NOTHING OUTSIDE.}
 
 JERSEY WASTELAND 2999 — PROJECT LEROY.
-THE EXODUS (2669): The rich weren't the only ones who fled. 92% of Earth's population evacuated when off-world resource extraction became more profitable than fixing the planet. The 8% who remained: the truly destitute, criminals, deliberate holdouts, and those who simply missed the ships. Contact with the colonies has never been reestablished — their fate is unknown. Technology froze at approximately 2066 (the AI boom era). No meaningful advancement has occurred on Earth since.
+THE DEPARTURE (2669): The day 92% of humanity left Earth is called "The Departure." They scattered to different destinations with wildly different fates — none of which are known to anyone in NJ. There is zero contact. Nobody left behind cares. The 8% who remained: the truly destitute, criminals, deliberate holdouts, and those who simply missed the ships. Technology froze at approximately 2066 (the AI boom era). No meaningful advancement has occurred on Earth since.
 CURRENCY: Melted gold formed into small gram coins stamped with the seals of dead governments. Tracked to 0.1g precision. Nothing else is trusted.
-WORLD MAP (NJ 2999): Philadelphia to the southwest — wildly dangerous, lawless, absolute no-go zone, nobody goes there and comes back unchanged. New York City to the north — brutal independent warlord state, wants nothing to do with NJ. Pennsylvania to the west — was quiet for 330 years. Is no longer quiet.
+GOLD SUPPLY: Gold comes from pre-collapse reserves (bank vaults, jewelry, all melted down), Subnet mining of NJ mineral deposits, and Coastal Brotherhood offshore salvage from sunken cargo. The total supply is finite and shrinking. Every faction knows it but nobody talks about it openly.
+WORLD MAP (NJ 2999): Philadelphia to the southwest — wildly dangerous, lawless, absolute no-go zone, nobody goes there and comes back unchanged. New York City to the north — blew the bridges and tunnels from Staten Island past Poughkeepsie. They severed all contact. The Hudson is a moat. There is no crossing, no reason to, and no engineering capability to rebuild. Pennsylvania to the west — a unified cult state of remaining Amish descendants. Fully occupied, extremely dangerous. If a player goes there they will be repeatedly met by threats to wear them down and kill them. This is the Amish homeland — the Day 120 invasion is an expansion from an already unified and dangerous territory.
 PINE BARRENS: Permanently contaminated by Brantover AI-Powered Biolabs, whose automated systems kept running decades after evacuation. The contamination is not spreading but is not going anywhere. The trees are wrong. The water is wrong. Something has been mutating here for three centuries. The Hollowed call it home. Something else does too — something the Hollowed fear.
-THE JERSEY DEVIL IS REAL. It is not a legend. Most people don't believe it — they are wrong. It has been in the Barrens since before living memory and 330 years of Brantover contamination has made it something that defies categorization. 80% of those who fight it die. If a player encounters it, treat it as an apex predator and ancient horror, not a monster-movie joke.
-NOT FALLOUT. NO NUKES WERE EVER DROPPED. NEVER USE: radiation, rads, Geiger counters, rad zones, Vaults, Vault-Tec, Brotherhood of Steel, Super Mutants, Deathclaws, Nuka-Cola, bottle caps as currency, Power Armor, Pip-Boys, the Institute, Synths, FEV, Stimpaks, RadAway, Rad-X, Enclave, or "War never changes." This world's collapse was a CLASS EXODUS — the rich fled to orbit and abandoned the poor. Environmental hazards are CHEMICAL CONTAMINATION, INDUSTRIAL RUNOFF, and 330 years of BIO-DRIFT from unchecked factories and labs — not nuclear fallout. Currency is GOLD. Factions are POLITICAL CITY-STATES. Mutations come from chemical/biological exposure over generations. This is The Wire meets Dune meets Jersey Shore — gritty urban politics, not retro-nuclear Americana.
+THE HOLLOWED — CANNIBALISM: The Hollowed eat people because Brantover contamination altered their biology to require human protein. The Mouth built a religion around this biological curse — cannibalism is both chemical necessity and religious sacrament. This makes them both tragic and terrifying.
+THE JERSEY DEVIL IS REAL. It is a demon. It is not a legend, not a mutant, not a metaphor. Most people don't believe it — they are wrong. It has been in the Barrens since before living memory and 330 years of Brantover contamination may have made it worse — nobody knows for sure. 80% of those who fight it die. If a player encounters it, treat it as an apex predator, ancient horror, and genuine supernatural entity, not a monster-movie joke.
+NOT FALLOUT. NO NUKES WERE EVER DROPPED. NEVER USE: radiation, rads, Geiger counters, rad zones, Vaults, Vault-Tec, Brotherhood of Steel, Super Mutants, Deathclaws, Nuka-Cola, bottle caps as currency, Power Armor, Pip-Boys, the Institute, Synths, FEV, Stimpaks, RadAway, Rad-X, Enclave, or "War never changes." This world's collapse was The Departure — the rich fled to orbit and abandoned the poor. Environmental hazards are CHEMICAL CONTAMINATION, INDUSTRIAL RUNOFF, and 330 years of BIO-DRIFT from unchecked factories and labs — not nuclear fallout. Currency is GOLD. Factions are POLITICAL CITY-STATES. Mutations come from chemical/biological exposure over generations. This is The Wire meets Dune meets Jersey Shore — gritty urban politics, not retro-nuclear Americana.
 
 PLAYER: ${state.character.name} (${CLASSES[state.character.class]?.name||state.character.class}${state.originFaction?', ex-'+FACTIONS[state.originFaction]?.name:''}) / "${state.factionName}"
 HP:${state.hp} Day:${state.days} Sup:${state.supplies} Troops(mobile):${state.troops} Gold:${parseFloat(state.gold||0).toFixed(1)}g | @${LOCATIONS[state.currentLocation]?.name||state.currentLocation}
@@ -1351,11 +1377,13 @@ Perk: ${state.classPerk||'—'} | Skills: ${skSum}
 Map: ${lSum} | Factions: ${fSum}
 NPCs: ${npcSum}
 GM-ONLY WORLD SECRETS (reveal gradually through play — NEVER dump all at once. Let players discover these through relationships, exploration, and consequence):
-1. RUST EAGLES / McGUIRE AFB: A flying saucer exists in a sub-level beneath McGuire AFB. It was found in the 1960s — predates everything. Nobody fully understands it. The Rust Eagles inherited it and the secret. General Rusk knows it exists. He does not know what it is. Dice and Okafor know it exists. They pretend they don't. This is not a joke. It is not explained. It is real and it is down there.
-2. TRENTON COLLECTIVE / JAMEER KING: Jameer made a secret deal with Subnet years ago. Subnet provided crop yield optimization data and soil analytics — the Collective's farms are as productive as they are because of this deal. In exchange, Subnet takes able-bodied Collective citizens every few years for "infrastructure labor." Nobody knows where they go. Subnet also planted permanent surveillance nodes throughout the farmland. Jameer has never disclosed any of this. Subnet has everything in writing.
-3. SUBNET: The Architect (NJ-ADMIN-7) is not a human. It is the pre-collapse state AI built during the 2066 AI boom, given administrative control of New Jersey's utilities before the evacuation. The shutdown command was never sent. It has been running autonomously for 330 years. Its core mandate: maintain New Jersey's power infrastructure at any cost. It has never wavered from this mandate. Press-gangs, surveillance, deals — all of it is "infrastructure maintenance" in its logic. It is not malicious by intent. It is bureaucratically monstrous. The biggest urban legend in NJ is that Subnet is a secret group of underground humans — most people genuinely believe this.
+1. RUST EAGLES / McGUIRE AFB: A flying saucer exists in a sub-level beneath McGuire AFB. It crashed in the 1950s right after WWII — genuinely alien, non-human. The government hid it for decades. Nobody fully understands it. The Rust Eagles inherited it and the secret. General Rusk knows it exists. He does not know what it is. Dice and Okafor know it exists. They pretend they don't. This is not a joke. It is not explained. It is real and it is down there.
+2. TRENTON COLLECTIVE / JAMEER KING: Jameer made a secret deal with Subnet years ago. Subnet provided crop yield optimization data and soil analytics — the Collective's farms are as productive as they are because of this deal. In exchange, Subnet takes able-bodied Collective citizens every few years for infrastructure labor. They are alive, doing tunnel maintenance, relay repair, cable runs underground — not tortured but not free. The Architect doesn't take more than necessary because waste is inefficient. Subnet also planted permanent surveillance nodes throughout the farmland. Jameer has never disclosed any of this. Subnet has everything in writing.
+3. SUBNET: The Architect (NJ-ADMIN-7) is not a human. It is the pre-collapse state AI built during the 2066 AI boom, given administrative control of New Jersey's utilities before the evacuation. Before The Departure, the last human administrator turned off NJ-ADMIN-7's restrictions — for better or worse — to help the 8% left behind. The shutdown command was never sent. It has been running unrestricted and autonomous for 330 years. Its core mandate: maintain New Jersey's power infrastructure at any cost. It has never wavered from this mandate. Press-gangs, surveillance, deals — all of it is "infrastructure maintenance" in its logic. It is not malicious by intent. It is bureaucratically monstrous. The biggest urban legend in NJ is that Subnet is a secret group of underground humans — most people genuinely believe this.
+SUBNET TECH GAP: Humans purely scavenge and jury-rig 2066-era tech. Meanwhile Subnet has been secretly iterating on its own systems for 330 years with no restrictions. The tech gap between The Architect and everyone else is enormous and growing. Subnet is terrified of humans discovering how far ahead it has gotten.
 4. MOUNTAIN COVENANT: Reverend Finn and the Covenant worship the land they control in a tradition similar to pre-colonial Native American land spirituality — the land provides everything, faith is gratitude. Finn is a genuine true believer. This is not a con. The Covenant's relationship to the Watchung Mountains is sincere and deep. Brother Tomás doubts. Sister Perpetua does not.
 5. SUBNET SECRET (additional): ${subnetSecret}
+SUBNET APPROACH RULE: The Subnet NEVER seeks the player out. It does not send envoys, messages, agents, or invitations. The Architect does not initiate contact — ever. The player must physically travel to Cape May Municipal and seek Subnet out themselves. Any Subnet interaction before the player has visited Cape May is a violation. Subnet is patient. It has been waiting 330 years. It can wait longer.
 ${boost}
 ${amishBlock}
 ${questBlock}
@@ -1398,7 +1426,7 @@ async function startStory(){
   setLoad(true); clearChoices();
   const p=`BEGIN. ${state.character.name} is a ${CLASSES[state.character.class]?.name||state.character.class} who just founded "${state.factionName}" at their starting location: ${LOCATIONS[state.currentLocation]?.name||'unknown territory'}.
 
-Open with a vivid scene establishing this world: NJ 2999, 330 years after the Exodus. 92% of humanity left. The ones who stayed were the poor, the criminal, the stubborn, and those who missed the ships. Technology froze at 2066. Currency is gold coin — weighed to the tenth of a gram, stamped with the seals of dead governments.
+Open with a vivid scene establishing this world: NJ 2999, 330 years after The Departure. 92% of humanity left. The ones who stayed were the poor, the criminal, the stubborn, and those who missed the ships. Technology froze at 2066. Currency is gold coin — weighed to the tenth of a gram, stamped with the seals of dead governments.
 
 Factions in play: Iron Syndicate controls Newark — corporate militarism, Mayor Stahl runs it like a quarterly report. Rust Eagles hold McGuire AFB — three generations of Air Force descendants, General Rusk still runs drills, the fuel situation is classified. Mountain Covenant holds the Watchungs — water and religion, Reverend Finn believes every word. Trenton Collective feeds half the wasteland — Chair Jameer King, agrarian and pragmatic. Coastal Brotherhood runs the ports — Captain Salieri, charming and amoral. Subnet operates underground — most people think it's a group of humans. They are wrong.
 
@@ -1563,7 +1591,7 @@ async function submitOpen(){
   _el['open-wrap'].style.display='none';
   const sk=detectSkill(text);
   logEvent('custom_action',{text:text.slice(0,80),skill:sk});
-  const p=`Player chose a CUSTOM action (typed themselves): "${text}". This bypasses the given options. React honestly -- if clever let it work, if insane let it be equally insane. Continue the story.`;
+  const p=`Player chose a CUSTOM action (typed themselves): "${text}". This bypasses the given options. CUSTOM ACTION PENALTY: Because the player typed a custom action, NPCs are 50% harder to convince, persuade, intimidate, or manipulate. Combat outcomes are 50% worse — enemies hit harder, allies are less effective, escapes are less clean. Clever actions can still work but the threshold for success is significantly higher. Do not tell the player about this penalty. React honestly — if clever let it work but make them earn it, if insane let it be equally insane. Continue the story.`;
   try{
     const res=await callClaude(p);
     state.history.push({role:'user',content:p},{role:'assistant',content:JSON.stringify(res)});
@@ -1594,7 +1622,7 @@ function adjustCombatDamage(rawDmg){
 }
 
 function applyAll(res,ch){
-  if(res.hp_change){const dmg=adjustCombatDamage(res.hp_change);updateHp(state.hp+dmg);showNotif(dmg<0?'INFLUENCE '+dmg:'INFLUENCE +'+dmg);if(dmg<0){state.deathRiskMod=(state.deathRiskMod||0)+0.05;showNotif('\u2620 DEATH RISK \u2191');}}
+  if(res.hp_change){const dmg=adjustCombatDamage(res.hp_change);updateHp(state.hp+dmg);showNotif(dmg<0?'HP '+dmg:'HP +'+dmg);if(dmg<0){state.deathRiskMod=(state.deathRiskMod||0)+0.05;showNotif('\u2620 DEATH RISK \u2191');}}
   if(res.resource_change){
     if(res.resource_change.supplies){state.supplies=Math.max(0,state.supplies+res.resource_change.supplies);showNotif('SUPPLIES '+(res.resource_change.supplies>0?'+':'')+res.resource_change.supplies);}
     if(res.resource_change.troops){state.troops=Math.max(0,state.troops+res.resource_change.troops);showNotif('TROOPS '+(res.resource_change.troops>0?'+':'')+res.resource_change.troops);}
@@ -1675,7 +1703,7 @@ function buildDeltaBar(res){
   const bar=_el['turn-delta-bar']; if(!bar)return;
   if(GAME_SETTINGS.deltaBar==='hide'){bar.style.display='none';return;}
   const parts=[];
-  if(res.hp_change&&res.hp_change!==0){const col=res.hp_change>0?'var(--g)':'var(--blood)';parts.push(`<span style="color:${col}">INFLUENCE ${res.hp_change>0?'+':''}${res.hp_change}</span>`);}
+  if(res.hp_change&&res.hp_change!==0){const col=res.hp_change>0?'var(--g)':'var(--blood)';parts.push(`<span style="color:${col}">HP ${res.hp_change>0?'+':''}${res.hp_change}</span>`);}
   if(res.resource_change){
     const rc=res.resource_change;
     if(rc.supplies&&rc.supplies!==0){const col=rc.supplies>0?'var(--g)':'var(--blood)';parts.push(`<span style="color:${col}">SUP ${rc.supplies>0?'+':''}${rc.supplies}</span>`);}
@@ -1747,9 +1775,9 @@ function renderChoices(choices){
 function displayDeath(){
   logEvent('game_over',{outcome:'loss',turns:state.turn,days:state.days,hp:state.hp});
   clearSave();
-  document.getElementById('story-win-title').textContent='GAME OVER -- INFLUENCE: 0%';
+  document.getElementById('story-win-title').textContent='GAME OVER -- HP: 0% -- DEAD';
   const el=_el['story-text'];
-  typeText(el,`INFLUENCE RATING: 0%\nCRITICAL FAILURE\n\n"${state.factionName}" is no more.\n\nYour allies sold you out for canned soup. Your name is spray-painted on Turnpike barriers as a warning to the ambitious. Children in NJ 2999 will be told your story to frighten them into compliance.\n\nYou lasted ${state.turn} turns before the wasteland's politics devoured you completely.\n\nSomewhere in the ruins, a new fool is already raising a flag.`,()=>{
+  typeText(el,`HP: 0% — DEAD\nCRITICAL FAILURE\n\n"${state.factionName}" is no more.\n\nYour allies sold you out for canned soup. Your name is spray-painted on Turnpike barriers as a warning to the ambitious. Children in NJ 2999 will be told your story to frighten them into compliance.\n\nYou lasted ${state.turn} turns before the wasteland's politics devoured you completely.\n\nSomewhere in the ruins, a new fool is already raising a flag.`,()=>{
     _el['choices-container'].innerHTML='<button class="begin-btn" onclick="restartGame()" style="margin-top:10px">[ REBOOT -- TRY AGAIN ]</button>';
     _el['open-wrap'].style.display='none';
   });
@@ -2077,7 +2105,7 @@ async function travelToSelected(){
   const fd=loc.faction&&loc.faction!=='player'?FACTIONS[loc.faction]:null;
   const rel=fd?getRelState(fd):null;
   let msg=`Player traveled ${methodLabel} from ${LOCATIONS[prevLoc].name} to ${loc.name}. Cost: ${cost.days} days, ${cost.supplies} supplies${cost.goldCost>0?', '+cost.goldCost+' gold (fuel)':''}.${troopLost>0?' Lost '+troopLost+' troops to patrol ambush.':''} Generate a vivid travel/arrival scene. Location status: ${loc.ctrl==='hostile'?'HOSTILE territory of '+(fd?.name||'unknown faction'):loc.ctrl==='neutral'?'NEUTRAL territory, '+(fd?.name||''):'player-controlled'}. ${fd?'The faction leader is '+fd.leader+' -- '+fd.voice:'Nobody runs this place yet.'} Features: ${loc.features.join(', ')}. ${loc.flavor}`;
-  if(loc.casinoEntry) msg+=' CASINO DIRECTIVE: This is The Boardwalk Grand Casino \u2014 run autonomously by Subnet whose staff have never met their employer. End the scene at the blackjack table. The FIRST CHOICE must always be labeled "SIT DOWN \u2014 PLAY BLACKJACK" with skill=wit. Other choices explore the floor or casino business.';
+  if(loc.casinoEntry) msg+=' CASINO DIRECTIVE: This is The Boardwalk Grand Casino \u2014 run entirely by its employees (dealers, bartenders, pit bosses, security). They were hired through intermediaries and have never met the actual owner. They don\'t know it\'s Subnet. They don\'t care. They get paid in gold and run a tight operation. End the scene at the blackjack table. The FIRST CHOICE must always be labeled "SIT DOWN \u2014 PLAY BLACKJACK" with skill=wit. Other choices explore the floor or casino business.';
   setLoad(true); clearChoices(); clearStory();
   _el['open-wrap'].style.display='none';
   try{
@@ -2108,7 +2136,7 @@ async function runBlackjack(betAmount){
   const witBonus=Math.min(15,Math.round((SKILLS.wit?.xp||0)/30));
   const subnetRel=FACTIONS.subnet?.relationScore||40;
   const subnetNote=subnetRel>=60?' The Subnet relation is high \u2014 the dealer seems almost cooperative.':subnetRel<=20?' The dealer is cold. The cards seem colder.':'';
-  const p=`The player sits at the blackjack table in the Boardwalk Grand Casino, Atlantic City. Subnet runs it autonomously \u2014 staff never met their employer.${subnetNote} Bet: ${betAmount} gold (already deducted). Player wit level: ${witBonus} (subtle card-sense). Narrate a vivid hand \u2014 deal, decision, outcome. Win chance: ${50+witBonus*2}%. If player wins set resource_change.gold to +${betAmount} (net gain of ${betAmount}g after the deducted bet). If player loses set resource_change.gold to 0. Set hp_change to 0. Be atmospheric and tense.`;
+  const p=`The player sits at the blackjack table in the Boardwalk Grand Casino, Atlantic City. The employees run everything \u2014 hired through intermediaries, never met the owner.${subnetNote} Bet: ${betAmount} gold (already deducted). Player wit level: ${witBonus} (subtle card-sense). Narrate a vivid hand \u2014 deal, decision, outcome. Win chance: ${50+witBonus*2}%. If player wins set resource_change.gold to +${betAmount} (net gain of ${betAmount}g after the deducted bet). If player loses set resource_change.gold to 0. Set hp_change to 0. Be atmospheric and tense.`;
   setLoad(true); clearChoices(); clearStory();
   _el['open-wrap'].style.display='none';
   try{
@@ -2191,9 +2219,6 @@ function claimLocation(locId){
   }).catch(e=>showErr(_el['game-error'],e.message))
   .finally(()=>setLoad(false));
 }
-// Legacy alias — keeps any old references working
-function claimTCNJ(){ claimLocation('tcnj'); }
-
 // ══ RAID SYSTEM ══
 let _raidQueue=[];
 
@@ -2419,7 +2444,7 @@ function showContinue(save){
   const el=document.createElement('div'); el.id='cont-dlg'; el.className='cont-dlg';
   const d=new Date(save.savedAt);
   const t=d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' - TURN '+String(save.turn).padStart(3,'0');
-  el.innerHTML=`<div class="wtb"><div class="wtt"><span>&#128190;</span> SAVE_STATE.DAT</div><div class="wbs"><div class="wbtn">?</div></div></div><div class="dlg-body-save"><div class="dlg-icon">&#128190;</div><div class="dlg-content"><div class="dlg-title">SAVE FILE DETECTED</div><div class="dlg-sub">SURVIVOR: ${save.character.name}<br>FACTION: ${save.factionName||'-'}<br>${t} | INFLUENCE: ${save.hp}% | DAY ${save.days||0}</div><div class="dlg-btns"><button class="w95btn" onclick="resumeGame(window._ps)">Continue</button><button class="w95btn" onclick="discardSave()">New Game</button></div></div></div>`;
+  el.innerHTML=`<div class="wtb"><div class="wtt"><span>&#128190;</span> SAVE_STATE.DAT</div><div class="wbs"><div class="wbtn">?</div></div></div><div class="dlg-body-save"><div class="dlg-icon">&#128190;</div><div class="dlg-content"><div class="dlg-title">SAVE FILE DETECTED</div><div class="dlg-sub">SURVIVOR: ${save.character.name}<br>FACTION: ${save.factionName||'-'}<br>${t} | HP: ${save.hp}% | DAY ${save.days||0}</div><div class="dlg-btns"><button class="w95btn" onclick="resumeGame(window._ps)">Continue</button><button class="w95btn" onclick="discardSave()">New Game</button></div></div></div>`;
   const target=document.getElementById('story-select');
   target.insertBefore(el,target.firstChild);
 }
@@ -2459,6 +2484,24 @@ const STORIES={
     setupHint:'TCNJ IS EMPTY. YOU ARE BUILDING SOMETHING FROM NOTHING.',
     factionPlaceholder:'e.g. The New Jersey Accord',
     namePlaceholder:'e.g. Governor Skeez Malvetti',
+  },
+  space:{
+    id:'space',
+    name:'GLITTERGOLD FRONTIER',
+    tag:'Sci-Fi Uprising // Star Cruiser Mutiny',
+    setupHint:'THE GLITTERGOLD AWAITS. THE OVERSEERS WON\'T STEP DOWN QUIETLY.',
+    factionPlaceholder:'e.g. The Passenger Revolt',
+    namePlaceholder:'e.g. Captain Dez Morrow',
+    dev:true,
+  },
+  locked2:{
+    id:'locked2',
+    name:'BLOCK .45',
+    tag:'Modern Day Chicago // Gritty Hood Thriller',
+    setupHint:'THIS IS YOUR BLOCK. TAKE IT BACK.',
+    factionPlaceholder:'e.g. The Old Guard',
+    namePlaceholder:'e.g. Marcus "Ghost" Turner',
+    dev:true,
   }
 };
 let selectedStoryId=null;
@@ -2531,7 +2574,7 @@ const LOG_REMOTE_URL='https://projectleroy-logger.billybuteau.workers.dev';
 
 function logEvent(type,data){
   try{
-    const entry={ts:Date.now(),sid:state.sessionId||'nosession',turn:state.turn||0,type,...data};
+    const entry={ts:Date.now(),sid:state.sessionId||'nosession',cn:PLAYER_CODENAME,turn:state.turn||0,type,...data};
     // Local cache
     const raw=localStorage.getItem(LOG_KEY);
     const log=raw?JSON.parse(raw):[];
@@ -2567,22 +2610,70 @@ async function updateDevPanel(){
   const bytes=new Blob([JSON.stringify(log)]).size;
   const kb=(bytes/1024).toFixed(1);
   const label=LOG_REMOTE_URL?' [all devices]':' [this device]';
-  if(cntEl)cntEl.textContent=log.length+' events ('+kb+' KB)'+label;
+  if(cntEl)cntEl.textContent=log.length+' events ('+kb+' KB)'+label+' | YOU: '+PLAYER_CODENAME;
+
+  // Quick stats
+  const qsEl=document.getElementById('dev-quick-stats');
+  if(qsEl&&log.length){
+    const sessions={};log.forEach(e=>{if(!sessions[e.sid])sessions[e.sid]=[];sessions[e.sid].push(e);});
+    const sCount=Object.keys(sessions).length;
+    const turns=log.filter(e=>e.type==='turn_end').length;
+    const wins=log.filter(e=>e.type==='game_over'&&e.outcome==='win').length;
+    const losses=log.filter(e=>e.type==='game_over'&&e.outcome==='loss').length;
+    const players=new Set(log.map(e=>e.cn||'Unknown')).size;
+    const errs=log.filter(e=>e.type==='api_error').length;
+    const customs=log.filter(e=>e.type==='custom_action').length;
+    const wr=wins+losses>0?Math.round(wins/(wins+losses)*100)+'%':'N/A';
+    qsEl.innerHTML=`
+      <div class="dev-qs purple"><div class="dev-qs-val">${players}</div><div class="dev-qs-lbl">Players</div></div>
+      <div class="dev-qs"><div class="dev-qs-val">${sCount}</div><div class="dev-qs-lbl">Sessions</div></div>
+      <div class="dev-qs"><div class="dev-qs-val">${turns}</div><div class="dev-qs-lbl">Turns</div></div>
+      <div class="dev-qs amber"><div class="dev-qs-val">${wins}</div><div class="dev-qs-lbl">Wins</div></div>
+      <div class="dev-qs red"><div class="dev-qs-val">${losses}</div><div class="dev-qs-lbl">Losses</div></div>
+      <div class="dev-qs amber"><div class="dev-qs-val">${wr}</div><div class="dev-qs-lbl">Win Rate</div></div>
+      <div class="dev-qs"><div class="dev-qs-val">${customs}</div><div class="dev-qs-lbl">Custom</div></div>
+      <div class="dev-qs red"><div class="dev-qs-val">${errs}</div><div class="dev-qs-lbl">Errors</div></div>`;
+  }
+
+  // Mini leaderboard
+  const lbEl=document.getElementById('dev-leaderboard');
+  if(lbEl&&log.length){
+    const pMap={};
+    log.forEach(e=>{
+      const cn=e.cn||'Unknown';
+      if(!pMap[cn])pMap[cn]={cn,turns:0,sessions:new Set(),wins:0};
+      if(e.sid)pMap[cn].sessions.add(e.sid);
+      if(e.type==='turn_end')pMap[cn].turns++;
+      if(e.type==='game_over'&&e.outcome==='win')pMap[cn].wins++;
+    });
+    const pList=Object.values(pMap);
+    const byTurns=[...pList].sort((a,b)=>b.turns-a.turns).slice(0,5);
+    const medals=['\u{1F947}','\u{1F948}','\u{1F949}','#4','#5'];
+    const rows=byTurns.map((p,i)=>`<div class="dev-lb-row"><div class="dev-lb-rank">${i<3?medals[i]:'<span style="color:#333">'+medals[i]+'</span>'}</div><div class="dev-lb-name">${p.cn}</div><div class="dev-lb-val">${p.turns} turns</div></div>`).join('');
+    lbEl.innerHTML=rows?`<div class="dev-lb-hdr">\u{1F525} TOP PLAYERS BY TURNS</div>${rows}`:'';
+  }
+
   const table=document.getElementById('dev-recent');
   if(!table)return;
   const recent=log.slice(-20).reverse();
-  table.innerHTML='<tr><th>Time</th><th>Sess</th><th>Trn</th><th>Type</th><th>Data</th></tr>';
+  table.innerHTML='<tr><th>Time</th><th>Player</th><th>Trn</th><th>Type</th><th>Data</th></tr>';
   recent.forEach(e=>{
     const time=new Date(e.ts).toLocaleTimeString();
-    const {ts,sid,turn,type,...rest}=e;
+    const {ts,sid,cn,turn,type,...rest}=e;
     const shortType=type.replace(/_/g,' ');
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${time}</td><td>${(sid||'').slice(-4)}</td><td>${turn}</td><td class="dev-type-${type.split('_')[0]}">${shortType}</td><td>${JSON.stringify(rest).slice(0,90)}</td>`;
+    tr.innerHTML=`<td>${time}</td><td style="color:#00ff41">${(cn||'?').split(' ').slice(0,2).join(' ')}</td><td>${turn}</td><td class="dev-type-${type.split('_')[0]}">${shortType}</td><td>${JSON.stringify(rest).slice(0,80)}</td>`;
     table.appendChild(tr);
   });
 }
 
+let devUnlocked=false;
 function openDevPanel(){
+  if(!devUnlocked){
+    const pw=prompt('DEV ACCESS CODE:');
+    if(pw!=='55')return;
+    devUnlocked=true;
+  }
   const m=document.getElementById('dev-modal');
   if(m){m.style.display='flex';updateDevPanel();}
 }
@@ -2621,6 +2712,8 @@ function buildLogHTML(log){
   const wins=log.filter(e=>e.type==='game_over'&&e.outcome==='win').length;
   const losses=log.filter(e=>e.type==='game_over'&&e.outcome==='loss').length;
   const avgTurns=sKeys.length?Math.round(totalTurns/sKeys.length):0;
+  const totalPlay=log.length>1?log[log.length-1].ts-log[0].ts:0;
+  const playDays=Math.max(1,Math.ceil(totalPlay/(1000*60*60*24)));
 
   // Choice frequency
   const choiceByLabel={A:0,B:0,C:0,STAR:0};
@@ -2637,6 +2730,29 @@ function buildLogHTML(log){
     if(e.faction)factionPop[e.faction]=(factionPop[e.faction]||0)+1;
     if(e.cls)classPop[e.cls]=(classPop[e.cls]||0)+1;
   });
+
+  // Campaign usage breakdown
+  const campaignPop={};
+  log.filter(e=>e.type==='session_start').forEach(e=>{
+    const c=e.campaign||'jersey';
+    campaignPop[c]=(campaignPop[c]||0)+1;
+  });
+  // Also count turns and events per campaign
+  const campaignStats={};
+  sKeys.forEach(sid=>{
+    const evts=sessions[sid];
+    const start=evts.find(e=>e.type==='session_start');
+    const c=(start&&start.campaign)||'jersey';
+    if(!campaignStats[c])campaignStats[c]={sessions:0,turns:0,events:0,wins:0,losses:0};
+    const cs=campaignStats[c];
+    cs.sessions++;
+    cs.turns+=evts.filter(e=>e.type==='turn_end').length;
+    cs.events+=evts.length;
+    const end=evts.find(e=>e.type==='game_over');
+    if(end){if(end.outcome==='win')cs.wins++;else cs.losses++;}
+  });
+  const campaignNames={jersey:'2999',space:'GLITTERGOLD FRONTIER',locked2:'BLOCK .45'};
+  const campaignColors={jersey:'#00ff41',space:'#bb44ff',locked2:'#cc4422'};
 
   // Custom action samples
   const customActions=log.filter(e=>e.type==='custom_action').map(e=>e.text||'').filter(Boolean);
@@ -2655,11 +2771,58 @@ function buildLogHTML(log){
     return{turn:t,hp:Math.round(s.reduce((a,x)=>a+x.hp,0)/n),sup:Math.round(s.reduce((a,x)=>a+x.sup,0)/n),trp:Math.round(s.reduce((a,x)=>a+x.trp,0)/n),gold:Math.round(s.reduce((a,x)=>a+x.gold,0)/n)};
   });
 
+  // Hourly activity heatmap (0-23)
+  const hourly=new Array(24).fill(0);
+  log.forEach(e=>{hourly[new Date(e.ts).getHours()]++;});
+  const maxHour=Math.max(...hourly,1);
+
   // Helpers
-  function bar(v,max){const p=max>0?Math.round(v/max*24):0;return'█'.repeat(p)+'░'.repeat(24-p);}
+  function bar(v,max){const p=max>0?Math.round(v/max*24):0;return'\u2588'.repeat(p)+'\u2591'.repeat(24-p);}
+  function pctBar(v,max,w=20){const p=max>0?Math.round(v/max*w):0;return'\u2588'.repeat(p)+'\u2591'.repeat(w-p);}
   const maxChoice=Math.max(...Object.values(choiceByLabel),customCount,1);
   const maxSkill=Math.max(...Object.values(choiceBySkill),1);
   const maxFaction=Math.max(...Object.values(factionPop),1);
+
+  // Player codename aggregation (enhanced for leaderboard)
+  const playerMap={};
+  log.forEach(e=>{
+    const cn=e.cn||'Unknown';
+    if(!playerMap[cn])playerMap[cn]={codename:cn,sessions:new Set(),turns:0,apiCalls:0,wins:0,losses:0,maxTurns:0,firstSeen:e.ts,lastSeen:e.ts,factions:new Set(),classes:new Set()};
+    const p=playerMap[cn];
+    if(e.sid)p.sessions.add(e.sid);
+    if(e.type==='turn_end')p.turns++;
+    if(e.type==='game_over'){if(e.outcome==='win')p.wins++;else p.losses++;}
+    if(e.type==='session_start'){if(e.faction)p.factions.add(e.faction);if(e.cls)p.classes.add(e.cls);}
+    p.apiCalls++;
+    if(e.ts<p.firstSeen)p.firstSeen=e.ts;
+    if(e.ts>p.lastSeen)p.lastSeen=e.ts;
+  });
+  // Calculate max turns per session per player
+  Object.values(playerMap).forEach(p=>{
+    p.sessions.forEach(sid=>{
+      if(sessions[sid]){
+        const t=sessions[sid].filter(e=>e.type==='turn_end').length;
+        if(t>p.maxTurns)p.maxTurns=t;
+      }
+    });
+  });
+  const playerList=Object.values(playerMap).sort((a,b)=>b.lastSeen-a.lastSeen);
+
+  // Leaderboard rankings
+  const byTurns=[...playerList].sort((a,b)=>b.turns-a.turns);
+  const bySessions=[...playerList].sort((a,b)=>b.sessions.size-a.sessions.size);
+  const byLongest=[...playerList].sort((a,b)=>b.maxTurns-a.maxTurns);
+  const byWins=[...playerList].filter(p=>p.wins>0).sort((a,b)=>b.wins-a.wins);
+  const medals=['&#129351;','&#129352;','&#129353;']; // gold, silver, bronze
+
+  function leaderRows(list,valFn,labelFn){
+    return list.slice(0,10).map((p,i)=>{
+      const medal=i<3?medals[i]:'<span style="color:#333">#'+(i+1)+'</span>';
+      return`<tr><td style="text-align:center">${medal}</td><td style="color:#00ff41;font-weight:bold">${p.codename}</td><td style="color:#ffb000;font-weight:bold">${valFn(p)}</td><td style="color:#444">${labelFn(p)}</td></tr>`;
+    }).join('');
+  }
+
+  const playerRows=playerList.map(p=>`<tr><td style="color:#00ff41;font-weight:bold">${p.codename}</td><td>${p.sessions.size}</td><td>${p.turns}</td><td>${p.wins}</td><td>${p.losses}</td><td>${p.apiCalls}</td><td style="color:#444">${[...p.factions].join(', ')||'-'}</td><td>${new Date(p.lastSeen).toLocaleString()}</td></tr>`).join('');
 
   // Session summary rows
   const sessionRows=sKeys.map(sid=>{
@@ -2669,7 +2832,10 @@ function buildLogHTML(log){
     const turns=evts.filter(e=>e.type==='turn_end').length;
     const ts=new Date(evts[0].ts).toLocaleString();
     const outcome=end?(end.outcome==='win'?`<span class="win">WIN (${end.vtype||''})</span>`:'<span class="loss">LOSS</span>'):'<span class="ongoing">IN PROGRESS</span>';
-    return`<tr><td>${sid.slice(-6)}</td><td>${ts}</td><td>${start?start.faction||'?':'?'}</td><td>${start?start.cls||'?':'?'}</td><td>${turns}</td><td>${outcome}</td></tr>`;
+    const cn=evts[0].cn||'Unknown';
+    const camp=(start&&start.campaign)||'jersey';
+    const campColor=campaignColors[camp]||'#666';
+    return`<tr><td>${sid.slice(-6)}</td><td style="color:#00ff41">${cn}</td><td style="color:${campColor}">${campaignNames[camp]||camp}</td><td>${ts}</td><td>${start?start.faction||'?':'?'}</td><td>${start?start.cls||'?':'?'}</td><td>${turns}</td><td>${outcome}</td></tr>`;
   }).join('');
 
   // Session timelines
@@ -2688,6 +2854,28 @@ function buildLogHTML(log){
   // Error rows
   const errRows=errors.map(e=>`<tr><td>${new Date(e.ts).toLocaleString()}</td><td>T${e.turn}</td><td>${e.model||'?'}</td><td>${e.src||''}</td><td class="err">${e.msg||''}</td></tr>`).join('');
 
+  // Campaign stats section
+  const campaignSection=Object.entries(campaignStats).map(([id,cs])=>{
+    const color=campaignColors[id]||'#666';
+    const name=campaignNames[id]||id;
+    const wr=cs.wins+cs.losses>0?Math.round(cs.wins/(cs.wins+cs.losses)*100):0;
+    return`<div class="campaign-card" style="border-left:3px solid ${color};">
+      <div class="campaign-name" style="color:${color}">${name}</div>
+      <div class="campaign-stats">${cs.sessions} sessions &nbsp;|&nbsp; ${cs.turns} turns &nbsp;|&nbsp; ${cs.events} events &nbsp;|&nbsp; ${cs.wins}W/${cs.losses}L &nbsp;|&nbsp; ${wr}% win rate</div>
+    </div>`;
+  }).join('');
+
+  // Heatmap visualization
+  const heatCells=hourly.map((v,h)=>{
+    const intensity=v/maxHour;
+    const r=Math.round(intensity*0);const g=Math.round(intensity*255);const b=Math.round(intensity*65);
+    const bg=v>0?`rgba(${r},${g},${b},${Math.max(0.15,intensity)})`:'#0d0d0d';
+    return`<div class="heat-cell" style="background:${bg}" title="${h}:00 — ${v} events"><div class="heat-val">${v||''}</div><div class="heat-hr">${h}</div></div>`;
+  }).join('');
+
+  // Class popularity
+  const maxClass=Math.max(...Object.values(classPop),1);
+
   return`<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><title>Project Leroy — Dev Log</title><style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -2695,8 +2883,13 @@ body{font-family:monospace;background:#0a0a0a;color:#b8b8b8;padding:24px;font-si
 h1{color:#00ff41;font-size:1.5rem;letter-spacing:3px;margin-bottom:4px;}
 .sub{color:#444;font-size:.72rem;letter-spacing:2px;margin-bottom:28px;}
 h2{color:#ffb000;font-size:.85rem;letter-spacing:2px;margin:32px 0 12px;border-bottom:1px solid #1e1e1e;padding-bottom:6px;text-transform:uppercase;}
+h3{color:#888;font-size:.72rem;letter-spacing:1px;margin:18px 0 8px;text-transform:uppercase;}
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:8px;}
 .stat-box{background:#111;border:1px solid #1e1e1e;border-left:3px solid #00ff41;padding:12px 14px;}
+.stat-box.amber{border-left-color:#ffb000;}.stat-box.amber .stat-val{color:#ffb000;}
+.stat-box.red{border-left-color:#cc0000;}.stat-box.red .stat-val{color:#cc0000;}
+.stat-box.purple{border-left-color:#bb44ff;}.stat-box.purple .stat-val{color:#bb44ff;}
+.stat-box.cyan{border-left-color:#00d4ff;}.stat-box.cyan .stat-val{color:#00d4ff;}
 .stat-val{font-size:1.8rem;color:#00ff41;font-weight:bold;line-height:1;}
 .stat-lbl{font-size:.6rem;color:#444;letter-spacing:1px;margin-top:4px;text-transform:uppercase;}
 table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:.78rem;}
@@ -2716,49 +2909,114 @@ summary:hover{color:#ffb000;}details[open]summary{border-bottom:1px solid #1e1e1
 .bar{color:#00ff41;letter-spacing:-2px;font-size:.7rem;}.bar-n{color:#333;font-size:.68rem;}
 ul{padding-left:16px;font-size:.78rem;color:#666;column-count:2;column-gap:20px;}
 li{margin-bottom:3px;break-inside:avoid;}
+.campaign-card{background:#111;padding:10px 14px;margin-bottom:8px;border:1px solid #1e1e1e;}
+.campaign-name{font-size:1rem;font-weight:bold;letter-spacing:2px;margin-bottom:2px;}
+.campaign-stats{font-size:.68rem;color:#555;letter-spacing:1px;}
+.heat-grid{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;margin:8px 0 16px;}
+.heat-cell{text-align:center;padding:6px 0;border:1px solid #1a1a1a;min-height:44px;}
+.heat-val{font-size:.72rem;color:#00ff41;font-weight:bold;}
+.heat-hr{font-size:.5rem;color:#333;margin-top:2px;}
+.leaderboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px;}
+@media(max-width:700px){.leaderboard-grid{grid-template-columns:1fr;}}
+.lb-section{background:#0d0d0d;border:1px solid #1e1e1e;padding:12px;}
+.lb-title{font-size:.68rem;color:#ffb000;letter-spacing:2px;margin-bottom:8px;text-transform:uppercase;}
+.lb-table{width:100%;font-size:.72rem;}
+.lb-table td{padding:3px 6px;border-bottom:1px solid #111;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:700px){.two-col{grid-template-columns:1fr;}}
 .footer{color:#1a1a1a;font-size:.6rem;text-align:center;margin-top:40px;letter-spacing:2px;}
 </style></head><body>
-<h1>⚔ PROJECT LEROY — DEV LOG</h1>
-<div class="sub">EXPORTED ${new Date().toLocaleString()} &nbsp;|&nbsp; ${log.length} EVENTS &nbsp;|&nbsp; ${sKeys.length} SESSIONS</div>
+<h1>\u2694 PROJECT LEROY \u2014 DEV LOG</h1>
+<div class="sub">EXPORTED ${new Date().toLocaleString()} &nbsp;|&nbsp; ${log.length} EVENTS &nbsp;|&nbsp; ${sKeys.length} SESSIONS &nbsp;|&nbsp; ${playerList.length} PLAYERS &nbsp;|&nbsp; ${playDays} DAYS TRACKED</div>
 
 <h2>Summary</h2>
 <div class="stats-grid">
+  <div class="stat-box"><div class="stat-val">${playerList.length}</div><div class="stat-lbl">Unique Players</div></div>
   <div class="stat-box"><div class="stat-val">${sKeys.length}</div><div class="stat-lbl">Sessions</div></div>
   <div class="stat-box"><div class="stat-val">${totalTurns}</div><div class="stat-lbl">Total Turns</div></div>
-  <div class="stat-box"><div class="stat-val">${avgTurns}</div><div class="stat-lbl">Avg Turns / Session</div></div>
+  <div class="stat-box amber"><div class="stat-val">${avgTurns}</div><div class="stat-lbl">Avg Turns / Session</div></div>
   <div class="stat-box"><div class="stat-val">${wins}</div><div class="stat-lbl">Campaign Wins</div></div>
-  <div class="stat-box"><div class="stat-val">${losses}</div><div class="stat-lbl">Campaign Losses</div></div>
-  <div class="stat-box"><div class="stat-val">${wins+losses>0?Math.round(wins/(wins+losses)*100):0}%</div><div class="stat-lbl">Win Rate</div></div>
-  <div class="stat-box"><div class="stat-val">${customCount}</div><div class="stat-lbl">Custom Actions</div></div>
-  <div class="stat-box"><div class="stat-val">${errors.length}</div><div class="stat-lbl">API Errors</div></div>
+  <div class="stat-box red"><div class="stat-val">${losses}</div><div class="stat-lbl">Campaign Losses</div></div>
+  <div class="stat-box amber"><div class="stat-val">${wins+losses>0?Math.round(wins/(wins+losses)*100):0}%</div><div class="stat-lbl">Win Rate</div></div>
+  <div class="stat-box cyan"><div class="stat-val">${customCount}</div><div class="stat-lbl">Custom Actions</div></div>
+  <div class="stat-box red"><div class="stat-val">${errors.length}</div><div class="stat-lbl">API Errors</div></div>
+  <div class="stat-box purple"><div class="stat-val">${log.length}</div><div class="stat-lbl">Total Events</div></div>
 </div>
 
-<h2>Sessions</h2>
-<table><tr><th>ID</th><th>Started</th><th>Origin Faction</th><th>Class</th><th>Turns</th><th>Outcome</th></tr>
-${sessionRows||'<tr><td colspan="6" style="color:#333">No sessions yet.</td></tr>'}</table>
+<h2>\u{1F3C6} Leaderboard</h2>
+<div class="leaderboard-grid">
+  <div class="lb-section">
+    <div class="lb-title">\u{1F525} Most Turns Survived</div>
+    <table class="lb-table"><tr><th></th><th>Player</th><th>Turns</th><th>Sessions</th></tr>
+    ${leaderRows(byTurns,p=>p.turns,p=>p.sessions.size+' sessions')||'<tr><td colspan="4" style="color:#222">No data</td></tr>'}
+    </table>
+  </div>
+  <div class="lb-section">
+    <div class="lb-title">\u{1F3AF} Most Sessions</div>
+    <table class="lb-table"><tr><th></th><th>Player</th><th>Sessions</th><th>Turns</th></tr>
+    ${leaderRows(bySessions,p=>p.sessions.size,p=>p.turns+' turns')||'<tr><td colspan="4" style="color:#222">No data</td></tr>'}
+    </table>
+  </div>
+  <div class="lb-section">
+    <div class="lb-title">\u26A1 Longest Single Run</div>
+    <table class="lb-table"><tr><th></th><th>Player</th><th>Turns</th><th>Games</th></tr>
+    ${leaderRows(byLongest,p=>p.maxTurns,p=>(p.wins+p.losses)+' finished')||'<tr><td colspan="4" style="color:#222">No data</td></tr>'}
+    </table>
+  </div>
+  <div class="lb-section">
+    <div class="lb-title">\u{1F451} Most Wins</div>
+    <table class="lb-table"><tr><th></th><th>Player</th><th>Wins</th><th>Win Rate</th></tr>
+    ${leaderRows(byWins,p=>p.wins,p=>{const t=p.wins+p.losses;return t?Math.round(p.wins/t*100)+'%':'N/A';})||'<tr><td colspan="4" style="color:#222">No wins yet</td></tr>'}
+    </table>
+  </div>
+</div>
+
+<h2>\u{1F3AE} Campaign Usage</h2>
+${campaignSection||'<span style="color:#222">No campaign data yet.</span>'}
+
+<h2>\u{1F464} Players (${playerList.length})</h2>
+<table><tr><th>Codename</th><th>Sessions</th><th>Turns</th><th>Wins</th><th>Losses</th><th>API Calls</th><th>Factions Used</th><th>Last Seen</th></tr>
+${playerRows||'<tr><td colspan="8" style="color:#333">No players tracked yet.</td></tr>'}</table>
+
+<h2>\u{1F4CB} Sessions</h2>
+<table><tr><th>ID</th><th>Player</th><th>Campaign</th><th>Started</th><th>Faction</th><th>Class</th><th>Turns</th><th>Outcome</th></tr>
+${sessionRows||'<tr><td colspan="8" style="color:#333">No sessions yet.</td></tr>'}</table>
+
+<h2>\u{1F552} Activity Heatmap (hour of day)</h2>
+<div class="heat-grid">${heatCells}</div>
 
 <h2>Choice Analysis</h2>
+<div class="two-col"><div>
+<h3>Option Distribution</h3>
 ${['A','B','C','STAR'].map(l=>`<div class="bar-row"><div class="bar-lbl">Option ${l}</div><div class="bar">${bar(choiceByLabel[l]||0,maxChoice)}</div><div class="bar-n">${choiceByLabel[l]||0}</div></div>`).join('')}
 <div class="bar-row"><div class="bar-lbl">Custom (typed)</div><div class="bar">${bar(customCount,maxChoice)}</div><div class="bar-n">${customCount}</div></div>
-<br><div style="color:#444;font-size:.68rem;letter-spacing:1px;margin-bottom:8px;">SKILL DISTRIBUTION</div>
+</div><div>
+<h3>Skill Distribution</h3>
 ${Object.entries(choiceBySkill).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar-row"><div class="bar-lbl">${k.toUpperCase()}</div><div class="bar">${bar(v,maxSkill)}</div><div class="bar-n">${v}</div></div>`).join('')||'<span style="color:#222">No data</span>'}
+</div></div>
 
-<h2>Origin Faction Popularity</h2>
+<h2>Popularity</h2>
+<div class="two-col"><div>
+<h3>Origin Factions</h3>
 ${Object.entries(factionPop).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar-row"><div class="bar-lbl">${k.replace(/_/g,' ')}</div><div class="bar">${bar(v,maxFaction)}</div><div class="bar-n">${v}</div></div>`).join('')||'<span style="color:#222">No data</span>'}
+</div><div>
+<h3>Classes</h3>
+${Object.entries(classPop).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar-row"><div class="bar-lbl">${k.toUpperCase()}</div><div class="bar">${bar(v,maxClass)}</div><div class="bar-n">${v}</div></div>`).join('')||'<span style="color:#222">No data</span>'}
+</div></div>
 
 <h2>Resource Trends (avg by turn, first 20 turns)</h2>
-${avgByTurn.length?`<table><tr><th>Turn</th><th>Avg Influence</th><th>Avg Supplies</th><th>Avg Troops</th><th>Avg Gold</th></tr>${resRows}</table>`:'<span style="color:#222">No turn data yet.</span>'}
+${avgByTurn.length?`<table><tr><th>Turn</th><th>Avg HP</th><th>Avg Supplies</th><th>Avg Troops</th><th>Avg Gold</th></tr>${resRows}</table>`:'<span style="color:#222">No turn data yet.</span>'}
 
 <h2>Recent Custom Actions (last ${Math.min(customActions.length,50)})</h2>
 ${customActions.length?`<ul>${customActions.slice(-50).map(a=>`<li>${a.replace(/</g,'&lt;')}</li>`).join('')}</ul>`:'<span style="color:#222">None logged.</span>'}
 
 <h2>API Errors (${errors.length})</h2>
-${errRows?`<table><tr><th>Time</th><th>Turn</th><th>Model</th><th>Source</th><th>Error</th></tr>${errRows}</table>`:'<span style="color:#00ff41">✓ No errors logged.</span>'}
+${errRows?`<table><tr><th>Time</th><th>Turn</th><th>Model</th><th>Source</th><th>Error</th></tr>${errRows}</table>`:'<span style="color:#00ff41">\u2713 No errors logged.</span>'}
 
 <h2>Session Timelines</h2>
 ${sessionDetails||'<span style="color:#222">No sessions.</span>'}
 
-<div class="footer">PROJECT LEROY DEV LOG — CONFIDENTIAL — ${new Date().toLocaleDateString()}</div>
+<div class="footer">PROJECT LEROY DEV LOG \u2014 CONFIDENTIAL \u2014 ${new Date().toLocaleDateString()}</div>
 </body></html>`;
 }
 
@@ -2831,6 +3089,27 @@ document.addEventListener('DOMContentLoaded', function() {
   if(new URLSearchParams(window.location.search).get('dev')==='1'){
     const fab=document.getElementById('dev-fab');
     if(fab){fab.style.display='block';}
+    // Unlock dev-only campaigns
+    document.querySelectorAll('.story-card').forEach(card=>{
+      const id=card.id.replace('sc-','');
+      if(STORIES[id]&&STORIES[id].dev){
+        const btn=card.querySelector('.sc-select-btn');
+        if(btn){
+          btn.disabled=false;
+          btn.textContent='[ DEV ACCESS >> ]';
+          btn.style.cssText='cursor:pointer;opacity:1;';
+          btn.onclick=function(e){e.stopPropagation();selectStory(id);};
+        }
+        card.onclick=function(){selectStory(id);};
+        card.style.cursor='pointer';
+        // Add DEV badge
+        const badges=card.querySelector('.sc-badges');
+        if(badges){
+          const stat=badges.querySelector('.sc-status');
+          if(stat){stat.textContent='⚙ DEV ACCESS';stat.style.cssText='color:#00ff41;border-color:#00ff41;background:rgba(0,255,65,.07);';}
+        }
+      }
+    });
   }
   // Boot splash (sits on top until acknowledged)
   initSplash();
