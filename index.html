@@ -20,6 +20,32 @@
 <div id="bg-ascii"></div>
 <div id="app">
 
+<!-- SPLASH / BOOT SCREEN -->
+<div id="splash-screen">
+  <div id="splash-boot">
+    <div id="splash-boot-lines"></div>
+    <div id="splash-bar-wrap"><div id="splash-bar-fill"></div></div>
+  </div>
+  <div id="splash-dialog" style="display:none;">
+    <div class="splash-win">
+      <div class="splash-tb">
+        <div class="wtt"><span>&#9888;</span> PROJECTLEROY.EXE &mdash; IMPORTANT NOTICE</div>
+        <div class="wbs"><div class="wbtn">&#10005;</div></div>
+      </div>
+      <div class="splash-body">
+        <div class="splash-warn-icon">&#9888;</div>
+        <div class="splash-text-area">
+          <div class="splash-title-big">PROJECT LEROY</div>
+          <div class="splash-disc">The names, characters, businesses, places, events, and mildly questionable life choices portrayed in this work are entirely fictional. Any resemblance to actual persons, living or dead, is purely coincidental &mdash; even if it seems oddly specific. No real individuals, corporations, secret societies, or overly sensitive uncles were intentionally depicted. Please direct all conspiracy theories elsewhere.</div>
+        </div>
+      </div>
+      <div class="splash-footer">
+        <button class="splash-ok-btn" onclick="dismissSplash()">[ ACKNOWLEDGE AND ENTER ]</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- TITLE SCREEN — Windows 95 desktop aesthetic -->
 <div id="title-block">
 <div class="wp" style="background:var(--wg);">

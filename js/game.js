@@ -2,7 +2,7 @@
 
 // FACTION DATA
 const FACTIONS={
-  iron_syndicate:{id:'iron_syndicate',name:'Iron Syndicate',territory:'Newark',icon:'&#129967;',color:'#e0a020',
+  iron_syndicate:{id:'iron_syndicate',name:'Iron Syndicate',territory:'Newark',icon:'&#129967;',color:'#dd4444',
     relationScore:10,
     leader:'Mayor Jennifer Stahl',leaderTitle:'Mayor of Newark, Iron Syndicate',
     leaderPortrait:'+--------+\n| /\\__/\\ |\n| (o  o) |\n| =====  |\n| [CORP] |\n+--------+',
@@ -38,7 +38,7 @@ const FACTIONS={
       {name:'Sister Perpetua',role:'Finn\'s senior advisor, zealot',voice:'True believer. Outsiders are tests from God. Strangers are usually failing.'},
       {name:'Brother Tom\u00e1s',role:'Young novice, quiet doubter',voice:'Questions everything quietly. Potential defector. Finn doesn\'t know yet.'},
     ]},
-  trenton_collective:{id:'trenton_collective',name:'Trenton Collective',territory:'Trenton',icon:'&#127807;',color:'#dd4444',
+  trenton_collective:{id:'trenton_collective',name:'Trenton Collective',territory:'Trenton',icon:'&#127807;',color:'#e0a020',
     relationScore:50,
     leader:'Chair Jameer King',leaderTitle:'Elected Chair, Trenton Agricultural Collective',
     leaderPortrait:'+--------+\n| [BERET]|\n| (^_^)  |\n| ~~~~~  |\n|COMRADE |\n+--------+',
@@ -2141,6 +2141,43 @@ ${sessionDetails||'<span style="color:#222">No sessions.</span>'}
 </body></html>`;
 }
 
+// ── SPLASH / BOOT SCREEN ──
+function initSplash() {
+  const lines = [
+    '> PROJECTLEROY.EXE v0.1 ALPHA',
+    '> LOADING NARRATIVE ENGINE........',
+    '> ESTABLISHING ANTHROPIC LINK......',
+    '> INITIALIZING NJ-ADMIN-7 DATABASE.',
+    '> LOADING FACTION INTEL....... OK',
+    '> READY.',
+  ];
+  const linesEl = document.getElementById('splash-boot-lines');
+  const bar = document.getElementById('splash-bar-fill');
+  let i = 0;
+  const step = () => {
+    if (i < lines.length) {
+      const s = document.createElement('span');
+      s.className = 'splash-boot-line';
+      s.textContent = lines[i++];
+      linesEl.appendChild(s);
+      setTimeout(step, 240 + Math.random() * 160);
+    } else {
+      setTimeout(() => { bar.style.width = '100%'; }, 50);
+      setTimeout(() => {
+        document.getElementById('splash-boot').style.display = 'none';
+        document.getElementById('splash-dialog').style.display = 'block';
+      }, 2000);
+    }
+  };
+  step();
+}
+
+function dismissSplash() {
+  const el = document.getElementById('splash-screen');
+  el.style.opacity = '0';
+  setTimeout(() => { el.style.display = 'none'; }, 500);
+}
+
 // ── INIT ──
 document.addEventListener('DOMContentLoaded', function() {
   // ASCII BG
@@ -2172,4 +2209,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const fab=document.getElementById('dev-fab');
     if(fab){fab.style.display='block';}
   }
+  // Boot splash (sits on top until acknowledged)
+  initSplash();
 });
