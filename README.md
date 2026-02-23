@@ -2,7 +2,7 @@
 
 > Campaign 1 of **Wasteland Chronicles** — a post-apocalyptic political RPG set in New Jersey, year 2999.
 
-**[▶ Play Now](https://dabillyandagoat.github.io/RPG_PRJ)**
+**[▶ Play Now](https://dabillyandagoat.github.io/leroy)**
 
 ---
 
@@ -21,7 +21,7 @@ Unite the wasteland. Conquer it. Or get eaten by something in the Pine Barrens.
 ## Structure
 
 ```
-RPG_PRJ/
+leroy/
 ├── index.html          ← HTML shell
 ├── css/game.css        ← All game styles
 ├── js/game.js          ← All game logic
