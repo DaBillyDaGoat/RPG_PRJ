@@ -297,7 +297,7 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
 #story-select .wi{background:var(--wg);}
 .story-grid{display:grid;gap:10px;}
 .story-card{background:#0a0a0a;border:2px solid var(--gd);padding:0;cursor:pointer;transition:border-color .15s,box-shadow .15s;overflow:hidden;position:relative;box-shadow:0 0 8px rgba(0,255,65,0.15);}
-.story-card:not(.locked):hover{border-color:var(--g);box-shadow:0 0 16px var(--gg);}
+.story-card:hover{border-color:var(--g);box-shadow:0 0 16px var(--gg);}
 .story-card.locked{cursor:not-allowed;opacity:.55;}
 .story-card.selected-story{border-color:var(--a);box-shadow:0 0 14px rgba(255,176,0,.2);}
 .sc-banner{height:7px;width:100%;}
@@ -331,3 +331,66 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
 .story-badge-strip{background:#000;border:1px solid var(--gd);padding:6px 12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
 .story-badge-name{font-size:.62rem;color:var(--g);letter-spacing:1px;}
 .story-badge-tag{font-size:.52rem;color:var(--gd);}
+
+/* ── CAMPAIGN CARD EXTRAS ── */
+.sc-title-purple{color:#bb44ff;}
+.sc-select-btn-red{opacity:.55;border-color:#cc2222 !important;color:#cc2222 !important;cursor:not-allowed;}
+.sc-select-btn-red:hover{background:var(--wg);}
+.settings-chip{cursor:pointer;}
+.settings-chip:hover{background:#d4d0c8;}
+
+/* ── SETTINGS / TUTORIAL MODAL ── */
+.settings-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:8000;display:flex;align-items:center;justify-content:center;}
+.settings-win{background:var(--wg);border-top:2px solid var(--ww);border-left:2px solid var(--ww);border-right:2px solid var(--wgd);border-bottom:2px solid var(--wgd);min-width:320px;max-width:500px;width:90%;box-shadow:4px 4px 0 rgba(0,0,0,.6);max-height:88vh;display:flex;flex-direction:column;}
+.settings-tb{background:linear-gradient(to right,var(--wb),#1a6fb5);padding:3px 7px;font-size:.6rem;color:var(--ww);letter-spacing:1px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.settings-close{background:var(--wg);border-top:1px solid var(--ww);border-left:1px solid var(--ww);border-right:1px solid var(--wgd);border-bottom:1px solid var(--wgd);color:var(--wk);font-size:.65rem;cursor:pointer;padding:1px 6px;font-family:'Share Tech Mono',monospace;line-height:1.4;}
+.settings-close:active{border-top:1px solid var(--wgd);border-left:1px solid var(--wgd);border-right:1px solid var(--ww);border-bottom:1px solid var(--ww);}
+.settings-tabs-row{display:flex;background:var(--wg);border-bottom:2px solid var(--wgd);flex-shrink:0;}
+.stab-btn{padding:4px 14px;font-family:'Share Tech Mono',monospace;font-size:.58rem;letter-spacing:1px;background:var(--wg);border:none;border-right:1px solid var(--wgd);cursor:pointer;color:var(--wgdd);position:relative;top:2px;border-radius:0;}
+.stab-btn.active{background:#fff;color:var(--wk);top:0;border-bottom:2px solid #fff;}
+.settings-body{background:#fff;overflow-y:auto;flex:1;}
+.stab-content{font-family:'Share Tech Mono',monospace;font-size:.62rem;line-height:1.9;color:var(--wk);padding:14px 16px;}
+.stab-content h3{font-size:.65rem;letter-spacing:2px;margin:12px 0 4px;border-bottom:1px solid var(--wgd);padding-bottom:2px;font-weight:normal;}
+.stab-content h3:first-child{margin-top:0;}
+
+/* ── RESPONSIVE — MOBILE ── */
+@media (max-width:680px){
+  body{font-size:11px;}
+  #app{padding:6px 6px 100px;}
+  .wi{padding:10px 10px;}
+
+  /* Campaign cards: single column */
+  .story-grid{grid-template-columns:1fr;}
+
+  /* Resource bar: wrap */
+  .res-row{flex-wrap:wrap;gap:4px;}
+  .res-chip{font-size:.55rem;padding:3px 7px;}
+
+  /* Tabs: compress */
+  .tab{font-size:.5rem;padding:6px 8px;letter-spacing:1px;}
+
+  /* Story text */
+  #story-text{font-size:.72rem;line-height:1.75;}
+
+  /* Choice buttons: bigger tap target */
+  .choice-btn{font-size:.65rem;padding:10px 12px;}
+
+  /* Custom action input: stack vertically */
+  .open-wrap{flex-direction:column;gap:6px;}
+  .open-submit{width:100%;}
+
+  /* Map: fill width */
+  #campaign-map{width:100% !important;height:auto !important;}
+
+  /* Setup origin faction grid: 2-col on mobile */
+  .arch-grid{grid-template-columns:1fr 1fr !important;}
+
+  /* Desktop meta chips */
+  .desktop-meta{gap:6px;}
+  .desktop-meta-chip{font-size:.5rem;padding:4px 8px;}
+  .desktop-meta-chip span{font-size:.65rem;}
+
+  /* Settings modal full width */
+  .settings-win{width:98%;max-width:98%;}
+  .stab-content{font-size:.6rem;}
+}

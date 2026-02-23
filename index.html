@@ -33,10 +33,10 @@
       <div class="desktop-tagline">&ldquo;Every faction has a reason. None of them are good.&rdquo;</div>
       <div class="desktop-divider"></div>
       <div class="desktop-meta">
-        <div class="desktop-meta-chip">GENRE<span>Political Survival</span></div>
         <div class="desktop-meta-chip">ENGINE<span>Claude API</span></div>
         <div class="desktop-meta-chip">STATUS<span>Early Access</span></div>
-        <div class="desktop-meta-chip">BUILD<span>NJ-2999 Alpha</span></div>
+        <div class="desktop-meta-chip">BUILD<span>2999 Alpha</span></div>
+        <div class="desktop-meta-chip settings-chip" onclick="openSettings()">SETTINGS<span>Tutorial</span></div>
       </div>
       <div id="home-continue-row" style="display:none;margin-top:14px;width:100%;gap:8px;flex-wrap:wrap;">
         <button class="desktop-save-btn" onclick="resumeGame(window._ps)">&#9654; CONTINUE LAST SAVE</button>
@@ -85,7 +85,7 @@
               <div class="sc-num">CAMPAIGN 02</div>
             </div>
           </div>
-          <div class="sc-title">GLITTERGOLD FRONTIER</div>
+          <div class="sc-title sc-title-purple">GLITTERGOLD FRONTIER</div>
           <div class="sc-desc space-desc">You awake from cryo sleep in the year 3150 after fleeing Earth on the Glittergold &mdash; a luxury star cruiser &mdash; as it became clear humanity&rsquo;s treatment of the planet had pushed it to its brink.<br><br>The overseers running this ship aren&rsquo;t the help the luxury clientele expected them to be. Influence an uprising, jettison the bastards out the airlock, or just go on a rampage. Someone has to.</div>
           <div class="sc-meta">
             <div class="sc-meta-item">MAP: <span>Solar System, 3150</span></div>
@@ -96,7 +96,7 @@
       </div>
 
       <!-- STORY 03: BLOCK .45 — Coming Soon -->
-      <div class="story-card locked" id="sc-locked2">
+      <div class="story-card" id="sc-locked2">
         <div class="sc-banner" style="background:linear-gradient(to right,#4a0000,#aa2200,#4a0000);"></div>
         <div class="sc-inner">
           <div class="sc-top">
@@ -112,7 +112,7 @@
             <div class="sc-meta-item">MAP: <span>O-Block, 2027</span></div>
             <div class="sc-meta-item">ENDINGS: <span>Multiple</span></div>
           </div>
-          <button class="sc-select-btn" style="opacity:.5;border-color:#cc2222;color:#cc2222;" disabled>[ IN DEVELOPMENT ]</button>
+          <button class="sc-select-btn sc-select-btn-red" disabled>[ IN DEVELOPMENT ]</button>
         </div>
       </div>
 
@@ -445,5 +445,50 @@
 </div>
 
 <script src="js/game.js"></script>
+
+<!-- SETTINGS / TUTORIAL MODAL -->
+<div class="settings-modal" id="settings-modal" style="display:none;" onclick="if(event.target===this)closeSettings()">
+  <div class="settings-win">
+    <div class="settings-tb">
+      <span>&#9881; WASTELAND_SETTINGS.EXE</span>
+      <button class="settings-close" onclick="closeSettings()">&#10005;</button>
+    </div>
+    <div class="settings-tabs-row">
+      <button class="stab-btn active" id="stabtn-tutorial" onclick="settingsTab('tutorial')">TUTORIAL</button>
+      <button class="stab-btn" id="stabtn-options" onclick="settingsTab('options')">SETTINGS</button>
+    </div>
+    <div class="settings-body">
+      <div id="stab-tutorial" class="stab-content">
+        <h3>&#9658; OBJECTIVE</h3>
+        Unite or dominate all factions of New Jersey 2999. Win by controlling all 6 locations on the map, or by resolving every faction &mdash; ally them (Relation 66+) or conquer them (Relation 0 + their home territory captured). Any combination of alliances and conquests works. Your Influence reaches 0% and the campaign ends in defeat.
+        <h3>&#9658; EACH TURN</h3>
+        Read the narrative. Choose A / B / C, or type your own action in the input at the bottom. Each preset choice earns Action Points (AP) in a skill. Custom actions earn 0 AP but can do anything.
+        <h3>&#9658; SKILLS</h3>
+        FORCE &mdash; Combat, intimidation, troop command<br>
+        WIT &mdash; Trade, engineering, cunning plans<br>
+        INFLUENCE &mdash; Diplomacy, persuasion, politics<br>
+        SHADOW &mdash; Stealth, espionage, subterfuge<br>
+        GRIT &mdash; Survival, scavenging, endurance<br><br>
+        Earn AP to level up skills. Higher levels unlock Perks with mechanical effects.
+        <h3>&#9658; RESOURCES</h3>
+        INFLUENCE &mdash; Your political health. Reaches 0% and you lose.<br>
+        SUPPLIES &mdash; Required for travel and operations.<br>
+        TROOPS &mdash; Your military force. 0 troops forces stealth or diplomacy.<br>
+        GOLD &mdash; Currency for trade and bribes.
+        <h3>&#9658; FACTIONS</h3>
+        7 factions control New Jersey. Visit the FACTIONS tab to open direct dialogue with faction leaders. Each faction has a Relation score (0&ndash;100). Hostile at 0, allied at 66+. You decide how to handle each one.
+        <h3>&#9658; MAP</h3>
+        Travel to locations from the MAP tab. Controlling a location earns passive supply income every turn. Station garrison troops to defend it when you are away.
+        <h3>&#9658; SAVE</h3>
+        Your game saves automatically after every turn to your browser&rsquo;s local storage. Progress persists between sessions on the same device.
+      </div>
+      <div id="stab-options" class="stab-content" style="display:none;">
+        <br>
+        <div style="text-align:center;color:var(--wgdd);letter-spacing:2px;padding:20px 0;">[ SETTINGS &mdash; COMING SOON ]</div>
+        <br>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>

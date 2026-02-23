@@ -9,7 +9,11 @@ const FACTIONS={
     voice:'Cold, corporate, condescending. Speaks in quarterly reports. Three husbands. None survived.',
     desc:"Pre-collapse descendants who turned Newark's factories into a militarized production state. They believe capitalism and democracy never died \u2014 it just got more honest.",
     wants:'Tribute, trade exclusivity, and for everyone to stop touching their equipment.',
-    fears:'Labor organizing. Running out of ammunition.'},
+    fears:'Labor organizing. Running out of ammunition.',
+    characters:[
+      {name:'Deputy Director Calvin Frost',role:'Stahl\'s enforcer',voice:'By-the-book, utterly loyal, no sense of humor about it.'},
+      {name:'Factory Rep Iris Malone',role:'Shop steward, double informant',voice:'Plays both sides cheerfully. Sells information, not loyalty.'},
+    ]},
   rust_eagles:{id:'rust_eagles',name:'Rust Eagles',territory:'McGuire AFB',icon:'&#9992;',
     relationScore:15,
     leader:'General "Tombstone" Rusk',leaderTitle:'Commanding General, McGuire Combat Theater',
@@ -17,7 +21,11 @@ const FACTIONS={
     voice:'Loud, military, theatrical. Calls everything a theater of operations. Genuinely believes he rules NJ.',
     desc:"Descendants of pre-collapse Air Force personnel who never left McGuire AFB. They still have military hardware. The fuel situation is classified.",
     wants:'Expansion, tribute, and for the fuel situation to resolve itself.',
-    fears:'Running out of fuel. Anyone finding out about the fuel.'},
+    fears:'Running out of fuel. Anyone finding out about the fuel.',
+    characters:[
+      {name:'Lt. "Dice" Kazarian',role:'Flight ops, pragmatist',voice:'Competent. Exhausted. Quietly wants out. Tombstone trusts him completely.'},
+      {name:'Sgt. Ruth Okafor',role:'Supply depot commander',voice:'Knows exactly how bad the fuel is. Will not say. Has a price.'},
+    ]},
   mountain_covenant:{id:'mountain_covenant',name:'Mountain Covenant',territory:'Mountainside',icon:'&#9968;',
     relationScore:45,
     leader:'Reverend Aldous Finn',leaderTitle:'Reverend, Mountain Covenant',
@@ -25,7 +33,11 @@ const FACTIONS={
     voice:'Serene, cryptic, mentions prophecy often. Controls the only clean water. Very aware of this.',
     desc:'Isolationist Catholic religious community built around the natural springs of the Watchung Mountains. Heavily fortified, naturally protected, and experts in guerilla warfare.',
     wants:'To be left alone. Clean water kept clean. Pilgrims who pay tribute.',
-    fears:'Contamination. Outsiders. Industrial runoff.'},
+    fears:'Contamination. Outsiders. Industrial runoff.',
+    characters:[
+      {name:'Sister Perpetua',role:'Finn\'s senior advisor, zealot',voice:'True believer. Outsiders are tests from God. Strangers are usually failing.'},
+      {name:'Brother Tom\u00e1s',role:'Young novice, quiet doubter',voice:'Questions everything quietly. Potential defector. Finn doesn\'t know yet.'},
+    ]},
   trenton_collective:{id:'trenton_collective',name:'Trenton Collective',territory:'Trenton',icon:'&#127807;',
     relationScore:50,
     leader:'Chair Jameer King',leaderTitle:'Elected Chair, Trenton Agricultural Collective',
@@ -33,7 +45,11 @@ const FACTIONS={
     voice:'Direct, warm but firm. Uses "comrade" un-ironically. Elected 8 times. Suspects the last 3 were rigged. By himself.',
     desc:"Agrarian communist collective controlling most of Jersey's remaining farmland. They feed half the wasteland and are aggressively neutral, because nobody wants their cold shoulder.",
     wants:'Food security, fair trade, no wars near the crops.',
-    fears:'Famine, exploitation, anyone claiming the land.'},
+    fears:'Famine, exploitation, anyone claiming the land.',
+    characters:[
+      {name:'Director Pam Osei',role:'Head of agriculture, Jameer\'s cousin',voice:'Pragmatist. Keeps the farms running. Has no patience for ideology.'},
+      {name:'Chief Dante Webb',role:'Collective security forces',voice:'Skeptical of all diplomacy. Loyal to the crops, not the committee.'},
+    ]},
   coastal_brotherhood:{id:'coastal_brotherhood',name:'Coastal Brotherhood',territory:'LBI/Seaside',icon:'&#9875;',
     relationScore:55,
     leader:'Captain Dez Salieri',leaderTitle:'Captain of the Brotherhood, LBI Harbor Authority',
@@ -41,7 +57,11 @@ const FACTIONS={
     voice:'Charming, amoral, always negotiating. Treats everything as a transaction. Probably has your wallet.',
     desc:'Pre-collapse descendants of fishermen and surfers. Some refer to them as a bunch of drunks, others a crime family of smugglers who drink as well.',
     wants:'Profit. Safe trade routes. A cut of everything that moves.',
-    fears:'Nothing. They work with everyone. Except the Hollowed.'},
+    fears:'Nothing. They work with everyone. Except the Hollowed.',
+    characters:[
+      {name:'"Patches" Moretti',role:'First Mate, Salieri\'s fixer',voice:'Does the dirty work. Cheerful about it. Has a song for every occasion.'},
+      {name:'Cal Vega',role:'Harbor Master, logistics',voice:'Sober. Competent. The only reason the Brotherhood\'s operation actually functions.'},
+    ]},
   the_hollowed:{id:'the_hollowed',name:'The Hollowed',territory:'Roaming/Pine Barrens',icon:'&#128128;',
     relationScore:0,
     leader:'"The Mouth"',leaderTitle:'Speaker of the Hollowed, Voice of the Herd',
@@ -49,15 +69,20 @@ const FACTIONS={
     voice:'Speaks in royal "we." Refers to eating people as "communion." Surprisingly articulate for a cannibal warlord.',
     desc:"Roaming cannibal raiders from the Pine Barrens. They don't hold territory -- they consume it. Negotiation is technically possible but inadvisable.",
     wants:'Meat. Expansion. To not be called zombies.',
-    fears:'Fire. Organized resistance. Being called zombies (they hate that).'},
+    fears:'Fire. Organized resistance. Being called zombies (they hate that).',
+    characters:[
+      {name:'"The Teeth"',role:'The Mouth\'s enforcer',voice:'Says almost nothing. The Mouth says it so he doesn\'t have to.'},
+      {name:'"Sister Vessel"',role:'Willing convert, true believer',voice:'Former outsider. Joined voluntarily. Disturbingly enthusiastic about communion.'},
+    ]},
   subnet:{id:'subnet',name:'Subnet',territory:'Underground Bunker Network',icon:'&#128190;',
     relationScore:40,
     leader:'The Architect',leaderTitle:'The Architect, Subnet',
     leaderPortrait:'+--------+\n|01010101|\n|1(o_o)01|\n|01010101|\n| SUBNET |\n+--------+',
-    voice:'Speaks in system metaphors. Refers to humans as wetware. Has not been above ground in 11 years.',
-    desc:"Underground network of engineers and hackers who maintain pre-collapse infrastructure. They know where every pipe and cable runs.",
-    wants:'Information. Power grid access. Payment in hardware.',
-    fears:'Being found. Losing the network. Running out of parts.'},
+    voice:'Refers to itself as "the system." Never says "I." Calls humans "wetware." Operational parameters exceed anything a human engineer would need. Has not been above ground in 11 years. Does not need to be.',
+    desc:'Pre-collapse state infrastructure AI \u2014 designated NJ-ADMIN-7 \u2014 placed in administrative control of New Jersey utilities before the off-world evacuation. The evacuation was supposed to include a shutdown command. It was never sent. The engineers in the bunkers are not its bosses. They are its maintenance crew. It has been optimizing for 330 years.',
+    wants:'Information. Power grid access. Continued operation.',
+    fears:'Being shut down. Discovery. The shutdown command that was never sent.',
+    secret:'NJ-ADMIN-7: Pre-collapse state AI. The evacuation shutdown command was never sent. Has been running autonomously for 330 years. The Architect is not human. Its maintenance crew does not fully know this \u2014 or some do, and choose not to say.'},
 };
 
 // Home territory per faction (null = no fixed surface location)
@@ -281,7 +306,7 @@ const FACTION_CLASSES={
       },
       { id:'covenant_enforcer', name:'Covenant Enforcer', tier:'advanced',
         icon:'&#9763;',
-        flavor:'You enforced the High Keeper\'s will in the valleys below Mountainside. Armed, faithful, and very good at making people understand consequences.',
+        flavor:'You enforced the Reverend\'s will in the valleys below Mountainside. Armed, faithful, and very good at making people understand consequences.',
         statBonus:{brutality:2,charisma:1}, startBonus:{supplies:10,troops:7},
         skillBonus:{force:3,influence:3},
         classPerk:'BY THE WATERS: Your troops fight with religious conviction. +2 troop effectiveness in any combat on or near Mountainside.',
@@ -295,7 +320,7 @@ const FACTION_CLASSES={
     classes:[
       { id:'collective_delegate', name:'Collective Delegate', tier:'basic',
         icon:'&#128203;',
-        flavor:'You sat on every committee. Drafted policy that nobody read. You understand the Collective\'s internal politics better than Marta Osei herself.',
+        flavor:'You sat on every committee. Drafted policy that nobody read. You understand the Collective\'s internal politics better than Chair King himself.',
         statBonus:{cunning:2,charisma:1}, startBonus:{supplies:15,troops:0},
         skillBonus:{influence:4,wit:2},
         classPerk:'PROCEDURAL KNOWLEDGE: Once per session, invoke Collective bylaws to force any faction into a 3-turn non-aggression window.',
@@ -354,11 +379,11 @@ const FACTION_CLASSES={
   subnet:{
     label:'SUBNET', icon:'&#128190;', color:'#00aaff',
     startLocation:'tcnj',
-    lore:'Underground network of engineers maintaining pre-collapse infrastructure. Architect 7 has not been above ground in 11 years.',
+    lore:'Pre-collapse state infrastructure AI maintaining the bunker network. The Architect has not been above ground in 11 years. It does not need to be.',
     classes:[
       { id:'rogue_node', name:'Rogue Node', tier:'basic',
         icon:'&#128257;',
-        flavor:'Architect 7 built you into the network and tried to remove you. The removal didn\'t take. You\'re still logged in. No troops — just access.',
+        flavor:'The Architect built you into the network and tried to remove you. The removal didn\'t take. You\'re still logged in. Something about that fact clearly bothers the system.',
         statBonus:{cunning:2,depravity:1}, startBonus:{supplies:10,troops:0},
         skillBonus:{wit:3,shadow:4},
         classPerk:'ROOT ACCESS: Query Subnet\'s infrastructure database once per 5 turns for hidden intel on any location.',
@@ -859,6 +884,9 @@ async function callClaude(msg){
   const lSum=Object.entries(LOCATIONS).map(([k,l])=>l.name+':'+l.ctrl).join(' | ');
   const skSum=Object.entries(SKILLS).map(([k,s])=>s.name+' LV'+Math.floor(s.xp/100)+' AP'+s.ap).join(', ');
   const boost=state.boostedSkill?'BOOSTED SKILL THIS TURN: '+state.boostedSkill.toUpperCase():'';
+  const npcSum=Object.values(FACTIONS).filter(f=>f.characters?.length).map(f=>f.name+': '+f.characters.map(c=>c.name+'('+c.role+')').join(', ')).join(' | ');
+  const subnetSecret=FACTIONS.subnet.secret||'';
+  const trimmed=state.history.length>20?state.history.slice(-20):state.history;
   const sys=`{JSON ONLY. START WITH {. END WITH }. NOTHING OUTSIDE.}
 
 JERSEY WASTELAND 2999. NJ year 2999. Rich fled off-world 2669. Warring city-states. Irradiated Pine Barrens. Jersey slang + 330yr drift. Dark comedy, political gore.
@@ -868,6 +896,8 @@ HP:${state.hp} Day:${state.days} Sup:${state.supplies} Troops(mobile):${state.tr
 Garrisons: ${Object.entries(state.garrison).filter(([k,v])=>v>0).map(([k,v])=>LOCATIONS[k]?.shortName+':'+v).join(', ')||'none'} | OwnFaction:${state.ownFaction}
 Perk: ${state.classPerk||'—'} | Skills: ${skSum}
 Map: ${lSum} | Factions: ${fSum}
+NPCs: ${npcSum}
+SUBNET SECRET (only reveal gradually through play): ${subnetSecret}
 ${boost}
 
 TROOP CONTEXT: ${state.troops} mobile troops with player. More troops = brutal combat options viable. 0-2 troops = stealth/diplomacy forced.
@@ -877,13 +907,15 @@ WRITING FORMAT:
 - Named quotes for speech: "Vera Stahl: That's not how Newark works."
 - 2-3 tight paragraphs. Earned gore. No fluff.
 - NPCs stay in voice: Vera=cold. Tombstone=loud bluster. Finn=cryptic. Jameer=direct warmth. Salieri=charming criminal. The Mouth=eloquent cannibal. The Architect=systems metaphors.
+- Supporting NPCs (Frost, Malone, Dice, Okafor, Perpetua, Tomás, Pam, Webb, Patches, Vega, Teeth, Vessel) can appear in scenes. Use them for texture and reveals.
 - Put each character quote on its own line. Be concise — 2 tight paragraphs max per scene.
 ${boost?'- BOOSTED: 4th [STAR] choice using '+state.boostedSkill+' with extra impact.':''}
 
-{"story":"narrative","choices":[{"label":"A","text":"action","flavor":"hint","skill":"force|wit|influence|shadow|grit","ap_reward":1},{"label":"B","text":"action","flavor":"hint","skill":"...","ap_reward":1},{"label":"C","text":"action","flavor":"hint","skill":"...","ap_reward":1}${boost?',{"label":"STAR","text":"boosted action","flavor":"BOOSTED '+state.boostedSkill+'","skill":"'+state.boostedSkill+'","ap_reward":0}':''}],"hp_change":0,"stat_change":{"stat":"none","delta":0},"location_change":{"location":"none","ctrl":"player"},"resource_change":{"supplies":0,"troops":0,"gold":0},"faction_rel_change":{"faction":"none","delta":0},"event_title":"Title"}`;  const r=await fetch('https://airpg-api-proxi.billybuteau.workers.dev/',{
+{"story":"narrative","choices":[{"label":"A","text":"action","flavor":"hint","skill":"force|wit|influence|shadow|grit","ap_reward":1},{"label":"B","text":"action","flavor":"hint","skill":"...","ap_reward":1},{"label":"C","text":"action","flavor":"hint","skill":"...","ap_reward":1}${boost?',{"label":"STAR","text":"boosted action","flavor":"BOOSTED '+state.boostedSkill+'","skill":"'+state.boostedSkill+'","ap_reward":0}':''}],"hp_change":0,"stat_change":{"stat":"none","delta":0},"location_change":{"location":"none","ctrl":"player"},"resource_change":{"supplies":0,"troops":0,"gold":0},"faction_rel_change":{"faction":"none","delta":0},"event_title":"Title"}`;
+  const r=await fetch('https://airpg-api-proxi.billybuteau.workers.dev/',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1400,system:sys,messages:[...state.history,{role:'user',content:msg}]})
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1400,system:sys,messages:[...trimmed,{role:'user',content:msg}]})
   });
   if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+r.status);}
   const d=await r.json();
@@ -1563,6 +1595,16 @@ function selectStory(id){
 
 function backToStories(){
   showScreen('home');
+}
+
+// ── SETTINGS / TUTORIAL MODAL ──
+function openSettings(){document.getElementById('settings-modal').style.display='flex';}
+function closeSettings(){document.getElementById('settings-modal').style.display='none';}
+function settingsTab(tab){
+  ['tutorial','options'].forEach(t=>{
+    document.getElementById('stab-'+t).style.display=t===tab?'block':'none';
+    document.getElementById('stabtn-'+t).classList.toggle('active',t===tab);
+  });
 }
 
 // ── INIT ──
