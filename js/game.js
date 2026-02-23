@@ -133,6 +133,7 @@ function checkWin(){
 
 function displayVictory(type){
   state.gameOver=true;
+  logEvent('game_over',{outcome:'win',vtype:type,turns:state.turn,days:state.days});
   clearSave();
   const msgs={
     domination:`INFLUENCE RATING: 100%\nTERRITORIAL DOMINATION\n\n"${state.factionName}" controls every inch of New Jersey.\n\nFrom Newark's factories to Long Beach Island's docks, every checkpoint, every farm, every underground bunker — yours. ${state.character.name} didn't just survive the wasteland. They became it.\n\nThe last faction surrendered on turn ${state.turn}. History will call it inevitable. Everyone else will call it terrifying.`,
@@ -431,6 +432,7 @@ const state={
   originFaction:null,classPerk:'',
   gameOver:false,
   metFactions:[],   // faction IDs where player has opened dialogue (reveals their NPCs)
+  sessionId:'',     // unique session ID for dev log grouping
 };
 let skillAllocRemaining=5;
 const skillAlloc={force:0,wit:0,influence:0,shadow:0,grit:0};
@@ -566,6 +568,8 @@ function beginGame(){
   document.getElementById('panel-faction').textContent=fName;
   document.getElementById('panel-loc').textContent=LOCATIONS[state.currentLocation]?.shortName||'TCNJ';
   updateHp(100); updateRes(); renderAPRow();
+  state.sessionId=Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  logEvent('session_start',{faction:state.originFaction,cls:state.character.class,name:state.character.name,skills:{...skillAlloc}});
   showScreen('game-screen');
   switchTab('story');
   startStory();
@@ -820,6 +824,7 @@ function openDialogue(fid){
   const f=FACTIONS[fid]; if(!f)return;
   state.activeFactionDlg=fid; state.dlgHistory=[];
   if(!state.metFactions.includes(fid)) state.metFactions.push(fid);
+  logEvent('faction_talk',{fid,leader:f.leader,rel:f.relationScore});
   const rel=getRelState(f);
   document.getElementById('dlg-win-title').textContent='DIALOGUE.EXE -- '+f.name.toUpperCase();
   document.getElementById('port-ascii').textContent=f.leaderPortrait;
@@ -893,7 +898,12 @@ async function callDlg(sys,msg){
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:'claude-3-5-haiku-20241022',max_tokens:700,system:sys,messages:[...state.dlgHistory,{role:'user',content:msg}]})
   });
-  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+r.status);}
+  if(!r.ok){
+    const e=await r.json().catch(()=>({}));
+    const err=new Error(e.error?.message||'HTTP '+r.status);
+    logEvent('api_error',{msg:err.message.slice(0,120),model:'haiku',src:'dialogue'});
+    throw err;
+  }
   const d=await r.json();
   return extractJSON(d.content[0].text);
 }
@@ -1039,7 +1049,12 @@ ${boost?'- BOOSTED: 4th [STAR] choice using '+state.boostedSkill+' with extra im
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:pickModel(msg),max_tokens:1400,system:sys,messages:[...trimmed,{role:'user',content:msg}]})
   });
-  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+r.status);}
+  if(!r.ok){
+    const e=await r.json().catch(()=>({}));
+    const err=new Error(e.error?.message||'HTTP '+r.status);
+    logEvent('api_error',{msg:err.message.slice(0,120),model:pickModel(msg),src:'main'});
+    throw err;
+  }
   const d=await r.json();
   return extractJSON(d.content[0].text);
 }
@@ -1058,6 +1073,7 @@ async function startStory(){
 async function makeChoice(idx){
   if(state.isLoading||state.gameOver)return;
   const ch=state.currentChoices[idx]; if(!ch)return;
+  logEvent('choice_made',{label:ch.label,text:(ch.text||'').slice(0,60),skill:ch.skill});
   setLoad(true); disableChoices(true); clearStory();
   document.getElementById('open-wrap').style.display='none';
   const p=`Player chose: "${ch.text}". Show vivid, brutal, funny consequences.`;
@@ -1082,6 +1098,7 @@ async function submitOpen(){
   setLoad(true); disableChoices(true); clearStory();
   document.getElementById('open-wrap').style.display='none';
   const sk=detectSkill(text);
+  logEvent('custom_action',{text:text.slice(0,80),skill:sk});
   const p=`Player chose a CUSTOM action (typed themselves): "${text}". This bypasses the given options. React honestly -- if clever let it work, if insane let it be equally insane. Continue the story.`;
   try{
     const res=await callClaude(p);
@@ -1162,6 +1179,7 @@ function renderChoices(choices){
 }
 
 function displayDeath(){
+  logEvent('game_over',{outcome:'loss',turns:state.turn,days:state.days,hp:state.hp});
   clearSave();
   document.getElementById('story-win-title').textContent='GAME OVER -- INFLUENCE: 0%';
   const el=document.getElementById('story-text');
@@ -1374,6 +1392,7 @@ async function travelToSelected(){
   const hasPatrol=PATROL_ROUTES.some(r=>(r.from===locId||r.to===locId)&&(r.from===state.currentLocation||r.to===state.currentLocation));
   if(hasPatrol&&loc.travelTroopRisk){troopLost=Math.floor(Math.random()*3)+1;state.troops=Math.max(0,state.troops-troopLost);}
   const prevLoc=state.currentLocation;
+  logEvent('travel',{from:prevLoc,to:locId,cost:{days:loc.travelDays,supplies:loc.travelSupplies},troopLost});
   state.currentLocation=locId;
   updateRes();
   document.getElementById('panel-loc').textContent=loc.shortName;
@@ -1575,6 +1594,7 @@ function collectPassiveIncome(){
 function onTurnEnd(){
   state.days++;
   collectPassiveIncome();
+  logEvent('turn_end',{hp:state.hp,sup:state.supplies,trp:state.troops,gold:state.gold,day:state.days});
   checkWin();
   // Check raids every 3 turns
   if(state.turn%3===0 && !state.gameOver) checkForRaids();
@@ -1592,7 +1612,7 @@ function saveGame(html){
       hp:state.hp,maxHp:state.maxHp,turn:state.turn,
       history:state.history,currentChoices:state.currentChoices,lastStoryHTML:html,
       days:state.days,supplies:state.supplies,troops:state.troops,gold:state.gold||0,
-      currentLocation:state.currentLocation,metFactions:state.metFactions||[],locStates,fRels,skData,savedAt:Date.now()
+      currentLocation:state.currentLocation,metFactions:state.metFactions||[],sessionId:state.sessionId,locStates,fRels,skData,savedAt:Date.now()
     }));
   }catch(e){}
 }
@@ -1606,7 +1626,9 @@ function resumeGame(save){
   state.days=save.days||0; state.supplies=save.supplies||50; state.troops=save.troops||10; state.gold=save.gold||0;
   state.currentLocation=save.currentLocation||'tcnj';
   state.metFactions=save.metFactions||[];
+  state.sessionId=save.sessionId||(Date.now().toString(36)+Math.random().toString(36).slice(2,7));
   state.apiKey=localStorage.getItem(API_KEY)||'';
+  logEvent('session_resume',{turn:save.turn,hp:save.hp});
   if(save.locStates) Object.entries(save.locStates).forEach(([k,v])=>{if(LOCATIONS[k])LOCATIONS[k].ctrl=v;});
   if(save.fRels) Object.entries(save.fRels).forEach(([k,v])=>{if(FACTIONS[k])FACTIONS[k].relationScore=v;});
   if(save.skData) Object.entries(save.skData).forEach(([k,v])=>{if(SKILLS[k]){SKILLS[k].xp=v.xp;SKILLS[k].ap=v.ap;}});
@@ -1731,6 +1753,217 @@ function settingsTab(tab){
   });
 }
 
+// ── DEV LOGGING ──
+const LOG_KEY='wc_devlog_v1';
+const LOG_MAX=800;
+
+function logEvent(type,data){
+  try{
+    const raw=localStorage.getItem(LOG_KEY);
+    const log=raw?JSON.parse(raw):[];
+    log.push({ts:Date.now(),sid:state.sessionId||'nosession',turn:state.turn||0,type,...data});
+    if(log.length>LOG_MAX)log.splice(0,log.length-LOG_MAX);
+    localStorage.setItem(LOG_KEY,JSON.stringify(log));
+  }catch(e){}
+}
+
+function getDevLog(){try{return JSON.parse(localStorage.getItem(LOG_KEY))||[];}catch(e){return[];}}
+function clearDevLog(){localStorage.removeItem(LOG_KEY);updateDevPanel();showNotif('DEV LOG CLEARED');}
+
+function updateDevPanel(){
+  const log=getDevLog();
+  const bytes=new Blob([JSON.stringify(log)]).size;
+  const kb=(bytes/1024).toFixed(1);
+  const cntEl=document.getElementById('dev-event-count');
+  if(cntEl)cntEl.textContent=log.length+' events ('+kb+' KB)';
+  const table=document.getElementById('dev-recent');
+  if(!table)return;
+  const recent=log.slice(-15).reverse();
+  table.innerHTML='<tr><th>Time</th><th>Sess</th><th>Trn</th><th>Type</th><th>Data</th></tr>';
+  recent.forEach(e=>{
+    const time=new Date(e.ts).toLocaleTimeString();
+    const {ts,sid,turn,type,...rest}=e;
+    const shortType=type.replace(/_/g,' ');
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${time}</td><td>${(sid||'').slice(-4)}</td><td>${turn}</td><td class="dev-type-${type.split('_')[0]}">${shortType}</td><td>${JSON.stringify(rest).slice(0,90)}</td>`;
+    table.appendChild(tr);
+  });
+}
+
+function openDevPanel(){
+  const m=document.getElementById('dev-modal');
+  if(m){m.style.display='flex';updateDevPanel();}
+}
+function closeDevPanel(){
+  const m=document.getElementById('dev-modal');
+  if(m)m.style.display='none';
+}
+
+function exportDevLog(){
+  const log=getDevLog();
+  if(!log.length){showNotif('LOG IS EMPTY');return;}
+  const html=buildLogHTML(log);
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='wc-devlog-'+new Date().toISOString().slice(0,10)+'.html';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showNotif('LOG EXPORTED');
+}
+
+function buildLogHTML(log){
+  // Group events by session ID
+  const sessions={};
+  log.forEach(e=>{if(!sessions[e.sid])sessions[e.sid]=[];sessions[e.sid].push(e);});
+  const sKeys=Object.keys(sessions);
+
+  // Aggregates
+  const totalTurns=log.filter(e=>e.type==='turn_end').length;
+  const wins=log.filter(e=>e.type==='game_over'&&e.outcome==='win').length;
+  const losses=log.filter(e=>e.type==='game_over'&&e.outcome==='loss').length;
+  const avgTurns=sKeys.length?Math.round(totalTurns/sKeys.length):0;
+
+  // Choice frequency
+  const choiceByLabel={A:0,B:0,C:0,STAR:0};
+  const choiceBySkill={};
+  log.filter(e=>e.type==='choice_made').forEach(e=>{
+    if(e.label)choiceByLabel[e.label]=(choiceByLabel[e.label]||0)+1;
+    if(e.skill)choiceBySkill[e.skill]=(choiceBySkill[e.skill]||0)+1;
+  });
+  const customCount=log.filter(e=>e.type==='custom_action').length;
+
+  // Faction/class popularity
+  const factionPop={};const classPop={};
+  log.filter(e=>e.type==='session_start').forEach(e=>{
+    if(e.faction)factionPop[e.faction]=(factionPop[e.faction]||0)+1;
+    if(e.cls)classPop[e.cls]=(classPop[e.cls]||0)+1;
+  });
+
+  // Custom action samples
+  const customActions=log.filter(e=>e.type==='custom_action').map(e=>e.text||'').filter(Boolean);
+
+  // Errors
+  const errors=log.filter(e=>e.type==='api_error');
+
+  // Avg resources by turn (first 20 turns)
+  const turnSnaps={};
+  log.filter(e=>e.type==='turn_end').forEach(e=>{
+    if(!turnSnaps[e.turn])turnSnaps[e.turn]=[];
+    turnSnaps[e.turn].push({hp:e.hp||0,sup:e.sup||0,trp:e.trp||0,gold:e.gold||0});
+  });
+  const avgByTurn=Object.keys(turnSnaps).map(Number).sort((a,b)=>a-b).slice(0,20).map(t=>{
+    const s=turnSnaps[t];const n=s.length;
+    return{turn:t,hp:Math.round(s.reduce((a,x)=>a+x.hp,0)/n),sup:Math.round(s.reduce((a,x)=>a+x.sup,0)/n),trp:Math.round(s.reduce((a,x)=>a+x.trp,0)/n),gold:Math.round(s.reduce((a,x)=>a+x.gold,0)/n)};
+  });
+
+  // Helpers
+  function bar(v,max){const p=max>0?Math.round(v/max*24):0;return'█'.repeat(p)+'░'.repeat(24-p);}
+  const maxChoice=Math.max(...Object.values(choiceByLabel),customCount,1);
+  const maxSkill=Math.max(...Object.values(choiceBySkill),1);
+  const maxFaction=Math.max(...Object.values(factionPop),1);
+
+  // Session summary rows
+  const sessionRows=sKeys.map(sid=>{
+    const evts=sessions[sid];
+    const start=evts.find(e=>e.type==='session_start');
+    const end=evts.find(e=>e.type==='game_over');
+    const turns=evts.filter(e=>e.type==='turn_end').length;
+    const ts=new Date(evts[0].ts).toLocaleString();
+    const outcome=end?(end.outcome==='win'?`<span class="win">WIN (${end.vtype||''})</span>`:'<span class="loss">LOSS</span>'):'<span class="ongoing">IN PROGRESS</span>';
+    return`<tr><td>${sid.slice(-6)}</td><td>${ts}</td><td>${start?start.faction||'?':'?'}</td><td>${start?start.cls||'?':'?'}</td><td>${turns}</td><td>${outcome}</td></tr>`;
+  }).join('');
+
+  // Session timelines
+  const sessionDetails=sKeys.map(sid=>{
+    const evts=sessions[sid];
+    const rows=evts.map(e=>{
+      const{ts,sid:_,turn,type,...rest}=e;
+      return`<tr><td>${new Date(ts).toLocaleTimeString()}</td><td>T${turn}</td><td class="et-${type.split('_')[0]}">${type}</td><td>${JSON.stringify(rest).replace(/['"{}]/g,'').slice(0,120)}</td></tr>`;
+    }).join('');
+    return`<details><summary><b>Session ${sid.slice(-6)}</b> — ${evts.length} events</summary><table class="evt-tbl"><tr><th>Time</th><th>Turn</th><th>Type</th><th>Data</th></tr>${rows}</table></details>`;
+  }).join('\n');
+
+  // Resource trend table
+  const resRows=avgByTurn.map(r=>`<tr><td>${r.turn}</td><td>${r.hp}</td><td>${r.sup}</td><td>${r.trp}</td><td>${r.gold}</td></tr>`).join('');
+
+  // Error rows
+  const errRows=errors.map(e=>`<tr><td>${new Date(e.ts).toLocaleString()}</td><td>T${e.turn}</td><td>${e.model||'?'}</td><td>${e.src||''}</td><td class="err">${e.msg||''}</td></tr>`).join('');
+
+  return`<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>Wasteland Chronicles — Dev Log</title><style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:monospace;background:#0a0a0a;color:#b8b8b8;padding:24px;font-size:13px;line-height:1.6;}
+h1{color:#00ff41;font-size:1.5rem;letter-spacing:3px;margin-bottom:4px;}
+.sub{color:#444;font-size:.72rem;letter-spacing:2px;margin-bottom:28px;}
+h2{color:#ffb000;font-size:.85rem;letter-spacing:2px;margin:32px 0 12px;border-bottom:1px solid #1e1e1e;padding-bottom:6px;text-transform:uppercase;}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:8px;}
+.stat-box{background:#111;border:1px solid #1e1e1e;border-left:3px solid #00ff41;padding:12px 14px;}
+.stat-val{font-size:1.8rem;color:#00ff41;font-weight:bold;line-height:1;}
+.stat-lbl{font-size:.6rem;color:#444;letter-spacing:1px;margin-top:4px;text-transform:uppercase;}
+table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:.78rem;}
+th{background:#111;color:#ffb000;text-align:left;padding:6px 8px;font-weight:normal;letter-spacing:1px;font-size:.68rem;border-bottom:1px solid #1e1e1e;}
+td{padding:4px 8px;border-bottom:1px solid #141414;vertical-align:top;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+tr:hover td{background:#111;}
+.win{color:#00ff41;}.loss{color:#cc0000;}.ongoing{color:#ffb000;}.err{color:#ff4444;white-space:normal;}
+details{margin-bottom:6px;border:1px solid #1e1e1e;}
+summary{cursor:pointer;color:#888;padding:7px 10px;background:#111;font-size:.78rem;list-style:none;}
+summary:hover{color:#ffb000;}details[open]summary{border-bottom:1px solid #1e1e1e;}
+.evt-tbl td{font-size:.72rem;color:#666;white-space:nowrap;max-width:240px;}
+.et-choice{color:#00ff41!important;}.et-custom{color:#00bbff!important;}.et-session{color:#ffb000!important;}
+.et-game{color:#ff44aa!important;}.et-api{color:#cc0000!important;}.et-turn{color:#2a2a2a!important;}
+.et-faction{color:#bb44ff!important;}.et-travel{color:#ffaa00!important;}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:5px;font-size:.75rem;}
+.bar-lbl{width:130px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;}
+.bar{color:#00ff41;letter-spacing:-2px;font-size:.7rem;}.bar-n{color:#333;font-size:.68rem;}
+ul{padding-left:16px;font-size:.78rem;color:#666;column-count:2;column-gap:20px;}
+li{margin-bottom:3px;break-inside:avoid;}
+.footer{color:#1a1a1a;font-size:.6rem;text-align:center;margin-top:40px;letter-spacing:2px;}
+</style></head><body>
+<h1>⚔ WASTELAND CHRONICLES — DEV LOG</h1>
+<div class="sub">EXPORTED ${new Date().toLocaleString()} &nbsp;|&nbsp; ${log.length} EVENTS &nbsp;|&nbsp; ${sKeys.length} SESSIONS</div>
+
+<h2>Summary</h2>
+<div class="stats-grid">
+  <div class="stat-box"><div class="stat-val">${sKeys.length}</div><div class="stat-lbl">Sessions</div></div>
+  <div class="stat-box"><div class="stat-val">${totalTurns}</div><div class="stat-lbl">Total Turns</div></div>
+  <div class="stat-box"><div class="stat-val">${avgTurns}</div><div class="stat-lbl">Avg Turns / Session</div></div>
+  <div class="stat-box"><div class="stat-val">${wins}</div><div class="stat-lbl">Campaign Wins</div></div>
+  <div class="stat-box"><div class="stat-val">${losses}</div><div class="stat-lbl">Campaign Losses</div></div>
+  <div class="stat-box"><div class="stat-val">${wins+losses>0?Math.round(wins/(wins+losses)*100):0}%</div><div class="stat-lbl">Win Rate</div></div>
+  <div class="stat-box"><div class="stat-val">${customCount}</div><div class="stat-lbl">Custom Actions</div></div>
+  <div class="stat-box"><div class="stat-val">${errors.length}</div><div class="stat-lbl">API Errors</div></div>
+</div>
+
+<h2>Sessions</h2>
+<table><tr><th>ID</th><th>Started</th><th>Origin Faction</th><th>Class</th><th>Turns</th><th>Outcome</th></tr>
+${sessionRows||'<tr><td colspan="6" style="color:#333">No sessions yet.</td></tr>'}</table>
+
+<h2>Choice Analysis</h2>
+${['A','B','C','STAR'].map(l=>`<div class="bar-row"><div class="bar-lbl">Option ${l}</div><div class="bar">${bar(choiceByLabel[l]||0,maxChoice)}</div><div class="bar-n">${choiceByLabel[l]||0}</div></div>`).join('')}
+<div class="bar-row"><div class="bar-lbl">Custom (typed)</div><div class="bar">${bar(customCount,maxChoice)}</div><div class="bar-n">${customCount}</div></div>
+<br><div style="color:#444;font-size:.68rem;letter-spacing:1px;margin-bottom:8px;">SKILL DISTRIBUTION</div>
+${Object.entries(choiceBySkill).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar-row"><div class="bar-lbl">${k.toUpperCase()}</div><div class="bar">${bar(v,maxSkill)}</div><div class="bar-n">${v}</div></div>`).join('')||'<span style="color:#222">No data</span>'}
+
+<h2>Origin Faction Popularity</h2>
+${Object.entries(factionPop).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar-row"><div class="bar-lbl">${k.replace(/_/g,' ')}</div><div class="bar">${bar(v,maxFaction)}</div><div class="bar-n">${v}</div></div>`).join('')||'<span style="color:#222">No data</span>'}
+
+<h2>Resource Trends (avg by turn, first 20 turns)</h2>
+${avgByTurn.length?`<table><tr><th>Turn</th><th>Avg Influence</th><th>Avg Supplies</th><th>Avg Troops</th><th>Avg Gold</th></tr>${resRows}</table>`:'<span style="color:#222">No turn data yet.</span>'}
+
+<h2>Recent Custom Actions (last ${Math.min(customActions.length,50)})</h2>
+${customActions.length?`<ul>${customActions.slice(-50).map(a=>`<li>${a.replace(/</g,'&lt;')}</li>`).join('')}</ul>`:'<span style="color:#222">None logged.</span>'}
+
+<h2>API Errors (${errors.length})</h2>
+${errRows?`<table><tr><th>Time</th><th>Turn</th><th>Model</th><th>Source</th><th>Error</th></tr>${errRows}</table>`:'<span style="color:#00ff41">✓ No errors logged.</span>'}
+
+<h2>Session Timelines</h2>
+${sessionDetails||'<span style="color:#222">No sessions.</span>'}
+
+<div class="footer">WASTELAND CHRONICLES DEV LOG — CONFIDENTIAL — ${new Date().toLocaleDateString()}</div>
+</body></html>`;
+}
+
 // ── INIT ──
 document.addEventListener('DOMContentLoaded', function() {
   // ASCII BG
@@ -1757,4 +1990,9 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   document.getElementById('open-input').addEventListener('keydown',e=>{if(e.key==='Enter')submitOpen();});
   document.getElementById('dlg-open').addEventListener('keydown',e=>{if(e.key==='Enter')submitDlgOpen();});
+  // Dev mode — show DEV button if ?dev=1 in URL
+  if(new URLSearchParams(window.location.search).get('dev')==='1'){
+    const fab=document.getElementById('dev-fab');
+    if(fab){fab.style.display='block';}
+  }
 });

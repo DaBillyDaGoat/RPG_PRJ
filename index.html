@@ -511,5 +511,33 @@
     </div>
   </div>
 </div>
+
+<!-- DEV PANEL MODAL (only shown in ?dev=1 mode) -->
+<div class="dev-modal" id="dev-modal" style="display:none;" onclick="if(event.target===this)closeDevPanel()">
+  <div class="dev-win">
+    <div class="dev-tb">
+      <span>&#9881; WASTELAND_DEVLOG.EXE</span>
+      <button class="dev-close" onclick="closeDevPanel()">&#10005;</button>
+    </div>
+    <div class="dev-body">
+      <div class="dev-stat-row">
+        <span id="dev-event-count">0 events</span>
+        <span class="dev-status">&#9679; DEV MODE ACTIVE</span>
+      </div>
+      <div class="dev-btns">
+        <button class="dev-btn dev-btn-export" onclick="exportDevLog()">[ &#11015; EXPORT HTML REPORT ]</button>
+        <button class="dev-btn dev-btn-clear" onclick="if(confirm('Clear all log data?'))clearDevLog()">[ &#10005; CLEAR LOG ]</button>
+        <button class="dev-btn" onclick="closeDevPanel()">[ CLOSE ]</button>
+      </div>
+      <div class="dev-recent-hdr">RECENT EVENTS (LAST 15)</div>
+      <div class="dev-table-wrap">
+        <table id="dev-recent"></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DEV FAB — floating button, only visible when ?dev=1 -->
+<button class="dev-fab" id="dev-fab" style="display:none;" onclick="openDevPanel()">&#9881; DEV</button>
 </body>
 </html>
