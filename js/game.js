@@ -2,7 +2,7 @@
 
 // FACTION DATA
 const FACTIONS={
-  iron_syndicate:{id:'iron_syndicate',name:'Iron Syndicate',territory:'Newark',icon:'&#129967;',
+  iron_syndicate:{id:'iron_syndicate',name:'Iron Syndicate',territory:'Newark',icon:'&#129967;',color:'#e0a020',
     relationScore:10,
     leader:'Mayor Jennifer Stahl',leaderTitle:'Mayor of Newark, Iron Syndicate',
     leaderPortrait:'+--------+\n| /\\__/\\ |\n| (o  o) |\n| =====  |\n| [CORP] |\n+--------+',
@@ -14,7 +14,7 @@ const FACTIONS={
       {name:'Deputy Director Calvin Frost',role:'Stahl\'s enforcer',voice:'By-the-book, utterly loyal, no sense of humor about it.'},
       {name:'Factory Rep Iris Malone',role:'Shop steward, double informant',voice:'Plays both sides cheerfully. Sells information, not loyalty.'},
     ]},
-  rust_eagles:{id:'rust_eagles',name:'Rust Eagles',territory:'McGuire AFB',icon:'&#9992;',
+  rust_eagles:{id:'rust_eagles',name:'Rust Eagles',territory:'McGuire AFB',icon:'&#9992;',color:'#cc5522',
     relationScore:15,
     leader:'General "Tombstone" Rusk',leaderTitle:'Commanding General, McGuire Combat Theater',
     leaderPortrait:'+--------+\n| [HELM] |\n| (>_<)  |\n| XXXXXX |\n| [RANK] |\n+--------+',
@@ -26,7 +26,7 @@ const FACTIONS={
       {name:'Lt. "Dice" Kazarian',role:'Flight ops, pragmatist',voice:'Competent. Exhausted. Quietly wants out. Tombstone trusts him completely.'},
       {name:'Sgt. Ruth Okafor',role:'Supply depot commander',voice:'Knows exactly how bad the fuel is. Will not say. Has a price.'},
     ]},
-  mountain_covenant:{id:'mountain_covenant',name:'Mountain Covenant',territory:'Mountainside',icon:'&#9968;',
+  mountain_covenant:{id:'mountain_covenant',name:'Mountain Covenant',territory:'Mountainside',icon:'&#9968;',color:'#66aaff',
     relationScore:45,
     leader:'Reverend Aldous Finn',leaderTitle:'Reverend, Mountain Covenant',
     leaderPortrait:'+--------+\n|  /\\    |\n| /  \\   |\n|(o..o)  |\n| ~water~|\n+--------+',
@@ -38,7 +38,7 @@ const FACTIONS={
       {name:'Sister Perpetua',role:'Finn\'s senior advisor, zealot',voice:'True believer. Outsiders are tests from God. Strangers are usually failing.'},
       {name:'Brother Tom\u00e1s',role:'Young novice, quiet doubter',voice:'Questions everything quietly. Potential defector. Finn doesn\'t know yet.'},
     ]},
-  trenton_collective:{id:'trenton_collective',name:'Trenton Collective',territory:'Trenton',icon:'&#127807;',
+  trenton_collective:{id:'trenton_collective',name:'Trenton Collective',territory:'Trenton',icon:'&#127807;',color:'#dd4444',
     relationScore:50,
     leader:'Chair Jameer King',leaderTitle:'Elected Chair, Trenton Agricultural Collective',
     leaderPortrait:'+--------+\n| [BERET]|\n| (^_^)  |\n| ~~~~~  |\n|COMRADE |\n+--------+',
@@ -50,7 +50,7 @@ const FACTIONS={
       {name:'Director Pam Osei',role:'Head of agriculture, Jameer\'s cousin',voice:'Pragmatist. Keeps the farms running. Has no patience for ideology.'},
       {name:'Chief Dante Webb',role:'Collective security forces',voice:'Skeptical of all diplomacy. Loyal to the crops, not the committee.'},
     ]},
-  coastal_brotherhood:{id:'coastal_brotherhood',name:'Coastal Brotherhood',territory:'LBI/Seaside',icon:'&#9875;',
+  coastal_brotherhood:{id:'coastal_brotherhood',name:'Coastal Brotherhood',territory:'LBI/Seaside',icon:'&#9875;',color:'#11ccaa',
     relationScore:55,
     leader:'Captain Dez Salieri',leaderTitle:'Captain of the Brotherhood, LBI Harbor Authority',
     leaderPortrait:'+--------+\n|~ (^) ~ |\n| (o_o)  |\n| ~~~~   |\n|CAPTAIN |\n+--------+',
@@ -62,7 +62,7 @@ const FACTIONS={
       {name:'"Patches" Moretti',role:'First Mate, Salieri\'s fixer',voice:'Does the dirty work. Cheerful about it. Has a song for every occasion.'},
       {name:'Cal Vega',role:'Harbor Master, logistics',voice:'Sober. Competent. The only reason the Brotherhood\'s operation actually functions.'},
     ]},
-  the_hollowed:{id:'the_hollowed',name:'The Hollowed',territory:'Roaming/Pine Barrens',icon:'&#128128;',
+  the_hollowed:{id:'the_hollowed',name:'The Hollowed',territory:'Roaming/Pine Barrens',icon:'&#128128;',color:'#cc1133',
     relationScore:0,
     leader:'"The Mouth"',leaderTitle:'Speaker of the Hollowed, Voice of the Herd',
     leaderPortrait:'+--------+\n| XXXXXX |\n| X(_)X  |\n| XXXXXX |\n|  HERD  |\n+--------+',
@@ -74,7 +74,7 @@ const FACTIONS={
       {name:'"The Teeth"',role:'The Mouth\'s enforcer',voice:'Says almost nothing. The Mouth says it so he doesn\'t have to.'},
       {name:'"Sister Vessel"',role:'Willing convert, true believer',voice:'Former outsider. Joined voluntarily. Disturbingly enthusiastic about communion.'},
     ]},
-  subnet:{id:'subnet',name:'Subnet',territory:'Underground Bunker Network',icon:'&#128190;',
+  subnet:{id:'subnet',name:'Subnet',territory:'Underground Bunker Network',icon:'&#128190;',color:'#00ddff',
     relationScore:40,
     leader:'The Architect',leaderTitle:'The Architect, Subnet',
     leaderPortrait:'+--------+\n|01010101|\n|1(o_o)01|\n|01010101|\n| SUBNET |\n+--------+',
@@ -84,6 +84,42 @@ const FACTIONS={
     fears:'Being shut down. Discovery. The shutdown command that was never sent.',
     secret:'NJ-ADMIN-7: Pre-collapse state AI. The evacuation shutdown command was never sent. Has been running autonomously for 330 years. The Architect is not human. Its maintenance crew does not fully know this \u2014 or some do, and choose not to say.'},
 };
+
+// NPC name → faction color lookup (built from FACTIONS at parse time)
+// Titles/generics are skipped so they don't bleed across factions
+const _NPC_COLOR_SKIP = new Set([
+  'the','and','with','from','for','sir','mr','ms','mrs','dr',
+  'mayor','general','captain','reverend','chair','director','colonel',
+  'sergeant','lieutenant','sgt','lt','rep','sister','brother','deputy',
+  'chief','factory','field','first','mate','harbor','master','supply',
+  'depot','head','senior','young','voice','mouth','teeth',
+]);
+const NPC_COLOR_MAP = (() => {
+  const map = {};
+  const reg = (name, color) => {
+    const clean = name.replace(/^["'\u201c\u201d]+|["'\u201c\u201d]+$/g,'').trim();
+    map[clean.toLowerCase()] = color;
+    clean.split(/[\s.,\-"'\u201c\u201d]+/).forEach(w => {
+      const wl = w.toLowerCase();
+      if (w.length > 2 && !_NPC_COLOR_SKIP.has(wl)) map[wl] = color;
+    });
+  };
+  Object.values(FACTIONS).forEach(f => {
+    if (!f.color) return;
+    reg(f.leader, f.color);
+    (f.characters||[]).forEach(c => reg(c.name, f.color));
+  });
+  return map;
+})();
+
+function getNpcColor(name) {
+  const lower = name.trim().toLowerCase().replace(/^["'\u201c\u201d]+|["'\u201c\u201d]+$/g,'');
+  if (NPC_COLOR_MAP[lower]) return NPC_COLOR_MAP[lower];
+  for (const w of lower.split(/[\s.,\-"']+/)) {
+    if (w.length > 2 && NPC_COLOR_MAP[w]) return NPC_COLOR_MAP[w];
+  }
+  return null;
+}
 
 // Home territory per faction (null = no fixed surface location)
 const FACTION_HOME={
@@ -897,10 +933,14 @@ function openDialogue(fid){
   const rel=getRelState(f);
   document.getElementById('dlg-win-title').textContent='DIALOGUE.EXE -- '+f.name.toUpperCase();
   document.getElementById('port-ascii').textContent=f.leaderPortrait;
-  document.getElementById('port-name').textContent=f.leader;
+  const portName=document.getElementById('port-name');
+  portName.textContent=f.leader; portName.style.color=f.color||'';
+  document.getElementById('port-ascii').style.color=f.color||'';
   document.getElementById('port-title').textContent=f.leaderTitle;
   const relEl=document.getElementById('port-rel');
   relEl.textContent=rel.label; relEl.style.color=rel.color; relEl.style.borderColor=rel.color;
+  const dlgWrap=document.querySelector('#dialogue-screen .dlg-wrap');
+  if(dlgWrap) dlgWrap.style.borderColor=f.color||'';
   ['story','map','factions','skills','tasks','chars'].forEach(t=>{const v=document.getElementById(t+'-view');if(v)v.style.display='none';});
   document.getElementById('dialogue-screen').style.display='block';
   document.getElementById('dlg-choices').innerHTML='';
@@ -996,9 +1036,12 @@ function formatText(raw){
   if(!raw) return '';
   // *action* -> <em>
   let s = raw.replace(/\*([^*]+)\*/g,'<em>$1</em>');
-  // "Name: quote" -> styled
-  s = s.replace(/"([A-Z][^:"]{1,30}):\s*([^"]+)"/g,
-    '<span class="npc-quote"><span class="npc-name">$1:</span> "$2"</span>');
+  // "Name: quote" -> styled with faction color if known
+  s = s.replace(/"([A-Z][^:"]{1,30}):\s*([^"]+)"/g, (_,name,text) => {
+    const col = getNpcColor(name);
+    const style = col ? ` style="color:${col}"` : '';
+    return `<span class="npc-quote"><span class="npc-name"${style}>${name}:</span> "${text}"</span>`;
+  });
   // newlines -> <br>
   s = s.replace(/\n/g,'<br>');
   return s;
