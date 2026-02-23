@@ -129,7 +129,7 @@ const FACTION_HOME={
   trenton_collective:'trenton',
   coastal_brotherhood:'lbi',
   the_hollowed:null,   // Roaming — no fixed home
-  subnet:null,         // Underground — no surface location
+  subnet:'cape_may',   // Underground HQ beneath Cape May Municipal
 };
 
 // WIN CONDITION HELPERS
@@ -415,7 +415,7 @@ const FACTION_CLASSES={
   },
   subnet:{
     label:'SUBNET', icon:'&#128190;', color:'#00aaff',
-    startLocation:'tcnj',
+    startLocation:'cape_may',
     lore:'Pre-collapse state infrastructure AI maintaining the bunker network. The Architect has not been above ground in 11 years. It does not need to be.',
     classes:[
       { id:'rogue_node', name:'Rogue Node', tier:'basic',
@@ -444,6 +444,8 @@ const LOCATIONS={
   trenton:{name:'Trenton',shortName:'TRENT',ctrl:'neutral',faction:'trenton_collective',svgX:196,svgY:273,travelDays:1,travelSupplies:8,travelTroopRisk:false,raidRisk:1,supplyPerTurn:10,features:['Farmland','Food stores','Collective governance'],flavor:'The breadbasket of NJ 2999. Chair King runs it by committee. It somehow works.'},
   mcguire:{name:'McGuire AFB',shortName:'MCGRE',ctrl:'hostile',faction:'rust_eagles',svgX:231,svgY:321,travelDays:2,travelSupplies:12,travelTroopRisk:true,raidRisk:3,supplyPerTurn:10,features:['Military airstrip','Armory','Aircraft (fuel unknown)'],flavor:'Three generations of Air Force descendants who never left. General Rusk still runs daily drills.'},
   lbi:{name:'LBI Harbor',shortName:'LBI',ctrl:'neutral',faction:'coastal_brotherhood',svgX:358,svgY:338,travelDays:3,travelSupplies:18,travelTroopRisk:false,raidRisk:2,supplyPerTurn:9,features:['Harbor','Trade routes','Smuggling network'],flavor:'Long Beach Island. Captain Salieri runs the most profitable port on the coast. Everything moves through here \u2014 for a price.'},
+  meridian_biolabs:{name:'Meridian BioLabs',shortName:'MRDBN',ctrl:'unclaimed',faction:'player',svgX:200,svgY:108,travelDays:3,travelSupplies:16,travelTroopRisk:false,raidRisk:2,supplyPerTurn:7,claimable:true,features:['Pharmaceutical production lines','Abandoned research labs','Bio-synthesis equipment'],flavor:"Pre-collapse pharmaceutical campus in Warren County. Meridian abandoned it mid-production when the evacuation orders came. The labs are still stocked. The question is stocked with what."},
+  cape_may:{name:'Cape May Municipal',shortName:'CAPMY',ctrl:'neutral',faction:'subnet',svgX:190,svgY:490,travelDays:4,travelSupplies:22,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Underground bunker entrance','NJ-ADMIN-7 access terminal','Subnet relay nodes'],flavor:"Cape May Municipal Building \u2014 condemned since 2715. Three sub-basement levels below the public record. The Architect receives visitors, when it chooses to."},
 };
 const PATROL_ROUTES=[{from:'newark',to:'tcnj'},{from:'mcguire',to:'tcnj'},{from:'mcguire',to:'trenton'}];
 
@@ -575,6 +577,7 @@ function beginGame(){
   // Starting location based on origin faction
   const originFdata=cls?FACTION_CLASSES[cls.factionId]:null;
   state.currentLocation=originFdata?.startLocation||'tcnj';
+  state.visitedLocations=[state.currentLocation];
   if(cls){
     // Stat bonuses remapped to skill AP
     Object.entries(cls.statBonus).forEach(([s,v])=>{
@@ -927,6 +930,10 @@ function renderChars(){
 // DIALOGUE
 function openDialogue(fid){
   const f=FACTIONS[fid]; if(!f)return;
+  if(fid==='subnet' && !(state.visitedLocations||[]).includes('cape_may')){
+    showNotif('SUBNET SIGNAL UNDETECTABLE — Travel to Cape May Municipal to attempt contact');
+    return;
+  }
   state.activeFactionDlg=fid; state.dlgHistory=[];
   if(!state.metFactions.includes(fid)) state.metFactions.push(fid);
   logEvent('faction_talk',{fid,leader:f.leader,rel:f.relationScore});
@@ -1544,6 +1551,8 @@ async function travelToSelected(){
   const prevLoc=state.currentLocation;
   logEvent('travel',{from:prevLoc,to:locId,cost:{days:loc.travelDays,supplies:loc.travelSupplies},troopLost});
   state.currentLocation=locId;
+  if(!state.visitedLocations) state.visitedLocations=[];
+  if(!state.visitedLocations.includes(locId)) state.visitedLocations.push(locId);
   updateRes();
   document.getElementById('panel-loc').textContent=loc.shortName;
   refreshMap(); switchTab('story');
@@ -2143,30 +2152,27 @@ ${sessionDetails||'<span style="color:#222">No sessions.</span>'}
 
 // ── SPLASH / BOOT SCREEN ──
 function initSplash() {
-  const lines = [
-    '> PROJECTLEROY.EXE v0.1 ALPHA',
-    '> LOADING NARRATIVE ENGINE........',
-    '> ESTABLISHING ANTHROPIC LINK......',
-    '> INITIALIZING NJ-ADMIN-7 DATABASE.',
-    '> LOADING FACTION INTEL....... OK',
-    '> READY.',
+  const statuses = [
+    'Initializing system...',
+    'Loading narrative engine...',
+    'Establishing API connection...',
+    'Reading New Jersey database...',
+    'Loading faction data...',
+    'Please wait...',
   ];
-  const linesEl = document.getElementById('splash-boot-lines');
+  const statusEl = document.getElementById('splash-boot-status');
   const bar = document.getElementById('splash-bar-fill');
   let i = 0;
   const step = () => {
-    if (i < lines.length) {
-      const s = document.createElement('span');
-      s.className = 'splash-boot-line';
-      s.textContent = lines[i++];
-      linesEl.appendChild(s);
-      setTimeout(step, 240 + Math.random() * 160);
+    if (i < statuses.length) {
+      statusEl.textContent = statuses[i++];
+      setTimeout(step, 320 + Math.random() * 180);
     } else {
       setTimeout(() => { bar.style.width = '100%'; }, 50);
       setTimeout(() => {
         document.getElementById('splash-boot').style.display = 'none';
         document.getElementById('splash-dialog').style.display = 'block';
-      }, 2000);
+      }, 2200);
     }
   };
   step();
