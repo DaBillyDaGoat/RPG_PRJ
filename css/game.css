@@ -127,8 +127,8 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
 .road.inactive{opacity:.04!important;}
 .road.patrolled{stroke:var(--blood);opacity:.7;animation:rp 2s ease-in-out infinite;}
 .town-node{cursor:pointer;}
-.town-node .town-dot{fill:rgba(180,180,160,.25);stroke:rgba(180,180,160,.5);stroke-width:.8;transition:fill .2s;}
-.town-node:hover .town-dot{fill:rgba(200,200,180,.45);}
+.town-node .town-dot{fill:rgba(220,190,50,.3);stroke:rgba(230,200,60,.6);stroke-width:.8;transition:fill .2s;}
+.town-node:hover .town-dot{fill:rgba(240,210,70,.5);}
 .town-node.current-loc .town-dot{stroke:var(--g);fill:rgba(0,255,65,.35);animation:playerPulse 2s ease-in-out infinite;}
 @keyframes rp{0%,100%{opacity:.7}50%{opacity:.3}}
 .loc-node{cursor:pointer;}
