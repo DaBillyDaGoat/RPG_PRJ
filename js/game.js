@@ -816,6 +816,7 @@ const NJ_BACKUP={
 };
 
 function activateCampaign(campaign){
+  _mapCached=false;
   const isSpace=campaign==='space';
   const src=isSpace
     ?{locations:SPACE_LOCATIONS,factions:SPACE_FACTIONS,roads:SPACE_ROADS,goldPerTurn:SPACE_GOLD_PER_TURN,factionHome:SPACE_FACTION_HOME,interFactionRels:INTER_FACTION_RELATIONS_SPACE}
@@ -2341,15 +2342,25 @@ function generateShipMap(){
     '<path d="'+H+'" fill="none" stroke="rgba(187,68,255,0.4)" stroke-width="1.5"/>'+
     co+pn+sn;
 }
-function restoreNJMap(){
+function restoreNJMap(){_mapCached=false;
   const svg=document.getElementById('campaign-svg');
   if(!svg||!window._njSvgBackup) return;
   svg.innerHTML=window._njSvgBackup;
 }
 
+// ── Map DOM cache (populated on first refreshMap call) ──
+let _mapNodes={},_mapRoads={},_mapPatrolRoads={},_mapCached=false;
+function _initMapCache(){
+  _mapNodes={};_mapRoads={};_mapPatrolRoads={};
+  Object.keys(LOCATIONS).forEach(id=>{const n=document.getElementById('node-'+id);if(n)_mapNodes[id]=n;});
+  Object.keys(ROAD_CONNECTIONS).forEach(rid=>{const r=document.getElementById(rid);if(r)_mapRoads[rid]=r;});
+  PATROL_ROUTES.forEach(r=>{const rd=document.getElementById('road-'+r.from+'-'+r.to)||document.getElementById('road-'+r.to+'-'+r.from);if(rd)_mapPatrolRoads[r.from+'-'+r.to]=rd;});
+  _mapCached=true;
+}
 function refreshMap(){
+  if(!_mapCached) _initMapCache();
   Object.entries(LOCATIONS).forEach(([id,loc])=>{
-    const node=document.getElementById('node-'+id); if(!node)return;
+    const node=_mapNodes[id]; if(!node)return;
     if(loc.secondary){
       node.classList.toggle('current-loc',id===state.currentLocation);
       return;
@@ -2358,12 +2369,9 @@ function refreshMap(){
     if(id===state.currentLocation) cls+=' current-loc';
     node.className.baseVal=cls;
   });
-  PATROL_ROUTES.forEach(r=>{
-    const road=document.getElementById('road-'+r.from+'-'+r.to)||document.getElementById('road-'+r.to+'-'+r.from);
-    if(road) road.classList.add('patrolled');
-  });
+  Object.values(_mapPatrolRoads).forEach(road=>{if(road)road.classList.add('patrolled');});
   Object.entries(ROAD_CONNECTIONS).forEach(([roadId,[locA,locB]])=>{
-    const road=document.getElementById(roadId); if(!road)return;
+    const road=_mapRoads[roadId]; if(!road)return;
     const la=LOCATIONS[locA]; const lb=LOCATIONS[locB];
     const fa=la?.faction?FACTIONS[la.faction]:null;
     const fb=lb?.faction?FACTIONS[lb.faction]:null;
@@ -2382,6 +2390,9 @@ function animatePatrols(){
   // Skip NJ patrol animations in space campaign
   if(state.campaign==='space') return;
   patrolAnimating=true;
+  const _p1=document.getElementById('patrol1');
+  const _p2=document.getElementById('patrol2');
+  const _mapView=document.getElementById('map-view');
   function _patrolFrame(){
     const ic=GAME_SETTINGS.mapStyle==='county';
     const nk=LOCATIONS.newark,tc=LOCATIONS.tcnj,mc=LOCATIONS.mcguire,tr=LOCATIONS.trenton;
@@ -2390,11 +2401,9 @@ function animatePatrols(){
     const tcx=ic?(tc.cX||tc.svgX):tc.svgX,tcy=ic?(tc.cY||tc.svgY):tc.svgY;
     const mcx=ic?(mc.cX||mc.svgX):mc.svgX,mcy=ic?(mc.cY||mc.svgY):mc.svgY;
     const trx=ic?(tr.cX||tr.svgX):tr.svgX,try_=ic?(tr.cY||tr.svgY):tr.svgY;
-    const p1=document.getElementById('patrol1');
-    if(p1){const t=(Date.now()/4500)%1;p1.setAttribute('cx',(nkx+(tcx-nkx)*t).toFixed(1));p1.setAttribute('cy',(nky+(tcy-nky)*t).toFixed(1));}
-    const p2=document.getElementById('patrol2');
-    if(p2){const t=(Date.now()/5500)%1;p2.setAttribute('cx',(mcx+(trx-mcx)*t).toFixed(1));p2.setAttribute('cy',(mcy+(try_-mcy)*t).toFixed(1));}
-    if(document.getElementById('map-view').style.display!=='none') requestAnimationFrame(_patrolFrame);
+    if(_p1){const t=(Date.now()/4500)%1;_p1.setAttribute('cx',(nkx+(tcx-nkx)*t).toFixed(1));_p1.setAttribute('cy',(nky+(tcy-nky)*t).toFixed(1));}
+    if(_p2){const t=(Date.now()/5500)%1;_p2.setAttribute('cx',(mcx+(trx-mcx)*t).toFixed(1));_p2.setAttribute('cy',(mcy+(try_-mcy)*t).toFixed(1));}
+    if(_mapView&&_mapView.style.display!=='none') requestAnimationFrame(_patrolFrame);
     else patrolAnimating=false;
   }
   _patrolFrame();

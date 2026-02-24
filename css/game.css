@@ -35,7 +35,6 @@ body::after{content:'';position:fixed;top:0;right:0;bottom:0;left:0;background:r
 .dos-hint{font-size:.58rem;color:var(--gd);margin-top:4px;}
 .dos-hint a{color:var(--ad);}
 .fw{margin-bottom:16px;}
-/* .class-grid removed — dead selector from old build */
 .arch-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:4px;}
 .arch-card{background:#000;border:1px solid var(--gd);padding:10px 12px;cursor:pointer;transition:border-color .12s,box-shadow .12s;position:relative;}
 .arch-card:hover{border-color:var(--g);box-shadow:0 0 8px var(--gg);}
@@ -75,7 +74,6 @@ body::after{content:'';position:fixed;top:0;right:0;bottom:0;left:0;background:r
 .char-panel{background:#000;border:1px solid var(--gd);padding:9px 12px;margin-bottom:10px;}
 .char-hdr{font-size:.52rem;color:var(--gd);letter-spacing:1px;border-bottom:1px solid var(--gd);padding-bottom:4px;margin-bottom:7px;line-height:1.7;}
 .char-hdr span{color:var(--a);}
-/* .stats-row, .sc, .scl, .scv removed — dead selectors from old build */
 .res-row{display:flex;gap:10px;flex-wrap:wrap;border-top:1px solid var(--gd);padding-top:6px;margin-top:4px;}
 .res-chip{font-size:.58rem;color:var(--gd);}
 .res-chip span{color:var(--a);}
@@ -108,7 +106,6 @@ body::after{content:'';position:fixed;top:0;right:0;bottom:0;left:0;background:r
 .open-input::placeholder{color:var(--gd);}
 .open-submit{background:var(--wg);border-top:1px solid var(--ww);border-left:1px solid var(--ww);border-right:1px solid var(--wgd);border-bottom:1px solid var(--wgd);padding:8px 12px;font-family:'Share Tech Mono',monospace;font-size:.62rem;color:var(--wk);cursor:pointer;white-space:nowrap;}
 .open-submit:hover{background:#d4d0c8;}
-/* .search-btn removed — dead selector, map uses .lpop-btn */
 .dos-loading{font-size:.6rem;color:var(--gd);letter-spacing:2px;padding:6px 0;display:none;}
 .dos-loading::after{content:'';animation:ldots 1.2s steps(4,end) infinite;}
 @keyframes ldots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
@@ -247,7 +244,6 @@ body.map-county-mode .road.patrolled{stroke:var(--blood);}
 .garrison-btn{background:var(--wg);border-top:1px solid var(--ww);border-left:1px solid var(--ww);border-right:1px solid var(--wgd);border-bottom:1px solid var(--wgd);padding:2px 8px;font-family:'Share Tech Mono',monospace;font-size:.55rem;color:var(--wk);cursor:pointer;}
 .garrison-btn:hover{background:#d4d0c8;}
 .garrison-btn:disabled{opacity:.4;cursor:not-allowed;}
-/* .claim-btn removed — dead selector, claim uses .lpop-btn */
 .raid-alert{background:#000;border:1px solid var(--blood);padding:8px 12px;color:var(--blood);font-size:.65rem;margin-bottom:8px;animation:raidPulse 1s ease-in-out infinite;}
 @keyframes raidPulse{0%,100%{border-color:var(--blood)}50%{border-color:var(--bloodd)}}
 .desktop-tagline{font-size:.6rem;color:var(--wgdd);font-style:italic;margin-bottom:14px;text-align:center;letter-spacing:.5px;}
