@@ -70,7 +70,7 @@ const FACTIONS={
     leader:'"The Mouth"',leaderTitle:'Speaker of the Hollowed, Voice of the Herd',
     leaderPortrait:'+--------+\n| XXXXXX |\n| X(_)X  |\n| XXXXXX |\n|  HERD  |\n+--------+',
     voice:'Speaks in royal "we." Refers to eating people as "communion." Surprisingly articulate for a cannibal warlord.',
-    desc:"Roaming cannibal raiders from the Pine Barrens. They don't hold territory -- they consume it. Negotiation is technically possible but inadvisable.",
+    desc:"Roaming cannibal marauders from the Pine Barrens. They don't hold territory -- they consume it. Negotiation is technically possible but inadvisable.",
     wants:'Meat. Expansion. To not be called zombies.',
     fears:'Fire. Organized resistance. Being called zombies (they hate that).',
     characters:[
@@ -550,7 +550,7 @@ const FACTION_CLASSES={
   the_hollowed:{
     label:'THE HOLLOWED', icon:'&#128128;', color:'#880000',
     startLocation:'tcnj',
-    lore:'Cannibal raiders from the Pine Barrens. They don\'t hold territory — they move through it. The Mouth speaks for the herd.',
+    lore:'Cannibal marauders from the Pine Barrens. They don\'t hold territory — they move through it. The Mouth speaks for the herd.',
     classes:[
       { id:'escaped_communion', name:'Escaped Communion', tier:'basic',
         icon:'&#128682;',
@@ -589,6 +589,53 @@ const FACTION_CLASSES={
       },
     ],
   },
+};
+
+// ── GLITTERGOLD FRONTIER — FAMILIES & SKILL NAMES ──
+const GLITTERGOLD_FAMILIES={
+  ashworth:{
+    label:'ASHWORTH',icon:'👑',color:'#ffd700',
+    startLocation:'tcnj',
+    lore:'Old railroad and industrial money. They believe they built civilization. Most respect from other passengers, least from staff.',
+    classes:[{
+      id:'ashworth_passenger',name:'Ashworth Passenger',tier:'basic',icon:'👑',
+      flavor:'Your family bankrolled railroads and factories before the world ended. Edmund hasn\'t asked a question in forty years. Constance wields politeness like a scalpel. You carry the weight of a name that used to mean something.',
+      statBonus:{brutality:1,charisma:2},startBonus:{supplies:15,troops:0},
+      skillBonus:{grit:3,force:2},
+      classPerk:'OLD MONEY: Your family name still carries weight. Once per session, invoke the Ashworth legacy for +15 standing in any negotiation.',
+    }],
+  },
+  whitmore_clarke:{
+    label:'WHITMORE-CLARKE',icon:'🔬',color:'#00d4ff',
+    startLocation:'tcnj',
+    lore:'Tech dynasty, nouveau riche buying their way into old money acceptance. The only ones with actually transferable skills.',
+    classes:[{
+      id:'whitmore_clarke_passenger',name:'Whitmore-Clarke Passenger',tier:'basic',icon:'🔬',
+      flavor:'Douglas married into the hyphen and still overcorrects. Serena respects competence above all. Felix is brilliant and insufferable about it. Your family actually understands how the ship works.',
+      statBonus:{cunning:2,depravity:1},startBonus:{supplies:20,troops:0},
+      skillBonus:{wit:3,shadow:3},
+      classPerk:'TECH DYNASTY: Your engineering knowledge is real. Once per session, bypass or repair any ship system without crew assistance.',
+    }],
+  },
+  langford:{
+    label:'LANGFORD',icon:'🎭',color:'#ff6ec7',
+    startLocation:'tcnj',
+    lore:'Old media and entertainment empire. Everything is performance. Can talk their way into or out of anything.',
+    classes:[{
+      id:'langford_passenger',name:'Langford Passenger',tier:'basic',icon:'🎭',
+      flavor:'Victor treats every conversation like an interview he\'s hosting. Diana has performed "gracious" so long it might be real. Theo still acts like cameras are rolling. Your family\'s gift is making people believe.',
+      statBonus:{charisma:2,cunning:1},startBonus:{supplies:15,troops:0},
+      skillBonus:{influence:4,shadow:2},
+      classPerk:'SHOWTIME: Your family commands attention. Once per session, reframe any hostile encounter into a performance that delays violence by one turn.',
+    }],
+  },
+};
+const GLITTERGOLD_SKILL_NAMES={
+  force:{name:'PRESTIGE',icon:'✦',hint:'Standing · Authority · Command'},
+  wit:{name:'SMARTS',icon:'🧠',hint:'Intelligence · Problem-Solving · Tech'},
+  influence:{name:'CHARM',icon:'💎',hint:'Grace · Persuasion · Social Capital'},
+  shadow:{name:'RESOURCEFULNESS',icon:'🔧',hint:'Ingenuity · Adaptability · Angles'},
+  grit:{name:'COMPOSURE',icon:'🛡',hint:'Calm · Endurance · Resilience'},
 };
 
 // LOCATIONS
@@ -687,6 +734,10 @@ const CLASSES={};
 Object.values(FACTION_CLASSES).forEach(f=>{
   f.classes.forEach(c=>{ CLASSES[c.id]={...c, factionId: Object.keys(FACTION_CLASSES).find(k=>FACTION_CLASSES[k]===f)}; });
 });
+// Register Glittergold families into CLASSES
+Object.entries(GLITTERGOLD_FAMILIES).forEach(([fid,fam])=>{
+  fam.classes.forEach(c=>{ CLASSES[c.id]={...c, factionId:fid, campaign:'space'}; });
+});
 
 // STATE
 const state={
@@ -704,6 +755,7 @@ const state={
   gameOver:false,
   metFactions:[],   // faction IDs where player has opened dialogue (reveals their NPCs)
   sessionId:'',     // unique session ID for dev log grouping
+  deadNpcs:[],      // {name, faction, cause, turn} — permanent NPC deaths
 };
 // ── PERSISTENT PLAYER CODENAME (survives across sessions) ──
 const CODENAME_KEY='jw2999_codename';
@@ -758,6 +810,24 @@ function selectFaction(el){
   document.querySelectorAll('.arch-card').forEach(c=>c.classList.remove('selected'));
   el.classList.add('selected');
   const fid=el.dataset.arch;
+
+  // Glittergold: family = class, no subclass step
+  if(selectedStoryId==='space'){
+    const fam=GLITTERGOLD_FAMILIES[fid];
+    if(!fam)return;
+    // Create a hidden selected class-card so beginGame() can find it
+    let ghost=document.getElementById('gg-ghost-class');
+    if(!ghost){
+      ghost=document.createElement('div');
+      ghost.id='gg-ghost-class';
+      ghost.style.display='none';
+      document.getElementById('setup-screen').appendChild(ghost);
+    }
+    ghost.className='class-card selected';
+    ghost.dataset.class=fam.classes[0].id;
+    return;
+  }
+
   const fdata=FACTION_CLASSES[fid];
   const panel=document.getElementById('subclass-panel');
   const grid=document.getElementById('sub-grid');
@@ -798,6 +868,7 @@ function selectClass(el){
 }
 
 function beginGame(){
+  const isSpace=selectedStoryId==='space';
   const apiKey=document.getElementById('api-key').value.trim();
   const name=document.getElementById('char-name').value.trim();
   const usernameInput=document.getElementById('username-input');
@@ -807,16 +878,18 @@ function beginGame(){
   const cc=document.querySelector('.class-card.selected');
   const err=document.getElementById('setup-error');
   if(!apiKey){showErr(err,'API KEY REQUIRED.');return;}
-  if(!name){showErr(err,'SURVIVOR DESIGNATION REQUIRED.');return;}
+  if(!name){showErr(err,isSpace?'PASSENGER NAME REQUIRED.':'SURVIVOR DESIGNATION REQUIRED.');return;}
   if(!username){showErr(err,'USERNAME REQUIRED.');return;}
   if(!loginCode||loginCode.length!==4||!/^\d{4}$/.test(loginCode)){showErr(err,'4-DIGIT CODE REQUIRED (numbers only).');return;}
-  if(!cc){showErr(err,'SELECT CLASS.');return;}
+  if(!cc){showErr(err,isSpace?'SELECT FAMILY.':'SELECT CLASS.');return;}
   err.style.display='none';
-  state.apiKey=apiKey; state.factionName='Old Jersey';
+  state.apiKey=apiKey;
+  state.factionName=isSpace?'Passenger':'Old Jersey';
   state.username=username; state.loginCode=loginCode;
   localStorage.setItem('jw2999_username',username);
   localStorage.setItem('jw2999_logincode',loginCode);
   state.character={name,class:cc.dataset.class};
+  state.campaign=selectedStoryId||'jersey';
   state.hp=100; state.maxHp=100; state.turn=1; state.history=[];
   state.days=0; state.supplies=50; state.troops=0; state.gold=0; state.garrison={}; state.deathRiskMod=0;
   state.ownFaction=false; state.originFaction=null; state.classPerk='';
@@ -825,34 +898,47 @@ function beginGame(){
   Object.entries(skillAlloc).forEach(([k,v])=>{if(SKILLS[k])SKILLS[k].ap+=v;});
   // Apply class bonuses from CLASSES data
   const cls=CLASSES[cc.dataset.class];
-  // Starting location based on origin faction
-  const originFdata=cls?FACTION_CLASSES[cls.factionId]:null;
-  state.currentLocation=originFdata?.startLocation||'tcnj';
-  state.visitedLocations=[state.currentLocation];
-  state.travelMethod='foot';
-  state.amishContactMade=false;
-  state.amishDealMade=false;
-  state.factionQuests={};
-  if(cls){
-    // Stat bonuses remapped to skill AP
-    Object.entries(cls.statBonus).forEach(([s,v])=>{
-      const sk=STAT_TO_SKILL[s]||s;
-      if(SKILLS[sk])SKILLS[sk].ap+=v;
-    });
-    // Skill AP bonuses
-    Object.entries(cls.skillBonus).forEach(([sk,v])=>{if(SKILLS[sk])SKILLS[sk].ap+=v;});
-    // Start resource bonuses
-    if(cls.startBonus.troops) state.troops=Math.max(0,state.troops+cls.startBonus.troops);
-    if(cls.startBonus.supplies) state.supplies=Math.max(0,state.supplies+cls.startBonus.supplies);
-    // Origin faction starts at Trade Pact (41)
-    const originFid=cls.factionId;
-    if(originFid && FACTIONS[originFid]) FACTIONS[originFid].relationScore=41;
-    // Rival factions start hostile (score 10)
-    const rivals=FACTION_RIVALS[originFid]||[];
-    rivals.forEach(rid=>{ if(FACTIONS[rid]) FACTIONS[rid].relationScore=10; });
-    // Store origin faction on state for AI context
-    state.originFaction=originFid;
-    state.classPerk=cls.classPerk;
+  if(isSpace){
+    // Glittergold: no map locations, start on the ship
+    state.currentLocation='tcnj'; // placeholder
+    state.visitedLocations=[];
+    state.travelMethod='foot';
+    state.factionQuests={};
+    if(cls){
+      Object.entries(cls.statBonus).forEach(([s,v])=>{
+        const sk=STAT_TO_SKILL[s]||s;
+        if(SKILLS[sk])SKILLS[sk].ap+=v;
+      });
+      Object.entries(cls.skillBonus).forEach(([sk,v])=>{if(SKILLS[sk])SKILLS[sk].ap+=v;});
+      if(cls.startBonus.troops) state.troops=Math.max(0,state.troops+cls.startBonus.troops);
+      if(cls.startBonus.supplies) state.supplies=Math.max(0,state.supplies+cls.startBonus.supplies);
+      state.originFaction=cls.factionId;
+      state.classPerk=cls.classPerk;
+    }
+  } else {
+    // NJ 2999 path
+    const originFdata=cls?FACTION_CLASSES[cls.factionId]:null;
+    state.currentLocation=originFdata?.startLocation||'tcnj';
+    state.visitedLocations=[state.currentLocation];
+    state.travelMethod='foot';
+    state.amishContactMade=false;
+    state.amishDealMade=false;
+    state.factionQuests={};
+    if(cls){
+      Object.entries(cls.statBonus).forEach(([s,v])=>{
+        const sk=STAT_TO_SKILL[s]||s;
+        if(SKILLS[sk])SKILLS[sk].ap+=v;
+      });
+      Object.entries(cls.skillBonus).forEach(([sk,v])=>{if(SKILLS[sk])SKILLS[sk].ap+=v;});
+      if(cls.startBonus.troops) state.troops=Math.max(0,state.troops+cls.startBonus.troops);
+      if(cls.startBonus.supplies) state.supplies=Math.max(0,state.supplies+cls.startBonus.supplies);
+      const originFid=cls.factionId;
+      if(originFid && FACTIONS[originFid]) FACTIONS[originFid].relationScore=41;
+      const rivals=FACTION_RIVALS[originFid]||[];
+      rivals.forEach(rid=>{ if(FACTIONS[rid]) FACTIONS[rid].relationScore=10; });
+      state.originFaction=originFid;
+      state.classPerk=cls.classPerk;
+    }
   }
   // Reset skill alloc for next new game
   Object.keys(skillAlloc).forEach(k=>skillAlloc[k]=0);
@@ -864,7 +950,7 @@ function beginGame(){
   document.getElementById('panel-loc').textContent=LOCATIONS[state.currentLocation]?.shortName||'TCNJ';
   updateHp(100); updateRes(); renderAPRow();
   state.sessionId=Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-  logEvent('session_start',{campaign:selectedStoryId||'jersey',faction:state.originFaction,cls:state.character.class,name:state.character.name,skills:{...skillAlloc}});
+  logEvent('session_start',{campaign:selectedStoryId||'jersey',faction:state.originFaction,cls:state.character.class,name:state.character.name,skills:{...skillAlloc},username:state.username||'',loginCode:state.loginCode||''});
   showScreen('game-screen');
   switchTab('story');
   startStory();
@@ -884,13 +970,15 @@ function updateHp(v){
   _el['hp-bar'].style.width=(state.hp/state.maxHp*100)+'%';
   _el['hp-text'].textContent=state.hp+'/'+state.maxHp;
 }
+function getPlayerTerritories(){return Object.values(LOCATIONS).filter(l=>!l.secondary&&l.ctrl==='player').length;}
+
 function updateRes(){
   const goldFmt=parseFloat(state.gold||0).toFixed(1)+'g';
   _el['res-days'].textContent=state.days;
   _el['res-supplies'].textContent=state.supplies;
   _el['res-troops'].textContent=state.troops;
   _el['res-gold'].textContent=goldFmt;
-  _el['res-territories'].textContent=Object.values(LOCATIONS).filter(l=>!l.secondary&&l.ctrl==='player').length;
+  _el['res-territories'].textContent=getPlayerTerritories();
   _el['map-day'].textContent=state.days;
   _el['map-sup'].textContent=state.supplies;
   _el['map-trp'].textContent=state.troops;
@@ -1029,12 +1117,20 @@ function chooseFork(skillKey, optKey){
 // FACTIONS RENDER
 function renderFactions(){
   const list=document.getElementById('faction-list'); list.innerHTML='';
+  const deadMap=Object.fromEntries((state.deadNpcs||[]).map(d=>[d.name,d]));
   Object.values(FACTIONS).forEach(f=>{
     const rel=getRelState(f);
     const met=state.metFactions.includes(f.id);
-    // Build NPC dossier — all contacts visible from start
+    const resolved=isResolved(f.id);
+    const allied=resolved&&f.relationScore>=66;
+    const destroyed=resolved&&f.relationScore===0;
+    // Build NPC dossier — check for dead NPCs
     let npcHtml='';
-    const buildNpc=(name,role,voice)=>`<div class="fc-npc"><div class="fc-npc-name">${name}</div><div class="fc-npc-role">${role}</div>${voice?`<div class="fc-npc-voice">&ldquo;${voice}&rdquo;</div>`:''}</div>`;
+    const buildNpc=(name,role,voice)=>{
+      const d=deadMap[name];
+      if(d) return`<div class="fc-npc fc-npc-deceased"><div class="fc-npc-name"><s>${name}</s> <span class="fc-npc-dead-tag">DECEASED</span></div><div class="fc-npc-role">${role}</div><div class="fc-npc-death">\u2620 ${d.cause} (Turn ${d.turn})</div></div>`;
+      return`<div class="fc-npc"><div class="fc-npc-name">${name}</div><div class="fc-npc-role">${role}</div>${voice?`<div class="fc-npc-voice">&ldquo;${voice}&rdquo;</div>`:''}</div>`;
+    };
     if(f.id==='subnet'){
       npcHtml='<div class="fc-npcs"><div class="fc-npc-hdr">KNOWN CONTACTS</div>'
         +buildNpc('THE ARCHITECT','NJ-ADMIN-7 — Primary Interface',FACTIONS.subnet.voice)
@@ -1045,14 +1141,20 @@ function renderFactions(){
       (f.characters||[]).forEach(c=>{npcHtml+=buildNpc(c.name,c.role,c.voice);});
       npcHtml+='</div>';
     }
+    // Faction resolution banner
+    const resBanner=allied?'<div class="fc-resolved-banner fc-allied">ALLIED</div>'
+      :destroyed?'<div class="fc-resolved-banner fc-destroyed">DESTROYED</div>':'';
     // Quests — only show generate option after met, always show done quests
     const quests=state.factionQuests?.[f.id];
-    const active=(quests||[]).filter(q=>!q.done);
-    const doneCount=(quests||[]).filter(q=>q.done).length;
+    let active=[],doneCount=0;
+    (quests||[]).forEach(q=>{if(q.done)doneCount++;else active.push(q);});
     const questCards=active.map(q=>`<div class="fc-quest-card"><div class="fc-quest-title">${q.title}</div><div class="fc-quest-from">FROM: ${q.charName}</div><div class="fc-quest-desc">${q.desc}</div><div class="fc-quest-reward">&#10003; COMPLETE = +33 RELATION</div></div>`).join('');
-    const questHtml=`<div class="fc-quests"><div class="fc-quest-hdr">FACTION QUESTS${doneCount?' <span style="color:var(--g)">('+doneCount+' done)</span>':''}</div>${questCards}<button class="fc-quest-gen-btn" data-quest-gen="${f.id}" onclick="generateFactionQuests('${f.id}')">${active.length?'[ REFRESH QUESTS ]':'[ GENERATE QUESTS ]'}</button></div>`;
-    const card=document.createElement('div'); card.className='faction-card'+(f.id===lastRelChangeFid?' rel-flash':'');
+    const questHtml=destroyed?'':`<div class="fc-quests"><div class="fc-quest-hdr">FACTION QUESTS${doneCount?' <span style="color:var(--g)">('+doneCount+' done)</span>':''}</div>${questCards}<button class="fc-quest-gen-btn" data-quest-gen="${f.id}" onclick="generateFactionQuests('${f.id}')">${active.length?'[ REFRESH QUESTS ]':'[ GENERATE QUESTS ]'}</button></div>`;
+    const cardCls='faction-card'+(f.id===lastRelChangeFid?' rel-flash':'')+(allied?' fc-card-allied':'')+(destroyed?' fc-card-destroyed':'');
+    const card=document.createElement('div'); card.className=cardCls;
+    const talkBtn=destroyed?'':'<button class="fc-talk-btn" onclick="openDialogue(\''+f.id+'\')">[ OPEN CHANNEL &mdash; '+f.leader.toUpperCase()+' ]</button>';
     card.innerHTML=`
+      ${resBanner}
       <div class="fc-hdr">
         <div class="fc-name">${f.icon} ${f.name}</div>
         <div class="fc-badge" style="color:${rel.color};border-color:${rel.color}">${rel.label}</div>
@@ -1066,7 +1168,7 @@ function renderFactions(){
       </div>
       ${npcHtml}
       ${questHtml}
-      <button class="fc-talk-btn" onclick="openDialogue('${f.id}')">[ OPEN CHANNEL &mdash; ${f.leader.toUpperCase()} ]</button>`;
+      ${talkBtn}`;
     list.appendChild(card);
     if(f.id===lastRelChangeFid){setTimeout(()=>{card.classList.remove('rel-flash');lastRelChangeFid=null;},2000);}
   });
@@ -1077,13 +1179,11 @@ function renderTasks(){
   const el=document.getElementById('tasks-list'); if(!el)return;
   el.innerHTML='';
   const factions=Object.values(FACTIONS);
-  const resolved=factions.filter(f=>isResolved(f.id)).length;
+  let resolved=0,alliedCount=0,conqueredCount=0;
+  factions.forEach(f=>{if(isResolved(f.id)){resolved++;if(f.relationScore>=66)alliedCount++;if(f.relationScore===0)conqueredCount++;}});
   const total=factions.length;
-  const territories=Object.values(LOCATIONS).filter(l=>!l.secondary&&l.ctrl==='player').length;
+  const territories=getPlayerTerritories();
   const totalTerr=Object.values(LOCATIONS).filter(l=>!l.secondary).length;
-  // Victory path detection
-  const alliedCount=factions.filter(f=>isResolved(f.id)&&f.relationScore>=66).length;
-  const conqueredCount=factions.filter(f=>isResolved(f.id)&&f.relationScore===0).length;
   let victoryPath='UNDECIDED';
   if(territories===totalTerr) victoryPath='DOMINATION';
   else if(resolved===total&&conqueredCount===0) victoryPath='DIPLOMATIC';
@@ -1454,9 +1554,11 @@ WRITING FORMAT:
 - NPCs stay in voice: Stahl=cold corporate. Tombstone=loud bluster. Finn=cryptic zealot. Jameer=direct warmth. Salieri=charming criminal. The Mouth=eloquent cannibal. The Architect=systems metaphors, never says I.
 - Supporting NPCs (Frost, Malone, Dice, Okafor, Perpetua, Tomás, Pam, Webb, Patches, Vega, Teeth, Vessel) can appear in scenes for texture and reveals.
 - Each character quote on its own line.
+- PLAYER NAME RULE: NPCs address the player as "${state.character.name}" — their CHARACTER NAME. "${state.factionName}" is the FACTION/organization name. NEVER call the player by their faction name in dialogue. Use their personal name.
+- NPC DEATH: If the narrative kills a named NPC (faction leader or supporting character), set npc_killed.name to their EXACT name and npc_killed.cause to a short death description (e.g. "Shot during ambush"). NPC deaths are PERMANENT — dead NPCs cannot reappear.
 ${boost?'- BOOSTED: 4th [STAR] choice using '+state.boostedSkill+' with extra impact.':''}
 
-{"story":"narrative","choices":[{"label":"A","text":"action","flavor":"hint","skill":"force|wit|influence|shadow|grit","ap_reward":1},{"label":"B","text":"action","flavor":"hint","skill":"...","ap_reward":1},{"label":"C","text":"action","flavor":"hint","skill":"...","ap_reward":1}${boost?',{"label":"STAR","text":"boosted action","flavor":"BOOSTED '+state.boostedSkill+'","skill":"'+state.boostedSkill+'","ap_reward":0}':''}],"hp_change":0,"location_change":{"location":"none","ctrl":"player"},"resource_change":{"supplies":0,"troops":0,"gold":0},"faction_rel_change":{"faction":"none","delta":0},"amish_contact":false,"amish_deal":false,"event_title":"Title","quest_complete":[]}`;
+{"story":"narrative","choices":[{"label":"A","text":"action","flavor":"hint","skill":"force|wit|influence|shadow|grit","ap_reward":1},{"label":"B","text":"action","flavor":"hint","skill":"...","ap_reward":1},{"label":"C","text":"action","flavor":"hint","skill":"...","ap_reward":1}${boost?',{"label":"STAR","text":"boosted action","flavor":"BOOSTED '+state.boostedSkill+'","skill":"'+state.boostedSkill+'","ap_reward":0}':''}],"hp_change":0,"location_change":{"location":"none","ctrl":"player"},"resource_change":{"supplies":0,"troops":0,"gold":0},"faction_rel_change":{"faction":"none","delta":0},"amish_contact":false,"amish_deal":false,"event_title":"Title","quest_complete":[],"npc_killed":{"name":"none","cause":""}}`;
   const r=await fetch('https://airpg-api-proxi.billybuteau.workers.dev/',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -1683,8 +1785,10 @@ function applyAll(res,ch){
     const destId=res.location_change.location;
     // Only update territory control if AI explicitly changed it from current
     if(res.location_change.ctrl&&res.location_change.ctrl!==dest.ctrl){
+      const prevCtrl=dest.ctrl;
       dest.ctrl=res.location_change.ctrl;
       showNotif(dest.name+' \u2192 '+res.location_change.ctrl.toUpperCase());
+      logEvent('territory_change',{location:destId,prevCtrl,newCtrl:res.location_change.ctrl,territories:getPlayerTerritories()});
     }
     // Update player position if actually moving
     if(destId!==state.currentLocation){
@@ -1752,6 +1856,15 @@ function applyAll(res,ch){
         }
       });
     });
+  }
+  // NPC death tracking
+  if(res.npc_killed&&res.npc_killed.name&&res.npc_killed.name!=='none'){
+    if(!state.deadNpcs) state.deadNpcs=[];
+    const already=state.deadNpcs.find(d=>d.name===res.npc_killed.name);
+    if(!already){
+      state.deadNpcs.push({name:res.npc_killed.name,cause:res.npc_killed.cause||'Unknown',turn:state.turn});
+      showNotif('\u2620 '+res.npc_killed.name.toUpperCase()+' KILLED');
+    }
   }
   updateRes();
   // Always sync map and whichever tab is open
@@ -1944,7 +2057,7 @@ function refreshMap(){
     }
     let cls='loc-node ctrl-'+loc.ctrl;
     if(id===state.currentLocation) cls+=' current-loc';
-    node.setAttribute('class',cls);
+    node.className.baseVal=cls;
   });
   PATROL_ROUTES.forEach(r=>{
     const road=document.getElementById('road-'+r.from+'-'+r.to)||document.getElementById('road-'+r.to+'-'+r.from);
@@ -2027,6 +2140,11 @@ function clickLoc(locId){
     const mPrev=document.getElementById('lpop-method-preview');
     if(mRow) mRow.style.display='none';
     if(mPrev) mPrev.style.display='none';
+    // SEARCH button — only when at this location
+    let sBtn=document.getElementById('lpop-search-btn');
+    if(!sBtn){sBtn=document.createElement('button');sBtn.id='lpop-search-btn';sBtn.className='lpop-btn';document.querySelector('.lpop-btns').appendChild(sBtn);}
+    sBtn.textContent='[ SEARCH ]';sBtn.disabled=false;sBtn.style.display='block';
+    sBtn.onclick=()=>{const p=document.getElementById('loc-popup');if(p)p.style.display='none';searchArea();};
   } else {
     const hasPatrol=PATROL_ROUTES.some(r=>(r.from===locId||r.to===locId)&&(r.from===state.currentLocation||r.to===state.currentLocation));
     // Travel method selector
@@ -2047,6 +2165,9 @@ function clickLoc(locId){
     document.getElementById('lpop-cost').innerHTML='';
     tBtn.textContent='[ TRAVEL ]';
     tBtn.disabled=state.supplies<cost.supplies||(cost.goldCost>0&&state.gold<cost.goldCost);
+    // Hide search button when not at location
+    const sBtnHide=document.getElementById('lpop-search-btn');
+    if(sBtnHide) sBtnHide.style.display='none';
   }
   tkBtn.style.display=fd?'block':'none';
   // Garrison button — only for player-controlled locations
@@ -2270,10 +2391,12 @@ function updateGarrisonDisplay(locId){
 function claimLocation(locId){
   const loc=LOCATIONS[locId];
   if(!loc||!loc.claimable||loc.ctrl!=='unclaimed'){showNotif('CANNOT CLAIM');return;}
+  const prevCtrl=loc.ctrl;
   loc.ctrl='player';
   loc.faction='player';
   state.ownFaction=true;
   showNotif((loc.shortName||locId).toUpperCase()+' CLAIMED — YOUR FACTION PLANTS ITS FLAG');
+  logEvent('territory_change',{location:locId,prevCtrl,newCtrl:'player',territories:getPlayerTerritories()});
   refreshMap();
   const isHQ=!state.history.length||locId==='tcnj';
   const msg=isHQ
@@ -2305,8 +2428,8 @@ function checkForRaids(){
       // Pick a hostile or rival faction to raid
       const hostiles=Object.values(FACTIONS).filter(f=>f.relationScore<30);
       if(hostiles.length){
-        const raider=hostiles[Math.floor(Math.random()*hostiles.length)];
-        _raidQueue.push({locId, raider, garrison, risk});
+        const marauder=hostiles[Math.floor(Math.random()*hostiles.length)];
+        _raidQueue.push({locId, marauder, garrison, risk});
       }
     }
   });
@@ -2318,12 +2441,12 @@ function processNextRaid(){
   const raid=_raidQueue.shift();
   const loc=LOCATIONS[raid.locId];
   const garrison=raid.garrison;
-  const raiderForce=raid.risk * 3 + Math.floor(Math.random()*5);
-  const autoDefend=garrison >= raiderForce;
+  const marauderForce=raid.risk * 3 + Math.floor(Math.random()*5);
+  const autoDefend=garrison >= marauderForce;
 
   if(autoDefend){
     // Auto-defended — brief narrative
-    const msg=`${raid.raider.name} (led by ${raid.raider.leader}) launched a raid on ${loc.name}. The player's garrison of ${garrison} troops repelled the attack. Force attacking: ~${raiderForce}. Generate a short vivid scene — the raid failing, the garrison holding. Good news but tense.`;
+    const msg=`${raid.marauder.name} (led by ${raid.marauder.leader}) launched a raid on ${loc.name}. The player's garrison of ${garrison} troops repelled the attack. Marauder force: ~${marauderForce}. Generate a short vivid scene — the raid failing, the garrison holding. Good news but tense.`;
     switchTab('story'); setLoad(true); clearChoices(); clearStory();
     callClaude(msg).then(res=>{
       state.history.push({role:'user',content:msg},{role:'assistant',content:JSON.stringify(res)});
@@ -2334,52 +2457,53 @@ function processNextRaid(){
     .finally(()=>setLoad(false));
   } else {
     // Garrison too weak — alert player to intervene or lose territory
-    showRaidAlert(raid, raiderForce);
+    showRaidAlert(raid, marauderForce);
   }
 }
 
-function showRaidAlert(raid, raiderForce){
+function showRaidAlert(raid, marauderForce){
   const loc=LOCATIONS[raid.locId];
   const existing=document.getElementById('raid-alert-box');
   if(existing) existing.remove();
   const box=document.createElement('div');
   box.id='raid-alert-box';
   box.className='raid-alert';
-  box.innerHTML=`<strong>&#9888; RAID IN PROGRESS</strong><br>${raid.raider.name} is attacking ${loc.name}!<br>Garrison: ${raid.garrison} | Raiding force: ~${raiderForce}<br>
+  box.innerHTML=`<strong>&#9888; RAID IN PROGRESS</strong><br>${raid.marauder.name} is attacking ${loc.name}!<br>Garrison: ${raid.garrison} | Marauder force: ~${marauderForce}<br>
     <div style="display:flex;gap:6px;margin-top:8px;">
-      <button class="garrison-btn" onclick="joinRaid('${raid.locId}','${raid.raider.id}',${raiderForce})">JOIN DEFENSE</button>
-      <button class="garrison-btn" onclick="abandonTerritory('${raid.locId}','${raid.raider.id}')">ABANDON</button>
+      <button class="garrison-btn" onclick="joinRaid('${raid.locId}','${raid.marauder.id}',${marauderForce})">JOIN DEFENSE</button>
+      <button class="garrison-btn" onclick="abandonTerritory('${raid.locId}','${raid.marauder.id}')">ABANDON</button>
     </div>`;
   const storyView=document.getElementById('story-view');
   if(storyView) storyView.insertBefore(box,storyView.firstChild);
   switchTab('story');
 }
 
-function joinRaid(locId, raiderId, raiderForce){
+function joinRaid(locId, marauderId, marauderForce){
   const box=document.getElementById('raid-alert-box');
   if(box) box.remove();
   const loc=LOCATIONS[locId];
-  const raider=FACTIONS[raiderId];
+  const marauder=FACTIONS[marauderId];
   const garrison=getGarrison(locId);
   const playerForce=garrison+state.troops;
-  const msg=`RAID BATTLE: ${raider.name} (${raider.leader}) attacking ${loc.name} with ~${raiderForce} fighters. Player joins the defense with ${state.troops} personal troops + ${garrison} garrison = ${playerForce} total defenders. Player stats: Force LV${Math.floor((SKILLS.force?.xp||0)/100)}, Influence LV${Math.floor((SKILLS.influence?.xp||0)/100)}, ${state.troops} mobile troops. Generate a detailed gritty battle scene. Outcome: ${playerForce >= raiderForce ? 'player wins but takes losses' : 'brutal fight, player barely holds or loses'}. Show real consequences — troop losses, territory damage, what the raider leader does when beaten/victorious.`;
+  const msg=`RAID BATTLE: ${marauder.name} (${marauder.leader}) attacking ${loc.name} with ~${marauderForce} fighters. Player joins the defense with ${state.troops} personal troops + ${garrison} garrison = ${playerForce} total defenders. Player stats: Force LV${Math.floor((SKILLS.force?.xp||0)/100)}, Influence LV${Math.floor((SKILLS.influence?.xp||0)/100)}, ${state.troops} mobile troops. Generate a detailed gritty battle scene. Outcome: ${playerForce >= marauderForce ? 'player wins but takes losses' : 'brutal fight, player barely holds or loses'}. Show real consequences — troop losses, territory damage, what the marauder leader does when beaten/victorious.`;
   setLoad(true); clearChoices(); clearStory();
   callClaude(msg).then(res=>{
     state.history.push({role:'user',content:msg},{role:'assistant',content:JSON.stringify(res)});
     state.turn++;
     // Apply outcome
-    if(playerForce >= raiderForce){
-      const losses=Math.ceil(raiderForce*0.3);
+    if(playerForce >= marauderForce){
+      const losses=Math.ceil(marauderForce*0.3);
       state.troops=Math.max(0,state.troops-Math.ceil(losses/2));
       setGarrison(locId,Math.max(0,garrison-Math.ceil(losses/2)));
-      FACTIONS[raiderId].relationScore=Math.max(0,FACTIONS[raiderId].relationScore-15);
+      FACTIONS[marauderId].relationScore=Math.max(0,FACTIONS[marauderId].relationScore-15);
       showNotif(loc.shortName+' DEFENDED — TROOPS LOST: '+losses);
     } else {
       LOCATIONS[locId].ctrl='hostile';
-      LOCATIONS[locId].faction=raiderId;
+      LOCATIONS[locId].faction=marauderId;
       setGarrison(locId,0);
-      FACTIONS[raiderId].relationScore=Math.max(0,FACTIONS[raiderId].relationScore-5);
-      showNotif(loc.shortName+' LOST TO '+raider.name.toUpperCase());
+      FACTIONS[marauderId].relationScore=Math.max(0,FACTIONS[marauderId].relationScore-5);
+      showNotif(loc.shortName+' LOST TO '+marauder.name.toUpperCase());
+      logEvent('territory_change',{location:locId,prevCtrl:'player',newCtrl:'hostile',territories:getPlayerTerritories()});
       refreshMap();
     }
     updateRes();
@@ -2388,13 +2512,14 @@ function joinRaid(locId, raiderId, raiderForce){
   .finally(()=>setLoad(false));
 }
 
-function abandonTerritory(locId, raiderId){
+function abandonTerritory(locId, marauderId){
   const box=document.getElementById('raid-alert-box');
   if(box) box.remove();
   const loc=LOCATIONS[locId];
   LOCATIONS[locId].ctrl='hostile';
-  LOCATIONS[locId].faction=raiderId;
+  LOCATIONS[locId].faction=marauderId;
   setGarrison(locId,0);
+  logEvent('territory_change',{location:locId,prevCtrl:'player',newCtrl:'hostile',territories:getPlayerTerritories()});
   refreshMap(); updateRes();
   showNotif(loc.shortName.toUpperCase()+' ABANDONED');
 }
@@ -2417,7 +2542,7 @@ function collectPassiveIncome(){
 function onTurnEnd(){
   state.days++;
   collectPassiveIncome();
-  logEvent('turn_end',{hp:state.hp,sup:state.supplies,trp:state.troops,gold:state.gold,day:state.days});
+  logEvent('turn_end',{hp:state.hp,sup:state.supplies,trp:state.troops,gold:state.gold,day:state.days,terr:getPlayerTerritories()});
   checkWin();
   // Check raids every 3 turns
   if(state.turn%3===0 && !state.gameOver) checkForRaids();
@@ -2461,7 +2586,7 @@ function saveGame(html){
       visitedLocations:state.visitedLocations||[state.currentLocation],
       factionQuests:state.factionQuests||{},
       garrison:state.garrison||{},ownFaction:state.ownFaction||false,
-      originFaction:state.originFaction||null,
+      originFaction:state.originFaction||null,deadNpcs:state.deadNpcs||[],
       username:state.username||localStorage.getItem('jw2999_username')||'',
       locStates,fRels,skData,savedAt:Date.now()
     }));
@@ -2485,6 +2610,7 @@ function resumeGame(save){
   state.garrison=save.garrison||{};
   state.ownFaction=save.ownFaction||false;
   state.originFaction=save.originFaction||null;
+  state.deadNpcs=save.deadNpcs||[];
   state.sessionId=save.sessionId||(Date.now().toString(36)+Math.random().toString(36).slice(2,7));
   state.apiKey=localStorage.getItem(API_KEY)||'';
   logEvent('session_resume',{turn:save.turn,hp:save.hp});
@@ -2626,6 +2752,130 @@ function selectStory(id){
   if(cnInput) cnInput.placeholder=story.namePlaceholder;
   // Show setup screen
   showScreen('setup-screen');
+  applyCampaignSkin(id);
+}
+
+// ── CAMPAIGN SKIN SWITCHER ──
+const JERSEY_SETUP_DEFAULTS={
+  profileTitle:'&#128128; SURVIVOR_PROFILE.DAT',
+  nameLabel:'SURVIVOR DESIGNATION',
+  factionLabel:'YOUR FACTION: OLD JERSEY',
+  step1Label:'STEP 1 — SELECT ORIGIN FACTION',
+  step2Label:'STEP 2 — SELECT SUBCLASS',
+  beginText:'[ BOOT CAMPAIGN >> ]',
+  skills:{
+    force:{name:'FORCE',icon:'💪',hint:'Fighting &middot; Intimidation &middot; Troops'},
+    wit:{name:'WIT',icon:'🧠',hint:'Cunning &middot; Trade &middot; Engineering'},
+    influence:{name:'INFLUENCE',icon:'👑',hint:'Charisma &middot; Diplomacy &middot; Leadership'},
+    shadow:{name:'SHADOW',icon:'🌑',hint:'Stealth &middot; Subterfuge &middot; Intel'},
+    grit:{name:'GRIT',icon:'🔥',hint:'Survival &middot; Endurance &middot; Scavenging'},
+  },
+};
+
+function applyCampaignSkin(storyId){
+  const isSpace=storyId==='space';
+  document.body.classList.toggle('campaign-space',isSpace);
+
+  // Title bar (second .wp is the profile panel)
+  const profileTb=document.querySelectorAll('#setup-screen .wp')[1]?.querySelector('.wtt');
+  if(profileTb) profileTb.innerHTML=isSpace
+    ?'<span>&#128640;</span> PASSENGER_MANIFEST.DAT'
+    :JERSEY_SETUP_DEFAULTS.profileTitle;
+
+  // Name label (first .dos-label)
+  const allLabels=document.querySelectorAll('#setup-screen .dos-label');
+  const nameLbl=allLabels[0];
+  if(nameLbl) nameLbl.textContent=isSpace?'PASSENGER NAME':'SURVIVOR DESIGNATION';
+
+  // Faction label (second .dos-label)
+  const factionLbl=allLabels[1];
+  if(factionLbl) factionLbl.textContent=isSpace
+    ?'YOUR FAMILY ABOARD THE GLITTERGOLD'
+    :'YOUR FACTION: OLD JERSEY';
+
+  // "FACTION CLASS" → "FAMILY" label (fifth .dos-label)
+  const classLbl=allLabels[4];
+  if(classLbl) classLbl.textContent=isSpace?'FAMILY':'FACTION CLASS';
+
+  // Step labels
+  const step1=document.getElementById('gg-step1-label');
+  if(step1){
+    step1.textContent=isSpace?'SELECT YOUR FAMILY':'STEP 1 — SELECT ORIGIN FACTION';
+    step1.id='gg-step1-label';
+  }
+  const step2=document.getElementById('sub-step-label');
+  if(step2) step2.style.display=isSpace?'none':'';
+
+  // Subclass panel
+  const subPanel=document.getElementById('subclass-panel');
+  if(subPanel){
+    subPanel.style.display=isSpace?'none':'';
+    if(!isSpace) subPanel.classList.remove('visible');
+  }
+
+  // Rebuild faction/family grid
+  const grid=document.querySelector('#setup-screen .arch-grid');
+  if(grid){
+    if(isSpace){
+      grid.style.gridTemplateColumns='1fr 1fr 1fr';
+      grid.innerHTML='';
+      Object.entries(GLITTERGOLD_FAMILIES).forEach(([fid,fam])=>{
+        const card=document.createElement('div');
+        card.className='arch-card';
+        card.dataset.arch=fid;
+        card.onclick=function(){selectFaction(this);};
+        card.innerHTML=
+          `<span class="arch-icon">${fam.icon}</span>`+
+          `<div class="arch-name gg-family" style="color:${fam.color}">${fam.label}</div>`+
+          `<div class="arch-stat">${fam.lore.substring(0,50)}...</div>`;
+        grid.appendChild(card);
+      });
+    } else {
+      grid.style.gridTemplateColumns='1fr 1fr 1fr';
+      grid.innerHTML='';
+      const factions=[
+        {id:'iron_syndicate',icon:'&#129967;',name:'IRON SYNDICATE',color:'#cc0000',sub:'Newark Factory State'},
+        {id:'rust_eagles',icon:'&#9992;',name:'RUST EAGLES',color:'#cc6600',sub:'McGuire AFB Military'},
+        {id:'mountain_covenant',icon:'&#9968;',name:'MTN COVENANT',color:'#0099aa',sub:'Mountainside Water Cult'},
+        {id:'trenton_collective',icon:'&#127807;',name:'TRENTON COLLECTIVE',color:'#aacc00',sub:'Agrarian Commune'},
+        {id:'coastal_brotherhood',icon:'&#9875;',name:'COASTAL BROTHERHOOD',color:'#0066cc',sub:'LBI Crime Network'},
+        {id:'the_hollowed',icon:'&#128128;',name:'THE HOLLOWED',color:'#880000',sub:'Pine Barrens Marauders'},
+      ];
+      factions.forEach(f=>{
+        const card=document.createElement('div');
+        card.className='arch-card';
+        card.dataset.arch=f.id;
+        card.onclick=function(){selectFaction(this);};
+        card.innerHTML=
+          `<span class="arch-icon">${f.icon}</span>`+
+          `<div class="arch-name" style="color:${f.color}">${f.name}</div>`+
+          `<div class="arch-stat">${f.sub}</div>`;
+        grid.appendChild(card);
+      });
+    }
+  }
+
+  // Skill names
+  const skillKeys=['force','wit','influence','shadow','grit'];
+  const skillRows=document.querySelectorAll('.skill-alloc-row');
+  skillRows.forEach((row,i)=>{
+    const key=skillKeys[i];
+    const nm=row.querySelector('.skill-alloc-nm');
+    const hint=row.querySelector('.skill-alloc-hint');
+    if(isSpace&&GLITTERGOLD_SKILL_NAMES[key]){
+      const sk=GLITTERGOLD_SKILL_NAMES[key];
+      if(nm) nm.textContent=sk.icon+' '+sk.name;
+      if(hint) hint.innerHTML=sk.hint;
+    } else {
+      const def=JERSEY_SETUP_DEFAULTS.skills[key];
+      if(nm) nm.textContent=def.icon+' '+def.name;
+      if(hint) hint.innerHTML=def.hint;
+    }
+  });
+
+  // Begin button
+  const beginBtn=document.getElementById('begin-btn');
+  if(beginBtn) beginBtn.textContent=isSpace?'[ BOARD THE GLITTERGOLD >> ]':'[ BOOT CAMPAIGN >> ]';
 }
 
 function backToStories(){
@@ -2634,6 +2884,8 @@ function backToStories(){
   skillAllocRemaining=10;
   Object.keys(skillAlloc).forEach(k=>{const e=document.getElementById('alloc-'+k);if(e)e.textContent='0';});
   const ptsEl=document.getElementById('skill-pts-left');if(ptsEl)ptsEl.textContent='10';
+  // Restore Jersey defaults
+  applyCampaignSkin('jersey');
   showScreen('home');
 }
 
@@ -2750,6 +3002,212 @@ async function updateDevPanel(){
     tr.innerHTML=`<td>${time}</td><td style="color:#00ff41">${(cn||'?').split(' ').slice(0,2).join(' ')}</td><td>${turn}</td><td class="dev-type-${type.split('_')[0]}">${shortType}</td><td>${JSON.stringify(rest).slice(0,80)}</td>`;
     table.appendChild(tr);
   });
+}
+
+// ── DEV PANEL TAB SYSTEM ──
+let _devActiveTab='overview';
+let _devCache={players:null,leaderboard:null,sessions:null,users:null};
+
+function devTab(tab){
+  _devActiveTab=tab;
+  document.querySelectorAll('.dev-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  document.querySelectorAll('.dev-tab-content').forEach(c=>c.classList.toggle('active',c.id==='dtab-'+tab));
+  if(tab==='players') loadDevPlayers();
+  else if(tab==='leaderboards') loadDevLeaderboards();
+  else if(tab==='sessions') loadDevSessions();
+  else if(tab==='users') loadDevUsers();
+}
+
+async function loadDevPlayers(){
+  const el=document.getElementById('dev-players-list');
+  if(!el)return;
+  if(!LOG_REMOTE_URL){el.innerHTML='<div class="dev-loading">No remote endpoint configured</div>';return;}
+  el.innerHTML='<div class="dev-loading">Loading players...</div>';
+  try{
+    // Get player list from leaderboard endpoint (has all codenames)
+    const lbR=await fetch(LOG_REMOTE_URL+'/leaderboard');
+    if(!lbR.ok) throw new Error('Failed to fetch leaderboard');
+    const lb=await lbR.json();
+    // Collect all unique codenames
+    const allNames=new Set();
+    Object.values(lb).forEach(arr=>{if(Array.isArray(arr))arr.forEach(e=>{if(e.cn)allNames.add(e.cn);});});
+    if(allNames.size===0){el.innerHTML='<div class="dev-loading">No player data yet</div>';return;}
+    // Fetch each player profile
+    const profiles=[];
+    for(const cn of allNames){
+      try{
+        const r=await fetch(LOG_REMOTE_URL+'/player/'+encodeURIComponent(cn));
+        if(r.ok){const p=await r.json();profiles.push(p);}
+      }catch(e){}
+    }
+    profiles.sort((a,b)=>(b.lastSeen||0)-(a.lastSeen||0));
+    _devCache.players=profiles;
+    renderDevPlayers(profiles);
+  }catch(e){el.innerHTML='<div class="dev-loading">Error: '+e.message+'</div>';}
+}
+
+function renderDevPlayers(profiles){
+  const el=document.getElementById('dev-players-list');
+  if(!el)return;
+  if(!profiles.length){el.innerHTML='<div class="dev-loading">No players found</div>';return;}
+  // Helper: get top key from count object
+  function topKey(obj){if(!obj||typeof obj!=='object')return null;const keys=Object.keys(obj);if(!keys.length)return null;return keys.sort((a,b)=>obj[b]-obj[a])[0];}
+  el.innerHTML=profiles.map((p,i)=>{
+    const wr=p.wins+p.losses>0?Math.round(p.wins/(p.wins+p.losses)*100)+'%':'N/A';
+    const lastSeen=p.lastSeen?new Date(p.lastSeen).toLocaleDateString():'?';
+    const sess=p.totalSessions||p.sessions||0;
+    const favFaction=topKey(p.factionCounts);
+    const favClass=topKey(p.classCounts);
+    const locs=p.locationsVisited||p.locations||[];
+    const deaths=p.deathCauses?Object.keys(p.deathCauses):[];
+    const fw=p.fastestWin&&p.fastestWin<Infinity?p.fastestWin:'—';
+    return`<div class="dev-player-card" id="dpc-${i}" onclick="togglePlayerDetail(${i})">
+      <div class="dev-player-hdr">
+        <span class="dev-player-name">${p.codename||'Unknown'}</span>
+        <span class="dev-player-meta">${sess} sessions | ${p.wins||0}W/${p.losses||0}L | Last: ${lastSeen}</span>
+      </div>
+      <div class="dev-player-detail">
+        <div class="dev-pd-grid">
+          <div class="dev-pd-stat"><div class="dev-pd-val">${sess}</div><div class="dev-pd-lbl">Sessions</div></div>
+          <div class="dev-pd-stat amber"><div class="dev-pd-val">${p.wins||0}</div><div class="dev-pd-lbl">Wins</div></div>
+          <div class="dev-pd-stat red"><div class="dev-pd-val">${p.losses||0}</div><div class="dev-pd-lbl">Losses</div></div>
+          <div class="dev-pd-stat"><div class="dev-pd-val">${wr}</div><div class="dev-pd-lbl">Win Rate</div></div>
+          <div class="dev-pd-stat"><div class="dev-pd-val">${p.avgSurvivalTurns||p.avgTurns||0}</div><div class="dev-pd-lbl">Avg Turns</div></div>
+          <div class="dev-pd-stat amber"><div class="dev-pd-val">${p.maxTerritoriesHeld||0}</div><div class="dev-pd-lbl">Max Terr</div></div>
+          <div class="dev-pd-stat"><div class="dev-pd-val">${parseFloat(p.totalGoldEarned||p.totalGold||0).toFixed(1)}</div><div class="dev-pd-lbl">Total Gold</div></div>
+          <div class="dev-pd-stat purple"><div class="dev-pd-val">${fw}</div><div class="dev-pd-lbl">Fast Win</div></div>
+          <div class="dev-pd-stat"><div class="dev-pd-val">${p.longestRun||0}</div><div class="dev-pd-lbl">Long Run</div></div>
+        </div>
+        ${favFaction?`<div class="dev-pd-section">Favorite Faction</div><div class="dev-pd-info">${favFaction}</div>`:''}
+        ${favClass?`<div class="dev-pd-section">Favorite Class</div><div class="dev-pd-info">${favClass}</div>`:''}
+        ${locs.length?`<div class="dev-pd-section">Locations Visited (${locs.length})</div><div class="dev-pd-info">${locs.join(', ')}</div>`:''}
+        ${deaths.length?`<div class="dev-pd-section">Death Causes</div><div class="dev-pd-info">${deaths.join(', ')}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function togglePlayerDetail(idx){
+  const card=document.getElementById('dpc-'+idx);
+  if(card) card.classList.toggle('open');
+}
+
+async function loadDevLeaderboards(){
+  const el=document.getElementById('dev-lb-full');
+  if(!el)return;
+  if(!LOG_REMOTE_URL){el.innerHTML='<div class="dev-loading">No remote endpoint configured</div>';return;}
+  el.innerHTML='<div class="dev-loading">Loading leaderboards...</div>';
+  try{
+    const r=await fetch(LOG_REMOTE_URL+'/leaderboard');
+    if(!r.ok) throw new Error('Failed');
+    const lb=await r.json();
+    _devCache.leaderboard=lb;
+    const medals=['\u{1F947}','\u{1F948}','\u{1F949}'];
+    function board(title,data,valKey,valLabel){
+      if(!data||!data.length) return`<div class="dev-lb-board"><div class="dev-lb-board-hdr">${title}</div><div class="dev-loading">No data</div></div>`;
+      const rows=data.slice(0,10).map((e,i)=>{
+        const medal=i<3?medals[i]:'#'+(i+1);
+        const name=e.codename||e.cn||'?';
+        return`<div class="dev-lb-board-row"><div class="dev-lb-board-rank">${medal}</div><div class="dev-lb-board-name">${name}</div><div class="dev-lb-board-val">${e[valKey]||0} ${valLabel}</div></div>`;
+      }).join('');
+      return`<div class="dev-lb-board"><div class="dev-lb-board-hdr">${title}</div>${rows}</div>`;
+    }
+    el.innerHTML=`<div class="dev-lb-grid">
+      ${board('\u{1F451} MOST WINS',lb.mostWins,'wins','wins')}
+      ${board('\u26A1 LONGEST RUN',lb.longestRun,'turns','turns')}
+      ${board('\u{1F5FA} MAX TERRITORIES',lb.maxTerritories,'territories','terr')}
+      ${board('\u{1F3C3} FASTEST WIN',lb.fastestWin,'turns','turns')}
+      ${board('\u{1F3AF} MOST SESSIONS',lb.mostSessions,'sessions','sess')}
+    </div>`;
+  }catch(e){el.innerHTML='<div class="dev-loading">Error: '+e.message+'</div>';}
+}
+
+let _devSessionsData=null;
+async function loadDevSessions(){
+  const el=document.getElementById('dev-sessions-list');
+  if(!el)return;
+  if(!LOG_REMOTE_URL){el.innerHTML='<div class="dev-loading">No remote endpoint configured</div>';return;}
+  // Use cached raw log to build session list
+  el.innerHTML='<div class="dev-loading">Loading sessions...</div>';
+  try{
+    const r=await fetch(LOG_REMOTE_URL+'/logs');
+    if(!r.ok) throw new Error('Failed');
+    const log=await r.json();
+    // Group by session
+    const sessions={};
+    log.forEach(e=>{if(e.sid){if(!sessions[e.sid])sessions[e.sid]=[];sessions[e.sid].push(e);}});
+    const sKeys=Object.keys(sessions).sort((a,b)=>{
+      const ta=sessions[a][0]?.ts||0, tb=sessions[b][0]?.ts||0;
+      return tb-ta;
+    });
+    _devSessionsData={sessions,sKeys};
+    renderDevSessions(sKeys,sessions);
+  }catch(e){el.innerHTML='<div class="dev-loading">Error: '+e.message+'</div>';}
+}
+
+function renderDevSessions(sKeys,sessions){
+  const el=document.getElementById('dev-sessions-list');
+  if(!el)return;
+  if(!sKeys.length){el.innerHTML='<div class="dev-loading">No sessions found</div>';return;}
+  el.innerHTML=sKeys.map(sid=>{
+    const evts=sessions[sid];
+    const start=evts.find(e=>e.type==='session_start');
+    const end=evts.find(e=>e.type==='game_over');
+    const turns=evts.filter(e=>e.type==='turn_end').length;
+    const ts=new Date(evts[0].ts).toLocaleString();
+    const cn=evts[0].cn||'Unknown';
+    const outcome=end?(end.outcome==='win'?'WIN':'LOSS'):'IN PROGRESS';
+    const oCls=end?(end.outcome==='win'?'dev-sess-win':'dev-sess-loss'):'dev-sess-ongoing';
+    const faction=start?start.faction||'?':'?';
+    const cls=start?start.cls||'?':'?';
+    // Event timeline
+    const timeline=evts.map(e=>{
+      const{ts:t,sid:_,cn:_c,turn,type,...rest}=e;
+      const typeClass='dev-type-'+type.split('_')[0];
+      return`<div class="dev-sess-evt"><span class="dev-sess-evt-time">${new Date(t).toLocaleTimeString()}</span><span class="dev-sess-evt-turn">T${turn}</span><span class="dev-sess-evt-type ${typeClass}">${type}</span><span class="dev-sess-evt-data">${JSON.stringify(rest).replace(/['"{}]/g,'').slice(0,100)}</span></div>`;
+    }).join('');
+    return`<div class="dev-sess-row" data-cn="${cn.toLowerCase()}" data-outcome="${outcome.toLowerCase()}">
+      <div class="dev-sess-hdr" onclick="this.parentElement.classList.toggle('open')">
+        <span><span class="dev-sess-id">${sid.slice(-6)}</span> <span class="dev-sess-player">${cn}</span> ${faction}/${cls} — ${turns}t</span>
+        <span><span class="dev-sess-outcome ${oCls}">${outcome}</span> <span style="color:#333;font-size:.48rem">${ts}</span></span>
+      </div>
+      <div class="dev-sess-detail">${timeline}</div>
+    </div>`;
+  }).join('');
+}
+
+function filterDevSessions(){
+  const q=(document.getElementById('dev-sess-filter')?.value||'').toLowerCase();
+  document.querySelectorAll('.dev-sess-row').forEach(row=>{
+    const cn=row.dataset.cn||'';
+    const outcome=row.dataset.outcome||'';
+    row.style.display=(!q||cn.includes(q)||outcome.includes(q))?'':'none';
+  });
+}
+
+async function loadDevUsers(){
+  const el=document.getElementById('dev-users-list');
+  if(!el)return;
+  if(!LOG_REMOTE_URL){el.innerHTML='<div class="dev-loading">No remote endpoint configured</div>';return;}
+  el.innerHTML='<div class="dev-loading">Loading users...</div>';
+  try{
+    const r=await fetch(LOG_REMOTE_URL+'/users');
+    if(!r.ok) throw new Error('Failed');
+    const users=await r.json();
+    _devCache.users=users;
+    if(!users.length){el.innerHTML='<div class="dev-loading">No user data yet</div>';return;}
+    users.sort((a,b)=>(b.lastSeen||0)-(a.lastSeen||0));
+    const rows=users.map(u=>`<tr>
+      <td class="u-codename">${u.codename||'—'}</td>
+      <td class="u-username">${u.username||'—'}</td>
+      <td class="u-code">${u.loginCode||'—'}</td>
+      <td>${u.lastSeen?new Date(u.lastSeen).toLocaleString():'—'}</td>
+    </tr>`).join('');
+    el.innerHTML=`<table class="dev-users-table">
+      <tr><th>CODENAME</th><th>USERNAME</th><th>CODE</th><th>LAST SEEN</th></tr>
+      ${rows}
+    </table>`;
+  }catch(e){el.innerHTML='<div class="dev-loading">Error: '+e.message+'</div>';}
 }
 
 let devUnlocked=false;
