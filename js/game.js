@@ -1474,6 +1474,29 @@ function talkFromMap(){
 function buildDlgSys(f){
   const rel=getRelState(f);
   const loc=Object.values(LOCATIONS).filter(l=>l.ctrl==='player').length;
+  const isSp=state.campaign==='space';
+  const defWord=isSp?'allies':'troops';
+  const supWord=isSp?'rations':'supplies';
+  const deckWord=isSp?'decks':'territories';
+
+  if(isSp){
+    return `{JSON ONLY. NO TEXT BEFORE OR AFTER THE JSON OBJECT.}
+
+NOT STAR WARS. NOT STAR TREK. NOT ALIEN. No lightsabers, phasers, xenomorphs, warp drive, hyperspace, or The Force. This is a LUXURY STAR CRUISER called the Glittergold, year 3150. Political drama between old-money passengers and the Overseers who seized control during 500 years of cryosleep. Ship AI is ARIA. Credits currency.
+
+You ARE ${f.leader} of ${f.name}. Relation to player: ${rel.label}.
+Voice: ${f.voice}
+Player: ${state.character.name} / "${state.factionName}" — ${state.troops} ${defWord}, ${state.supplies} ${supWord}, ${loc} ${deckWord}.
+
+Format speech as: "${f.leader}: [words]"
+Use *asterisks* for physical actions inline: *adjusts console* *leans against bulkhead*
+2-3 sentences. Dark humor. Match the ${rel.label} tone exactly — hostile means hostile.
+
+{"speech":"${f.leader}: ...","choices":[{"label":"A","text":"player line","skill":"force|wit|influence|shadow|grit","rel_change":0},{"label":"B","text":"player line","skill":"...","rel_change":0},{"label":"C","text":"player line","skill":"...","rel_change":0}]}
+
+One diplomatic (influence), one aggressive (force), one transactional (wit). rel_change realistic (-20 to +20).`;
+  }
+
   return `{JSON ONLY. NO TEXT BEFORE OR AFTER THE JSON OBJECT.}
 
 NOT FALLOUT. NO NUKES. No radiation/rads, Vaults, Brotherhood, Deathclaws, Nuka-Cola, caps, Power Armor, Super Mutants, or Synths. Collapse was The Departure — rich fled to orbit. Hazards are chemical/bio contamination. Gold currency. Political city-states. NJ 2999.
@@ -2318,7 +2341,12 @@ function generateShipMap(){
     '<path d="'+H+'" fill="none" stroke="rgba(187,68,255,0.4)" stroke-width="1.5"/>'+
     co+pn+sn;
 }
-function restoreNJMap(){/* restore NJ SVG on campaign switch */}
+function restoreNJMap(){
+  const svg=document.getElementById('campaign-svg');
+  if(!svg||!window._njSvgBackup) return;
+  svg.innerHTML=window._njSvgBackup;
+}
+
 function refreshMap(){
   Object.entries(LOCATIONS).forEach(([id,loc])=>{
     const node=document.getElementById('node-'+id); if(!node)return;
@@ -2983,8 +3011,8 @@ function restartGame(){
   state.deadNpcs=[];
   // Reset NJ locations to correct initial control states
   Object.keys(LOCATIONS).forEach(k=>{
-    if(k==='tcnj') LOCATIONS[k].ctrl='unclaimed';
-    else if(k==='newark'||k==='mcguire') LOCATIONS[k].ctrl='hostile';
+    if(k==='tcnj'||k==='meridian_biolabs') LOCATIONS[k].ctrl='unclaimed';
+    else if(k==='newark'||k==='mcguire'||k==='pine_barrens') LOCATIONS[k].ctrl='hostile';
     else LOCATIONS[k].ctrl='neutral';
   });
   Object.values(FACTIONS).forEach(f=>{
@@ -3919,6 +3947,9 @@ function dismissSplash() {
 document.addEventListener('DOMContentLoaded', function() {
   // Cache frequently-used DOM elements (avoids repeated lookups in hot paths)
   _initElCache();
+  // Backup NJ SVG map for restore after space campaign
+  const njSvg=document.getElementById('campaign-svg');
+  if(njSvg) window._njSvgBackup=njSvg.innerHTML;
   // Load and apply user settings immediately
   loadSettings();
   applySettings();
