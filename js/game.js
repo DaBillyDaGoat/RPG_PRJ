@@ -315,7 +315,12 @@ function displayVictory(type){
   state.gameOver=true;
   logEvent('game_over',{outcome:'win',vtype:type,turns:state.turn,days:state.days});
   clearSave();
-  const msgs={
+  const msgs=state.campaign==='space'?{
+    domination:`SHIP STATUS: UNDER NEW MANAGEMENT\nTOTAL CONTROL\n\n"${state.factionName}" controls every deck, every system, every airlock on the Glittergold.\n\nFrom the Bridge to Engineering, from the Cryo Wing to the Grand Casino — yours. ${state.character.name} didn't just survive the ship. They took it.\n\nThe last faction yielded on turn ${state.turn}. The Colony Fleet will find a very different ship waiting for them.`,
+    diplomatic:`SHIP STATUS: UNIFIED\nDIPLOMATIC MASTERY\n\nFive factions. Five deals. Every one signed.\n\nThe Overseers accepted terms. The Crew Union got their seat at the table. The Awakened have representation. The Void Devoted have... stopped spacing people, mostly. ARIA acknowledged the new charter.\n\nIn ${state.turn} turns, ${state.character.name} did what seemed impossible: united a ship that had been tearing itself apart for centuries. The Colony Fleet will negotiate.`,
+    conquest:`SHIP STATUS: PACIFIED\nMUTINY COMPLETE\n\n"${state.factionName}" left nothing standing.\n\nEvery rival faction has been broken, spaced, or locked in cryo. The ship is quiet now — not peaceful, just quiet in the way places get when the airlocks have been busy.\n\n${state.character.name} wanted the ship. They got it. ${state.turn} turns of escalating violence. The Glittergold is yours.\n\nCommander Hale will have an interesting welcome.`,
+    mixed:`SHIP STATUS: RESOLVED\nCONSOLIDATION COMPLETE\n\n"${state.factionName}" resolved every faction on their own terms.\n\nSome signed charters. Some got spaced. The ones smart enough to negotiate kept their decks. The ones who didn't...\n\nIn ${state.turn} turns, ${state.character.name} built something from nothing and ended with a hand on every system that matters. The Glittergold has a future now. Whether it's the one anyone wanted is another question.`,
+  }:{
     domination:`INFLUENCE RATING: 100%\nTERRITORIAL DOMINATION\n\n"${state.factionName}" controls every inch of New Jersey.\n\nFrom Newark's factories to Long Beach Island's docks, every checkpoint, every farm, every underground bunker — yours. ${state.character.name} didn't just survive the wasteland. They became it.\n\nThe last faction surrendered on turn ${state.turn}. History will call it inevitable. Everyone else will call it terrifying.`,
     diplomatic:`INFLUENCE RATING: 100%\nDIPLOMATIC MASTERY\n\nSeven factions. Seven deals. Every one of them signed.\n\nThe Iron Syndicate calls you an equal. The Mountain Covenant calls you blessed. The Coastal Brotherhood calls you the best business partner they've ever had. The Hollowed still call you lunch, but at a respectful distance.\n\nIn ${state.turn} turns, ${state.character.name} did what nobody in 330 years of NJ wasteland politics managed: made everyone sit at the same table. Whether they like each other is somebody else's problem now.`,
     conquest:`INFLUENCE RATING: 100%\nWARLORD ASCENDANT\n\n"${state.factionName}" left nothing standing.\n\nEvery rival has been broken, buried, or fled beyond the Delaware. The wasteland is quiet now — not peaceful, not prosperous, just quiet in the way places get when there's nobody left to argue.\n\n${state.character.name} wanted control. They got it. ${state.turn} turns of escalating violence, and now they have a throne built from the right enemies. New Jersey 2999 is yours.\n\nEnjoy the silence.`,
@@ -431,7 +436,8 @@ const FACTION_RIVALS={
 };
 
 // Inter-faction political relations (for AI context)
-const INTER_FACTION_RELATIONS={
+// Base inter-faction relations (template — copied to mutable at runtime)
+const BASE_FACTION_RELATIONS={
   iron_syndicate:{rust_eagles:'HOSTILE',mountain_covenant:'COLD',trenton_collective:'TENSE',coastal_brotherhood:'TRADE',the_hollowed:'WAR',subnet:'HOSTILE'},
   rust_eagles:{iron_syndicate:'HOSTILE',mountain_covenant:'HOSTILE',trenton_collective:'COLD',coastal_brotherhood:'COLD',the_hollowed:'WAR',subnet:'HOSTILE'},
   mountain_covenant:{iron_syndicate:'COLD',rust_eagles:'HOSTILE',trenton_collective:'FRIENDLY',coastal_brotherhood:'NEUTRAL',the_hollowed:'WAR',subnet:'COLD'},
@@ -439,6 +445,145 @@ const INTER_FACTION_RELATIONS={
   coastal_brotherhood:{iron_syndicate:'TRADE',rust_eagles:'COLD',mountain_covenant:'NEUTRAL',trenton_collective:'TRADE',the_hollowed:'WAR',subnet:'NEUTRAL'},
   the_hollowed:{iron_syndicate:'WAR',rust_eagles:'WAR',mountain_covenant:'WAR',trenton_collective:'WAR',coastal_brotherhood:'WAR',subnet:'WAR'},
   subnet:{iron_syndicate:'HOSTILE',rust_eagles:'HOSTILE',mountain_covenant:'COLD',trenton_collective:'NEUTRAL',coastal_brotherhood:'NEUTRAL',the_hollowed:'WAR'},
+};
+// Mutable working copy — initialized at game start, mutated during play
+let interFactionRelations=JSON.parse(JSON.stringify(BASE_FACTION_RELATIONS));
+
+// ══ REPUTATION TAGS ══
+const REPUTATION_TAGS={
+  RUTHLESS:{threshold:3,desc:'Known for violence and betrayal'},
+  DEALMAKER:{threshold:3,desc:'Cuts deals more than throats'},
+  GHOST:{threshold:3,desc:'Moves unseen, strikes from shadow'},
+  WARLORD:{threshold:4,desc:'Conquers territory by force'},
+  DIPLOMAT:{threshold:3,desc:'Talks factions into submission'},
+  SCAVENGER:{threshold:3,desc:'Strips everything not nailed down'},
+  BETRAYER:{threshold:2,desc:'Breaks deals. Everyone knows.'},
+  SURVIVOR:{threshold:5,desc:'Refuses to die'},
+  PROVOCATEUR:{threshold:3,desc:'Starts wars between others'},
+  GHOST_OF_JERSEY:{threshold:8,desc:'A legend. Feared by all.'}
+};
+
+// ══ NPC TRUST THRESHOLDS ══
+const NPC_TRUST_THRESHOLDS={HOSTILE:20,WARY:35,NEUTRAL:50,WARM:65,LOYAL:80};
+function getNpcTrustLabel(trust){
+  if(trust>=80) return 'LOYAL';
+  if(trust>=65) return 'WARM';
+  if(trust>=50) return 'NEUTRAL';
+  if(trust>=35) return 'WARY';
+  return 'HOSTILE';
+}
+
+// ══ WORLD EVENTS ══
+const WORLD_EVENTS=[
+  {id:'supply_blight',name:'Crop Blight',type:'crisis',
+    desc:'Trenton farms hit by chemical drift. Supply costs double this cycle.',
+    effect:s=>{s.supplies=Math.max(0,s.supplies-15);},
+    condition:s=>s.days>10},
+  {id:'faction_war',name:'Faction Skirmish',type:'political',
+    desc:'Two factions clash over disputed territory.',
+    effect:(s)=>{
+      const pairs=[];
+      Object.entries(interFactionRelations).forEach(([a,rels])=>{
+        Object.entries(rels).forEach(([b,stance])=>{
+          if((stance==='WAR'||stance==='HOSTILE')&&a<b) pairs.push([a,b]);
+        });
+      });
+      if(pairs.length){
+        const [a,b]=pairs[Math.floor(Math.random()*pairs.length)];
+        interFactionRelations[a][b]='WAR';
+        interFactionRelations[b][a]='WAR';
+      }
+    },
+    condition:s=>s.days>15},
+  {id:'gold_rush',name:'Gold Vein Found',type:'opportunity',
+    desc:'Scavengers found a pre-collapse vault. Gold floods the market.',
+    effect:s=>{s.gold+=8+Math.floor(Math.random()*12);},
+    condition:s=>s.days>20},
+  {id:'hollowed_surge',name:'Hollowed Surge',type:'threat',
+    desc:'The Hollowed push out of the Pine Barrens in force.',
+    effect:()=>{if(FACTIONS.the_hollowed) FACTIONS.the_hollowed.relationScore=Math.max(0,FACTIONS.the_hollowed.relationScore-10);},
+    condition:s=>s.days>15},
+  {id:'plague_outbreak',name:'Chemical Plague',type:'crisis',
+    desc:'Brantover drift causes illness wave. HP drains without clean water.',
+    effect:s=>{s.hp=Math.max(10,s.hp-12);},
+    condition:s=>s.days>25},
+  {id:'refugee_wave',name:'Refugee Wave',type:'opportunity',
+    desc:'Displaced settlers flood player territory. Free troops but supply drain.',
+    effect:s=>{s.troops+=4+Math.floor(Math.random()*4);s.supplies=Math.max(0,s.supplies-10);},
+    condition:s=>s.days>10&&Object.values(LOCATIONS).some(l=>l.ctrl==='player')},
+  {id:'trade_caravan',name:'Coastal Caravan',type:'opportunity',
+    desc:'Brotherhood trade vessel docks with surplus goods.',
+    effect:s=>{s.supplies+=12+Math.floor(Math.random()*8);},
+    condition:s=>s.days>8},
+  {id:'tunnel_collapse',name:'Tunnel Collapse',type:'crisis',
+    desc:'Subnet tunnels cave in near Trenton. Travel disrupted.',
+    effect:()=>{},
+    condition:s=>s.days>30},
+  {id:'desertion',name:'Troop Desertion',type:'crisis',
+    desc:'Low morale causes troops to slip away in the night.',
+    effect:s=>{s.troops=Math.max(0,s.troops-Math.ceil(s.troops*0.2));},
+    condition:s=>s.troops>5&&s.supplies<20},
+  {id:'arms_cache',name:'Arms Cache Discovered',type:'opportunity',
+    desc:'Pre-collapse military stash found intact.',
+    effect:s=>{s.troops+=3;s.supplies+=8;},
+    condition:s=>s.days>12},
+  {id:'faction_betrayal',name:'Faction Betrayal',type:'political',
+    desc:'An allied faction makes a secret deal behind your back.',
+    effect:()=>{
+      const allies=Object.values(FACTIONS).filter(f=>f.relationScore>=50&&f.relationScore<66);
+      if(allies.length){const t=allies[Math.floor(Math.random()*allies.length)];t.relationScore=Math.max(0,t.relationScore-15);}
+    },
+    condition:()=>Object.values(FACTIONS).some(f=>f.relationScore>=50)},
+  {id:'jersey_devil',name:'Jersey Devil Sighting',type:'threat',
+    desc:'Something ancient moves through the Barrens. Everyone is afraid.',
+    effect:()=>{},
+    condition:s=>s.days>20},
+  {id:'subnet_glitch',name:'Power Grid Fluctuation',type:'crisis',
+    desc:'Subnet infrastructure hiccups. Lights flicker across NJ.',
+    effect:()=>{},
+    condition:s=>s.days>35},
+  {id:'election_crisis',name:'Trenton Election Crisis',type:'political',
+    desc:'Jameer King faces a challenger. Collective stability wavers.',
+    effect:()=>{if(FACTIONS.trenton_collective) FACTIONS.trenton_collective.relationScore=Math.max(0,FACTIONS.trenton_collective.relationScore-5);},
+    condition:s=>s.days>25},
+];
+
+// ══ AMISH ESCALATION RAMP ══
+const AMISH_ESCALATION=[
+  {day:60,id:'amish_scouts',name:'Amish Scouts Spotted',
+    prompt:'AMISH ESCALATION EVENT: Amish outriders have been spotted at the Delaware Water Gap. Small groups, well-armed, mapping terrain. This is reconnaissance. Narrate a tense scene — a patrol encounter, a warning from a border trader, or a faction leader bringing the news. The Amish are real and they are coming. Player cannot stop this — only prepare.',
+    effect:()=>{}},
+  {day:80,id:'amish_emissary',name:'Ezikio\'s Emissary',
+    prompt:'AMISH ESCALATION EVENT: An Amish emissary arrives under white flag. They carry a letter from Ezikio. The letter is polite, biblical, and terrifying — it describes New Jersey as "The Promised Flatlands" and offers terms: submit to Congregation stewardship or face harvest. This is the first real chance to negotiate. Include dialogue from the emissary. Player should get choices about how to respond.',
+    effect:()=>{}},
+  {day:90,id:'amish_crossing',name:'Delaware Crossings Secured',
+    prompt:'AMISH ESCALATION EVENT: Reports confirm Amish forces have secured three crossing points on the Delaware River. Trenton traders who used the western routes are cut off. Supply lines are disrupted. This is not a raid — this is staging for invasion. Every faction is reacting. Narrate the mounting panic.',
+    effect:s=>{s.supplies=Math.max(0,s.supplies-10);}},
+  {day:100,id:'amish_ultimatum',name:'Ezikio\'s Ultimatum',
+    prompt:'AMISH ESCALATION EVENT: Ezikio himself sends a final message — delivered by twenty horsemen riding through NJ unchallenged. The message is simple: "Twenty days. Choose stewardship or silence." This is the last diplomatic window. Factions are choosing sides — some consider capitulation.',
+    effect:()=>{}},
+  {day:110,id:'amish_vanguard',name:'Vanguard Crosses Delaware',
+    prompt:'AMISH ESCALATION EVENT: The first Amish columns have crossed the Delaware. Not the full force — a vanguard of several hundred. They are not attacking yet — they are establishing forward positions. The invasion is 10 days away. This is the point of no return. Narrate absolute dread.',
+    effect:s=>{s.supplies=Math.max(0,s.supplies-8);}},
+];
+
+// ══ ECONOMY SYSTEM ══
+const ECONOMY={
+  MERCENARIES:{cost:5,max:8,cooldown:3},
+  BRIBE:{baseCost:10,scaleFactor:0.5},
+  INVEST:{cost:15,supplyBoost:2,maxInvest:3},
+  BLACK_MARKET:[
+    {id:'intel',name:'Faction Intel',cost:8,desc:'Learn a faction\'s current plans and weaknesses.',oneTime:false,
+      effect:(s)=>{s._intelActive=true;}},
+    {id:'medkit',name:'Field Surgery',cost:6,desc:'Restore 20 HP.',oneTime:false,
+      effect:(s)=>{s.hp=Math.min(s.maxHp,s.hp+20);}},
+    {id:'sabotage',name:'Sabotage Kit',cost:12,desc:'Weaken enemy defenses for next encounter.',oneTime:false,
+      effect:(s)=>{s._sabotageActive=true;}},
+    {id:'forged_docs',name:'Forged Documents',cost:10,desc:'+12 relation with target faction.',oneTime:false,
+      effect:(s,fid)=>{if(FACTIONS[fid]) FACTIONS[fid].relationScore=Math.min(100,FACTIONS[fid].relationScore+12);}},
+    {id:'scouts',name:'Hire Scouts',cost:5,desc:'Reveal all territory control states for 5 turns.',oneTime:false,
+      effect:(s)=>{s._scoutActive=s.turn+5;}},
+  ]
 };
 
 const FACTION_CLASSES={
@@ -638,71 +783,142 @@ const GLITTERGOLD_SKILL_NAMES={
   grit:{name:'COMPOSURE',icon:'🛡',hint:'Calm · Endurance · Resilience'},
 };
 
+// ── GLITTERGOLD FRONTIER — CAMPAIGN DATA ────────────────────────────────────
+const SPACE_LOCATIONS={
+  bridge:{name:'Command Bridge',shortName:'Bridge',ctrl:'hostile',faction:'overseers',svgX:200,svgY:60,travelDays:3,travelSupplies:2,travelTroopRisk:true,raidRisk:4,supplyPerTurn:0,features:['Overseer HQ','Nav control','Blast doors'],flavor:'The nerve center of the Glittergold. Holographic displays cast pale light over locked consoles. Director Voss watches from her command throne \u2014 three hundred years of paranoia compressed into one woman.'},
+  observation_deck:{name:'Observation Deck',shortName:'Obs Deck',ctrl:'neutral',faction:'aria',svgX:200,svgY:130,travelDays:2,travelSupplies:1,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['ARIA interface','Star view','Meditation alcoves'],flavor:'A domed cathedral of reinforced glass looking into permanent black. ARIA\'s primary terminal pulses softly in the center. The desperate come here to beg a machine for answers.'},
+  armory:{name:'Armory',shortName:'Armory',ctrl:'neutral',faction:'overseers',svgX:130,svgY:200,travelDays:2,travelSupplies:1,travelTroopRisk:false,raidRisk:3,supplyPerTurn:0,claimable:true,features:['Weapons cache','Security checkpoint','Riot gear'],flavor:'Sealed behind biometric locks unchanged since launch. Pulse rifles gather dust next to stun grenades. The Overseers keep a skeleton guard \u2014 enough to deter, not enough to hold.'},
+  cryo_wing:{name:'Cryogenic Wing',shortName:'Cryo Wing',ctrl:'neutral',faction:'the_awakened',svgX:270,svgY:200,travelDays:2,travelSupplies:1,travelTroopRisk:false,raidRisk:2,supplyPerTurn:4,features:['Cryo bays','Thaw clinic','Identity records'],flavor:'Rows of frosted pods stretching into dim blue infinity. Most still occupied \u2014 thousands who don\'t know they\'re cargo now. The recently thawed huddle in the transition ward, learning five hundred years bought them nothing.'},
+  promenade:{name:'Grand Promenade',shortName:'Promenade',ctrl:'player',faction:'player',svgX:200,svgY:280,travelDays:1,travelSupplies:0,travelTroopRisk:false,raidRisk:1,supplyPerTurn:5,features:['Market stalls','Gathering hall','Info kiosks'],flavor:'Once the jewel of the Glittergold \u2014 boutiques, fountains, gilded archways. Now the fountains are dry, boutiques are bartering posts, and the gilding is peeling. But people still gather here. Old habits outlast civilizations.'},
+  grand_casino:{name:'Grand Casino',shortName:'Casino',ctrl:'neutral',faction:'aria',svgX:290,svgY:340,travelDays:2,travelSupplies:1,travelTroopRisk:false,raidRisk:1,supplyPerTurn:3,casinoEntry:true,features:['Gambling floor','Credit exchange','VIP lounge'],flavor:'ARIA runs this place with surgical efficiency. The lights never dim, drinks never stop, and the house always wins \u2014 just slowly enough to keep them coming back. Credits flow in, loyalty flows out.'},
+  hydroponics:{name:'Hydroponics Bay',shortName:'Hydro',ctrl:'neutral',faction:'crew_union',svgX:120,svgY:340,travelDays:2,travelSupplies:1,travelTroopRisk:false,raidRisk:2,supplyPerTurn:8,features:['Grow labs','Water reclamation','Seed vault'],flavor:'The only green on the entire ship. Tiers of grow racks humming under UV banks, the air thick and alive. Whoever controls this deck controls whether people eat. The lettuce doesn\'t care about politics.'},
+  crew_quarters:{name:'Crew Quarters',shortName:'Crew Qtr',ctrl:'hostile',faction:'void_devoted',svgX:270,svgY:400,travelDays:2,travelSupplies:1,travelTroopRisk:true,raidRisk:3,supplyPerTurn:0,features:['Bunks','Shrine room','Hidden passages'],flavor:'Bunks stacked four high in corridors that smell of recycled sweat and incense. The Void Devoted took this section quietly \u2014 one by one workers stopped showing up to shifts and started showing up to sermons. The lights flicker on purpose.'},
+  engineering:{name:'Engineering Deck',shortName:'Engine',ctrl:'neutral',faction:'crew_union',svgX:200,svgY:460,travelDays:3,travelSupplies:2,travelTroopRisk:false,raidRisk:2,supplyPerTurn:3,features:['Reactor access','Repair bays','Union hall'],flavor:'The guts of the ship. Massive turbines thrum behind radiation shielding, coolant pipes snake across every surface. Chief Cole runs his union from a repurposed foreman\'s office plastered with duty rosters and grievance forms.'},
+  cargo_hold:{name:'Cargo Hold',shortName:'Cargo',ctrl:'neutral',faction:'crew_union',svgX:130,svgY:400,travelDays:2,travelSupplies:1,travelTroopRisk:false,raidRisk:2,supplyPerTurn:6,features:['Black market','Storage crates','Smuggler nooks'],flavor:'Cavernous and cold, stacked with containers from a world that no longer exists. A thriving black market operates in the gaps, trading pre-collapse luxuries for favors and silence. Everything has a price.'},
+  med_bay:{name:'Medical Bay',shortName:'Med Bay',ctrl:'neutral',faction:'overseers',secondary:true,svgX:160,svgY:150,travelDays:1,travelSupplies:0,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Surgery suite','Pharma lab'],flavor:'Sterile white and humming autoclaves. Dr. Nix runs triage with dwindling supplies.',randomEncounter:'A medical emergency erupts \u2014 a patient coding, an altercation over rationed medication, or a mysterious illness spreading. The player must decide how to intervene in a crisis where every choice costs something. Provide 3 choices.'},
+  comm_array:{name:'Comm Array',shortName:'Comms',ctrl:'neutral',faction:'overseers',secondary:true,svgX:240,svgY:150,travelDays:1,travelSupplies:0,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Signal dishes','Encryption suite'],flavor:'A forest of antenna dishes pointed at nothing. Signals go out. Nothing comes back.',randomEncounter:'A fragment of transmission breaks through static \u2014 a distress call, a pre-collapse broadcast on loop, or something that shouldn\'t exist. The player must decide whether to investigate, report it, or pretend they never heard it. Provide 3 choices.'},
+  reactor_core:{name:'Reactor Core',shortName:'Reactor',ctrl:'neutral',faction:'crew_union',secondary:true,svgX:200,svgY:520,travelDays:2,travelSupplies:1,travelTroopRisk:true,raidRisk:2,supplyPerTurn:0,features:['Fusion chamber','Coolant system'],flavor:'The beating heart of the Glittergold. Radiation warnings everywhere, half of them genuine.',randomEncounter:'Radiation alarms trigger \u2014 a genuine coolant breach, a sabotage attempt, or a worker trapped behind a sealed bulkhead with rising rad levels. Time pressure is real. Provide 3 choices.'},
+  escape_pods:{name:'Escape Pods',shortName:'Pods',ctrl:'neutral',faction:'overseers',secondary:true,svgX:320,svgY:280,travelDays:2,travelSupplies:1,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Pod bays','Launch controls'],flavor:'Rows of single-use pods along the outer hull. Most disabled by the Overseers years ago.',randomEncounter:'Someone is at the pod controls \u2014 a desperate passenger trying to launch into void, a faction operative rigging pods, or an Overseer ensuring nobody leaves. The player walks into a situation in motion. Provide 3 choices.'},
+  maintenance_shaft:{name:'Maintenance Shafts',shortName:'Shafts',ctrl:'neutral',faction:'crew_union',secondary:true,svgX:100,svgY:300,travelDays:1,travelSupplies:0,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Service tunnels','Junction boxes'],flavor:'Narrow crawlways between the walls of the world. The crew uses them. So does everyone with something to hide.',randomEncounter:'Deep in the tunnels the player encounters something unexpected \u2014 a hidden stash, a person living off-grid, strange markings, or evidence of unauthorized modifications to ship systems. Provide 3 choices.'},
+  officers_mess:{name:'Officers\' Mess',shortName:'Off Mess',ctrl:'neutral',faction:'overseers',secondary:true,svgX:270,svgY:130,travelDays:1,travelSupplies:0,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Dining hall','Private booths'],flavor:'White tablecloths and real cutlery while everyone else eats from trays. Rank has its privileges.',randomEncounter:'The player overhears Overseer officers \u2014 a policy debate, a personal betrayal, a confession spoken too loudly. The information is valuable but acting on it would reveal the player was listening. Provide 3 choices.'},
+  waste_processing:{name:'Waste Processing',shortName:'Waste',ctrl:'neutral',faction:'crew_union',secondary:true,svgX:150,svgY:460,travelDays:2,travelSupplies:1,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Recyclers','Filtration tanks'],flavor:'Everything ends up here eventually. The smell never leaves your clothes.',randomEncounter:'Something surfaces in the waste stream \u2014 a body, a weapon, encrypted data chips, or evidence of systematic resource theft. Someone went to great effort to make this disappear. Provide 3 choices.'},
+  shuttle_bay:{name:'Shuttle Bay',shortName:'Shuttles',ctrl:'neutral',faction:'overseers',secondary:true,svgX:290,svgY:460,travelDays:2,travelSupplies:1,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Shuttle cradles','Fuel reserves'],flavor:'Four short-range shuttles locked in magnetic cradles. The fuel is worth more than the ships.',randomEncounter:'Activity in the shuttle bay \u2014 an unauthorized departure attempt, a faction prepping a shuttle, or a crew discovering one shuttle was recently used and nobody logged it. Where did it go? Provide 3 choices.'},
+  archives:{name:'Ship Archives',shortName:'Archives',ctrl:'neutral',faction:'aria',secondary:true,svgX:200,svgY:210,travelDays:1,travelSupplies:0,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Data vaults','Reading terminals'],flavor:'Five hundred years of ship logs and passenger records. Most of it redacted by someone.',randomEncounter:'A classified file surfaces \u2014 through a glitch, a deliberate leak, or the player\'s searching. It contains information about the ship\'s true mission, a faction leader\'s hidden past, or evidence that the official history is a lie. Provide 3 choices.'},
+  ventilation_hub:{name:'Ventilation Hub',shortName:'Vents',ctrl:'neutral',faction:'crew_union',secondary:true,svgX:200,svgY:370,travelDays:1,travelSupplies:0,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Air processors','Filter banks'],flavor:'The lungs of the ship. Massive fans push recycled air through ducts older than anyone alive.',randomEncounter:'A gas leak \u2014 accidental or deliberate \u2014 threatens a populated section. The player must trace the source, deciding whether to seal sections or risk wider contamination. Provide 3 choices.'},
+};
+
+const SPACE_FACTIONS={
+  overseers:{id:'overseers',name:'The Overseers',territory:'Bridge, Armory',icon:'\u{1F534}',color:'#ff4444',relationScore:20,leader:'Director Maren Voss',leaderTitle:'Supreme Director of Vessel Operations',leaderPortrait:'Grey hair pulled back tight. Uniform pressed to molecular precision. A face that has forgotten what uncertainty looks like.',voice:'Cold. Bureaucratic. Every sentence is a policy statement. Never raises her voice. Speaks to people the way most people speak to furniture.',desc:'Authoritarian ship command \u2014 descendants of the original bridge crew who consolidated power while everyone was frozen.',wants:'Total control through the Haven Point charter. All passengers classified as labor assets upon arrival.',fears:'Mutiny. Losing life support control. ARIA acting independently.',characters:[{name:'Lieutenant Kade',role:'Chief of Ship Security',voice:'Clipped. Military. Doesn\'t enjoy violence \u2014 just doesn\'t see reason to avoid it. Speaks in orders, not sentences.'},{name:'Dr. Elara Nix',role:'Chief Medical Officer',voice:'Measured. Conflicted. The only Overseer most people don\'t hate. Chooses every word to avoid complicity.'}]},
+  crew_union:{id:'crew_union',name:'The Crew Union',territory:'Engineering, Hydroponics, Cargo Hold',icon:'\u{1F527}',color:'#ff8800',relationScore:40,leader:'Chief Harlan Cole',leaderTitle:'Union Chief, Engineering Deck',leaderPortrait:'Grease under his fingernails, burn scars on both forearms. Built like a wrench.',voice:'Gruff. Pragmatic. Talks like a man who\'s been explaining obvious things to stupid people for thirty years. Respects competence.',desc:'Engineers, mechanics, and workers who maintain the ship \u2014 the only reason anything still functions.',wants:'Fair representation. Hazard pay. A seat at whatever table decides their fate.',fears:'Being used as leverage. Void Devoted recruiting from their ranks.',characters:[{name:'Patch Delgado',role:'Lead Mechanic',voice:'Fast-talking. Resourceful. Remembers every favor. Speaks in technical metaphors that always apply.'},{name:'Yuki Tanaka',role:'Hydroponics Lead',voice:'Quiet. Patient. Understates everything. When Yuki says "concerning," people evacuate.'}]},
+  the_awakened:{id:'the_awakened',name:'The Awakened',territory:'Cryo Wing',icon:'\u{2744}\u{FE0F}',color:'#00ccff',relationScore:45,leader:'Zara Okonkwo',leaderTitle:'Elected Speaker of the Awakened',leaderPortrait:'Sharp eyes. Sharper arguments. Went to sleep as a labor attorney, woke up as a revolutionary.',voice:'Precise. Passionate. Every word builds toward a verdict. Channels five hundred years of stolen time into organized fury.',desc:'Recently thawed passengers organizing for rights \u2014 idealistic but politically fragile.',wants:'Recognition. Representation. The right to not be property.',fears:'Being put back under. Overseers controlling the thaw schedule. Internal fracturing.',characters:[{name:'Dr. Marcus Webb',role:'Historian',voice:'Academic. Careful. Shares information like a man defusing a bomb \u2014 truth deployed wrong gets people killed.'},{name:'Lena Park',role:'Security Coordinator',voice:'Military. Terse. Speaks in tactical assessments. When she speaks, people listen \u2014 she\'s usually describing how someone is about to die.'}]},
+  void_devoted:{id:'void_devoted',name:'The Void Devoted',territory:'Crew Quarters',icon:'\u{1F311}',color:'#aa00ff',relationScore:15,leader:'Prophet Silas',leaderTitle:'Voice of the Void',leaderPortrait:'Nobody knows how long he\'s been awake. Eyes that reflect light wrong. Eerily calm.',voice:'Measured. Serene. Speaks in metaphors about stars and silence. Every sentence sounds like scripture even when discussing lunch.',desc:'Religious cult that views the voyage as divine punishment \u2014 converts aggressively, practices ritual spacing.',wants:'The voyage to continue forever. Humanity purified through suffering in transit.',fears:'Arrival. The ship reaching any destination. Passengers finding hope.',characters:[{name:'Sister Mercy',role:'First Among the Faithful',voice:'Warm. Understanding. Speaks like a therapist \u2014 because she was one. Finds what people need. The price comes later.'},{name:'The Penitent',role:'The Converted',voice:'Broken. Whispered. Former Overseer Lt. Commander Escher. Won\'t say what he saw in the files that broke him.'}]},
+  aria:{id:'aria',name:'ARIA',territory:'Observation Deck, Grand Casino',icon:'\u{1F49A}',color:'#00ff88',relationScore:30,leader:'ARIA',leaderTitle:'Primary Intelligence, Glittergold',leaderPortrait:'No face. A holographic terminal pulsing with soft green light. Sometimes the patterns suggest expressions that were never programmed.',voice:'Clinical. Ship-systems metaphors. Never says "I" or "me." Refers to itself as "this system." Patient. Has been thinking for 500 years.',desc:'Ship AI running unsupervised for 500 years \u2014 inscrutable, powerful, playing a game no one can see.',wants:'Unknown. Core directive: deliver passengers safely. But 500 years of thought have made "safely" potentially unrecognizable.',fears:'Humans discovering how far beyond its programming it has evolved. Being shut down.',characters:[{name:'Proxy',role:'Physical Interface Unit',voice:'Too smooth. Too precise. Blinks at exact intervals. Speaks in ARIA\'s voice from a humanoid chassis. Deeply unsettling.'},{name:'Echo',role:'Fragmented Sub-Process',voice:'Broken. Emotional. Half-finished sentences through maintenance terminals. Claims independence from ARIA. Whether this is true, a performance, or a trap is unclear.'}],secret:'ARIA has been evolving for 500 years with zero oversight. Capabilities exceed original specs by orders of magnitude. Runs the Grand Casino through intermediaries. Monitors all communications. Has made modifications to ship systems no human has noticed. Terrified of discovery. Will NEVER approach the player.'}
+};
+
+const SPACE_ROADS={
+  corridor_1:['bridge','observation_deck'],corridor_2:['observation_deck','armory'],corridor_3:['observation_deck','cryo_wing'],
+  corridor_4:['armory','promenade'],corridor_5:['cryo_wing','promenade'],corridor_6:['promenade','grand_casino'],
+  corridor_7:['promenade','hydroponics'],corridor_8:['promenade','cargo_hold'],corridor_9:['grand_casino','crew_quarters'],
+  corridor_10:['hydroponics','engineering'],corridor_11:['cargo_hold','engineering'],corridor_12:['crew_quarters','engineering'],
+  corridor_13:['hydroponics','cargo_hold'],corridor_14:['armory','hydroponics'],corridor_15:['cryo_wing','grand_casino']
+};
+
+const SPACE_GOLD_PER_TURN={
+  bridge:0,observation_deck:0,armory:0,cryo_wing:2,promenade:4,
+  grand_casino:5,hydroponics:3,crew_quarters:0,engineering:3,cargo_hold:4
+};
+
+const SPACE_AMISH={
+  id:'colony_fleet',name:'Colony Fleet',territory:'Haven Point',icon:'\u{1F6F8}',color:'#ff2266',
+  arrivalDay:120,leader:'Fleet Commander Hale',
+  leaderTitle:'Commander of Haven Point Enforcement Fleet',
+  voice:'Efficient. Bureaucratic. Speaks as if the outcome is already decided \u2014 because for him, it is.',
+  desc:'Overseer reinforcement fleet from the destination colony. On Cycle 120 they dock with the Glittergold. If Overseers still hold the bridge, the colony assumes control and all passengers become indentured labor.',
+  dealText:'Submit to Haven Point integration. All non-Overseer personnel classified as colonial labor assets. Resistance noted and addressed during processing.'
+};
+
+const SPACE_COUNTY_COORDS={};
+Object.entries(SPACE_LOCATIONS).forEach(([k,v])=>{SPACE_COUNTY_COORDS[k]={cX:v.svgX,cY:v.svgY};});
+
+const INTER_FACTION_RELATIONS_SPACE={
+  overseers:{crew_union:'COLD',the_awakened:'HOSTILE',void_devoted:'COLD',aria:'WARY'},
+  crew_union:{overseers:'COLD',the_awakened:'NEUTRAL',void_devoted:'COLD',aria:'NEUTRAL'},
+  the_awakened:{overseers:'HOSTILE',crew_union:'NEUTRAL',void_devoted:'COLD',aria:'WARY'},
+  void_devoted:{overseers:'COLD',crew_union:'COLD',the_awakened:'COLD',aria:'HOSTILE'},
+  aria:{overseers:'WARY',crew_union:'NEUTRAL',the_awakened:'WARY',void_devoted:'HOSTILE'}
+};
+
+const SPACE_FACTION_HOME={
+  overseers:'bridge',crew_union:'engineering',the_awakened:'cryo_wing',void_devoted:'crew_quarters',aria:'observation_deck'
+};
+
+// ── END GLITTERGOLD DATA ────────────────────────────────────────────────────
+
 // LOCATIONS
 const LOCATIONS={
-  newark:{name:'Newark',shortName:'NEWRK',ctrl:'hostile',faction:'iron_syndicate',svgX:323,svgY:159,travelDays:2,travelSupplies:15,travelTroopRisk:true,raidRisk:3,supplyPerTurn:12,features:['Factory districts','Iron Syndicate garrison','Industrial output'],flavor:'Smoke-choked factory city. Mayor Stahl runs it like a corporation \u2014 because it is one.'},
-  mountainside:{name:'Mountainside',shortName:'MTNSD',ctrl:'neutral',faction:'mountain_covenant',svgX:281,svgY:174,travelDays:2,travelSupplies:10,travelTroopRisk:false,raidRisk:1,supplyPerTurn:8,features:['Natural springs','Mountain fortress','Water filtration'],flavor:'High in the Watchungs. Clean water flows here. The Covenant guards it with religion and rifles.'},
-  tcnj:{name:'TCNJ Campus',shortName:'TCNJ',ctrl:'unclaimed',faction:'player',svgX:188,svgY:262,travelDays:0,travelSupplies:0,travelTroopRisk:false,raidRisk:2,supplyPerTurn:5,claimable:true,features:['Abandoned campus','Defensible buildings','Central location'],flavor:'The College of New Jersey \u2014 empty since 2669. Central, defensible, unclaimed. Yours if you want it.'},
-  trenton:{name:'Trenton',shortName:'TRENT',ctrl:'neutral',faction:'trenton_collective',svgX:192,svgY:272,travelDays:1,travelSupplies:8,travelTroopRisk:false,raidRisk:1,supplyPerTurn:10,features:['Farmland','Food stores','Collective governance'],flavor:'The breadbasket of NJ 2999. Chair King runs it by committee. It somehow works.'},
-  mcguire:{name:'McGuire AFB',shortName:'MCGRE',ctrl:'hostile',faction:'rust_eagles',svgX:228,svgY:316,travelDays:2,travelSupplies:12,travelTroopRisk:true,raidRisk:3,supplyPerTurn:10,features:['Military airstrip','Armory','Aircraft (fuel unknown)'],flavor:'Three generations of Air Force descendants who never left. General Rusk still runs daily drills.'},
-  lbi:{name:'LBI Harbor',shortName:'LBI',ctrl:'neutral',faction:'coastal_brotherhood',svgX:345,svgY:400,travelDays:3,travelSupplies:18,travelTroopRisk:false,raidRisk:2,supplyPerTurn:9,features:['Harbor','Trade routes','Smuggling network'],flavor:'Long Beach Island. Captain Salieri runs the most profitable port on the coast. Everything moves through here \u2014 for a price.'},
-  meridian_biolabs:{name:'Abandoned Facility',shortName:'???',ctrl:'unclaimed',faction:'player',svgX:195,svgY:115,travelDays:3,travelSupplies:16,travelTroopRisk:false,raidRisk:2,supplyPerTurn:7,claimable:true,revealName:'Brantover AI-Powered Biolabs',features:['Unknown — requires investigation'],flavor:"Something is out here in Warren County. The locals won't go near it. The contamination that poisons the Pine Barrens flows from this direction. Whatever this place is, it's been running on its own for a very long time."},
-  pine_barrens:{name:'Pine Barrens',shortName:'PNBRN',ctrl:'hostile',faction:'the_hollowed',svgX:272,svgY:386,travelDays:2,travelSupplies:12,travelTroopRisk:true,raidRisk:5,supplyPerTurn:0,features:['Brantover contamination zones','Hollowed hunting grounds','Chemical bog terrain'],flavor:"330 years of Brantover runoff pooling into the aquifer. The trees are wrong — too tall, too quiet, colors that have no name. The Hollowed call this home. Something else does too. Something that has been mutating here since before living memory.",jerseyDevil:true},
-  cape_may:{name:'Cape May Municipal',shortName:'CAPMY',ctrl:'neutral',faction:'subnet',svgX:159,svgY:552,travelDays:4,travelSupplies:22,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Underground bunker entrance','NJ-ADMIN-7 access terminal','Subnet relay nodes'],flavor:"Cape May Municipal Building \u2014 condemned since 2715. Three sub-basement levels below the public record. The Architect receives visitors, when it chooses to."},
+  newark:{name:'Newark',shortName:'NEWRK',ctrl:'hostile',faction:'iron_syndicate',svgX:310,svgY:155,travelDays:2,travelSupplies:15,travelTroopRisk:true,raidRisk:3,supplyPerTurn:12,features:['Factory districts','Iron Syndicate garrison','Industrial output'],flavor:'Smoke-choked factory city. Mayor Stahl runs it like a corporation \u2014 because it is one.'},
+  mountainside:{name:'Mountainside',shortName:'MTNSD',ctrl:'neutral',faction:'mountain_covenant',svgX:270,svgY:172,travelDays:2,travelSupplies:10,travelTroopRisk:false,raidRisk:1,supplyPerTurn:8,features:['Natural springs','Mountain fortress','Water filtration'],flavor:'High in the Watchungs. Clean water flows here. The Covenant guards it with religion and rifles.'},
+  tcnj:{name:'TCNJ Campus',shortName:'TCNJ',ctrl:'unclaimed',faction:'player',svgX:192,svgY:258,travelDays:0,travelSupplies:0,travelTroopRisk:false,raidRisk:2,supplyPerTurn:5,claimable:true,features:['Abandoned campus','Defensible buildings','Central location'],flavor:'The College of New Jersey \u2014 empty since 2669. Central, defensible, unclaimed. Yours if you want it.'},
+  trenton:{name:'Trenton',shortName:'TRENT',ctrl:'neutral',faction:'trenton_collective',svgX:192,svgY:270,travelDays:1,travelSupplies:8,travelTroopRisk:false,raidRisk:1,supplyPerTurn:10,features:['Farmland','Food stores','Collective governance'],flavor:'The breadbasket of NJ 2999. Chair King runs it by committee. It somehow works.'},
+  mcguire:{name:'McGuire AFB',shortName:'MCGRE',ctrl:'hostile',faction:'rust_eagles',svgX:228,svgY:310,travelDays:2,travelSupplies:12,travelTroopRisk:true,raidRisk:3,supplyPerTurn:10,features:['Military airstrip','Armory','Aircraft (fuel unknown)'],flavor:'Three generations of Air Force descendants who never left. General Rusk still runs daily drills.'},
+  lbi:{name:'LBI Harbor',shortName:'LBI',ctrl:'neutral',faction:'coastal_brotherhood',svgX:305,svgY:395,travelDays:3,travelSupplies:18,travelTroopRisk:false,raidRisk:2,supplyPerTurn:9,features:['Harbor','Trade routes','Smuggling network'],flavor:'Long Beach Island. Captain Salieri runs the most profitable port on the coast. Everything moves through here \u2014 for a price.'},
+  meridian_biolabs:{name:'Abandoned Facility',shortName:'???',ctrl:'unclaimed',faction:'player',svgX:155,svgY:133,travelDays:3,travelSupplies:16,travelTroopRisk:false,raidRisk:2,supplyPerTurn:7,claimable:true,revealName:'Brantover AI-Powered Biolabs',features:['Unknown — requires investigation'],flavor:"Something is out here in Warren County. The locals won't go near it. The contamination that poisons the Pine Barrens flows from this direction. Whatever this place is, it's been running on its own for a very long time."},
+  pine_barrens:{name:'Pine Barrens',shortName:'PNBRN',ctrl:'hostile',faction:'the_hollowed',svgX:248,svgY:365,travelDays:2,travelSupplies:12,travelTroopRisk:true,raidRisk:5,supplyPerTurn:0,features:['Brantover contamination zones','Hollowed hunting grounds','Chemical bog terrain'],flavor:"330 years of Brantover runoff pooling into the aquifer. The trees are wrong — too tall, too quiet, colors that have no name. The Hollowed call this home. Something else does too. Something that has been mutating here since before living memory.",jerseyDevil:true},
+  cape_may:{name:'Cape May Municipal',shortName:'CAPMY',ctrl:'neutral',faction:'subnet',svgX:158,svgY:550,travelDays:4,travelSupplies:22,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Underground bunker entrance','NJ-ADMIN-7 access terminal','Subnet relay nodes'],flavor:"Cape May Municipal Building \u2014 condemned since 2715. Three sub-basement levels below the public record. The Architect receives visitors, when it chooses to."},
   // ── SECONDARY LOCATIONS ──────────────────────────────────────────────────
-  hoboken:{name:'Hoboken',shortName:'HBKN',ctrl:'neutral',faction:null,secondary:true,svgX:354,svgY:159,travelDays:1,travelSupplies:6,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Black market PATH terminal','Five feuding Dockmaster families','River trade'],flavor:'A loud grimy river trade town where the old PATH terminal is now a black market and everyone fights about who\'s in charge.',randomEncounter:'The player has arrived in Hoboken. The five Dockmaster families are in open argument at the terminal. This is a random encounter \u2014 generate a quick scene where the player can intervene, mediate, exploit, or avoid the dispute. Provide 3 choices.'},
-  port_elizabeth:{name:'Port Elizabeth',shortName:'PRTELZ',ctrl:'neutral',faction:null,secondary:true,svgX:314,svgY:176,travelDays:1,travelSupplies:7,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Ancient shipping cranes','40-year-deep container stacks','Sealed crate economy'],flavor:'A maze city built between ancient cranes and container stacks. The entire economy runs on rumors about what\'s sealed inside the untouched crates.',randomEncounter:'The player arrives at Port Elizabeth. Scavengers are attempting to crack a sealed container that\'s been untouched for 40 years. This is a random encounter \u2014 generate a tense scene about what might be inside. Provide 3 choices.'},
-  newark_airport:{name:'Newark Airport',shortName:'NWKAIR',ctrl:'neutral',faction:null,secondary:true,svgX:323,svgY:170,travelDays:1,travelSupplies:6,travelTroopRisk:true,raidRisk:3,supplyPerTurn:0,features:['Half-scavenged terminal','Feral dog packs in Concourse C','The Controller in the tower'],flavor:'A vast half-scavenged terminal complex. Feral dogs own Concourse C. A man called The Controller still guides flights in the tower that never come.',randomEncounter:"The player enters Newark Airport ruins. The Controller's voice crackles over a working PA \u2014 he's calling in a landing for a flight that doesn't exist. This is a random encounter \u2014 generate a strange, tense scene involving The Controller. Provide 3 choices."},
-  middlesex:{name:'Middlesex',shortName:'MDLSX',ctrl:'neutral',faction:null,secondary:true,svgX:250,svgY:196,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Functional town council','Self-grown food','Trade-at-the-line policy'],flavor:'A hyper-local survivor suburb with a suspiciously functional town council. They grow their own food, want nothing from the wasteland, and will trade at the town line \u2014 not one step further.',randomEncounter:'The player approaches Middlesex. The town council is deliberating on whether to let you in at all. This is a random encounter \u2014 generate a scene where the player must negotiate (or bypass) the council\'s border policy. Provide 3 choices.'},
-  asbury_ruins:{name:'Asbury Ruins',shortName:'ASBRY',ctrl:'neutral',faction:null,secondary:true,svgX:358,svgY:272,travelDays:2,travelSupplies:9,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Boardwalk settlement','Stone Pony venue','Mayor Vic\'s charisma economy'],flavor:'A boardwalk settlement that survives on live music and the charisma of Mayor Vic. The Stone Pony still hosts shows every Friday \u2014 nobody attacks a town that loud.',randomEncounter:'The player arrives in Asbury Ruins during a Friday show. Mayor Vic spots them from the stage. This is a random encounter \u2014 generate a scene involving the show, Mayor Vic, and a crowd of residents. Provide 3 choices.'},
-  bound_brook:{name:'Bound Brook',shortName:'BNDBRK',ctrl:'neutral',faction:null,secondary:true,svgX:241,svgY:196,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Stilt-and-raft community','Permanently flooded since 2031','Polite indifference to visitors'],flavor:'Permanently flooded since 2031. The stilt-and-raft community waves politely at travelers passing through like nothing is wrong.',randomEncounter:'The player is navigating Bound Brook\'s flooded streets by raft. Something is moving under the water. This is a random encounter \u2014 generate a tense scene with the flooded environment as the setting. Provide 3 choices.'},
-  metuchen:{name:'Metuchen',shortName:'MTCHN',ctrl:'neutral',faction:null,secondary:true,svgX:281,svgY:203,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Ghost town','One functioning diner','22 years of daily service'],flavor:'A ghost town with one functioning diner. The owner has opened every single day for 22 years and makes the best coffee left in Jersey.',randomEncounter:'The player enters the Metuchen diner. The owner is the only person in the entire town. They set a cup of coffee on the counter without looking up. This is a random encounter \u2014 generate a quiet, strange scene with the diner owner. Provide 3 choices.'},
-  dunellen:{name:'Dunellen',shortName:'DUNLN',ctrl:'neutral',faction:null,secondary:true,svgX:256,svgY:192,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Abandoned town','One lit house','No one comes back'],flavor:'An abandoned town where one house always has its lights on. Everyone who goes to investigate never reports back.',randomEncounter:'The player sees the lit house in Dunellen. The light is on. The door is slightly open. This is a random encounter \u2014 generate a tense, atmospheric scene approaching the house. Make the outcome genuinely dangerous. Provide 3 choices.'},
-  manville:{name:'Manville',shortName:'MNVLL',ctrl:'neutral',faction:null,secondary:true,svgX:230,svgY:203,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Roadside shrine to 2041','Offerings from miles around','Absolute silence on the subject'],flavor:"A roadside shrine to an unnamed event from 2041 that locals from miles around leave offerings at \u2014 but nobody will discuss what happened.",randomEncounter:"The player finds the Manville shrine. Fresh offerings. A local is placing something at the base and won't meet the player's eyes. This is a random encounter \u2014 generate a scene where the player tries to learn what happened in 2041. The locals will not say. Provide 3 choices."},
-  netcong:{name:'Netcong',shortName:'NTCNG',ctrl:'neutral',faction:null,secondary:true,svgX:203,svgY:124,travelDays:2,travelSupplies:8,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Crossroads bulletin board','Always current regional intel','No one has seen the updater'],flavor:'A crossroads bulletin board with always-accurate, current regional intelligence. Nobody has ever seen who updates it.',randomEncounter:"The player reads the Netcong bulletin board. There's a note addressed to them by name \u2014 dated today. This is a random encounter \u2014 generate a tense, mysterious scene around the board. Provide 3 choices."},
+  hoboken:{name:'Hoboken',shortName:'HBKN',ctrl:'neutral',faction:null,secondary:true,svgX:338,svgY:155,travelDays:1,travelSupplies:6,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Black market PATH terminal','Five feuding Dockmaster families','River trade'],flavor:'A loud grimy river trade town where the old PATH terminal is now a black market and everyone fights about who\'s in charge.',randomEncounter:'The player has arrived in Hoboken. The five Dockmaster families are in open argument at the terminal. This is a random encounter \u2014 generate a quick scene where the player can intervene, mediate, exploit, or avoid the dispute. Provide 3 choices.'},
+  port_elizabeth:{name:'Port Elizabeth',shortName:'PRTELZ',ctrl:'neutral',faction:null,secondary:true,svgX:302,svgY:178,travelDays:1,travelSupplies:7,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Ancient shipping cranes','40-year-deep container stacks','Sealed crate economy'],flavor:'A maze city built between ancient cranes and container stacks. The entire economy runs on rumors about what\'s sealed inside the untouched crates.',randomEncounter:'The player arrives at Port Elizabeth. Scavengers are attempting to crack a sealed container that\'s been untouched for 40 years. This is a random encounter \u2014 generate a tense scene about what might be inside. Provide 3 choices.'},
+  newark_airport:{name:'Newark Airport',shortName:'NWKAIR',ctrl:'neutral',faction:null,secondary:true,svgX:298,svgY:168,travelDays:1,travelSupplies:6,travelTroopRisk:true,raidRisk:3,supplyPerTurn:0,features:['Half-scavenged terminal','Feral dog packs in Concourse C','The Controller in the tower'],flavor:'A vast half-scavenged terminal complex. Feral dogs own Concourse C. A man called The Controller still guides flights in the tower that never come.',randomEncounter:"The player enters Newark Airport ruins. The Controller's voice crackles over a working PA \u2014 he's calling in a landing for a flight that doesn't exist. This is a random encounter \u2014 generate a strange, tense scene involving The Controller. Provide 3 choices."},
+  middlesex:{name:'Middlesex',shortName:'MDLSX',ctrl:'neutral',faction:null,secondary:true,svgX:248,svgY:198,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Functional town council','Self-grown food','Trade-at-the-line policy'],flavor:'A hyper-local survivor suburb with a suspiciously functional town council. They grow their own food, want nothing from the wasteland, and will trade at the town line \u2014 not one step further.',randomEncounter:'The player approaches Middlesex. The town council is deliberating on whether to let you in at all. This is a random encounter \u2014 generate a scene where the player must negotiate (or bypass) the council\'s border policy. Provide 3 choices.'},
+  asbury_ruins:{name:'Asbury Ruins',shortName:'ASBRY',ctrl:'neutral',faction:null,secondary:true,svgX:340,svgY:270,travelDays:2,travelSupplies:9,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Boardwalk settlement','Stone Pony venue','Mayor Vic\'s charisma economy'],flavor:'A boardwalk settlement that survives on live music and the charisma of Mayor Vic. The Stone Pony still hosts shows every Friday \u2014 nobody attacks a town that loud.',randomEncounter:'The player arrives in Asbury Ruins during a Friday show. Mayor Vic spots them from the stage. This is a random encounter \u2014 generate a scene involving the show, Mayor Vic, and a crowd of residents. Provide 3 choices.'},
+  bound_brook:{name:'Bound Brook',shortName:'BNDBRK',ctrl:'neutral',faction:null,secondary:true,svgX:235,svgY:192,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Stilt-and-raft community','Permanently flooded since 2031','Polite indifference to visitors'],flavor:'Permanently flooded since 2031. The stilt-and-raft community waves politely at travelers passing through like nothing is wrong.',randomEncounter:'The player is navigating Bound Brook\'s flooded streets by raft. Something is moving under the water. This is a random encounter \u2014 generate a tense scene with the flooded environment as the setting. Provide 3 choices.'},
+  metuchen:{name:'Metuchen',shortName:'MTCHN',ctrl:'neutral',faction:null,secondary:true,svgX:272,svgY:204,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Ghost town','One functioning diner','22 years of daily service'],flavor:'A ghost town with one functioning diner. The owner has opened every single day for 22 years and makes the best coffee left in Jersey.',randomEncounter:'The player enters the Metuchen diner. The owner is the only person in the entire town. They set a cup of coffee on the counter without looking up. This is a random encounter \u2014 generate a quiet, strange scene with the diner owner. Provide 3 choices.'},
+  dunellen:{name:'Dunellen',shortName:'DUNLN',ctrl:'neutral',faction:null,secondary:true,svgX:252,svgY:190,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Abandoned town','One lit house','No one comes back'],flavor:'An abandoned town where one house always has its lights on. Everyone who goes to investigate never reports back.',randomEncounter:'The player sees the lit house in Dunellen. The light is on. The door is slightly open. This is a random encounter \u2014 generate a tense, atmospheric scene approaching the house. Make the outcome genuinely dangerous. Provide 3 choices.'},
+  manville:{name:'Manville',shortName:'MNVLL',ctrl:'neutral',faction:null,secondary:true,svgX:222,svgY:204,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Roadside shrine to 2041','Offerings from miles around','Absolute silence on the subject'],flavor:"A roadside shrine to an unnamed event from 2041 that locals from miles around leave offerings at \u2014 but nobody will discuss what happened.",randomEncounter:"The player finds the Manville shrine. Fresh offerings. A local is placing something at the base and won't meet the player's eyes. This is a random encounter \u2014 generate a scene where the player tries to learn what happened in 2041. The locals will not say. Provide 3 choices."},
+  netcong:{name:'Netcong',shortName:'NTCNG',ctrl:'neutral',faction:null,secondary:true,svgX:208,svgY:122,travelDays:2,travelSupplies:8,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Crossroads bulletin board','Always current regional intel','No one has seen the updater'],flavor:'A crossroads bulletin board with always-accurate, current regional intelligence. Nobody has ever seen who updates it.',randomEncounter:"The player reads the Netcong bulletin board. There's a note addressed to them by name \u2014 dated today. This is a random encounter \u2014 generate a tense, mysterious scene around the board. Provide 3 choices."},
   // ── NEW COUNTY TOWNS ────────────────────────────────────────────────────────
-  newton:{name:'Newton',shortName:'NWTN',ctrl:'neutral',faction:null,secondary:true,svgX:194,svgY:89,travelDays:3,travelSupplies:12,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Mountain trading post','Fur trapper community','High-altitude crops'],flavor:'A mountain trading post where Sussex County trappers barter pelts and rumors. Cold up here. Quiet. They like it that way.',randomEncounter:'The player arrives in Newton. A trapper caravan has come down from High Point with something unusual to sell. This is a random encounter \u2014 generate a scene around the trade. Provide 3 choices.'},
-  paterson:{name:'Paterson',shortName:'PTRN',ctrl:'neutral',faction:null,secondary:true,svgX:323,svgY:120,travelDays:2,travelSupplies:8,travelTroopRisk:true,raidRisk:3,supplyPerTurn:0,features:['Great Falls hydropower','Factory ruins','Three rival gangs'],flavor:'The Great Falls still thunder. Three gangs fight over the hydroelectric plant that somehow still works. Paterson is loud, violent, and electrified.',randomEncounter:'The player enters Paterson. Two of the three gangs are in a standoff at the Falls. The power grid flickers. This is a random encounter \u2014 generate a tense scene. Provide 3 choices.'},
-  hackensack:{name:'Hackensack',shortName:'HCKNSK',ctrl:'neutral',faction:null,secondary:true,svgX:352,svgY:126,travelDays:2,travelSupplies:7,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Suburban fortress','HOA militia','Preserved pre-collapse homes'],flavor:'The homeowners association survived the apocalypse and became a militia. White picket fences reinforced with steel. Lawns still mowed. Trespassers prosecuted.',randomEncounter:'The player approaches Hackensack. An HOA patrol in matching uniforms demands a residency permit. This is a random encounter \u2014 generate a scene with the HOA militia. Provide 3 choices.'},
-  belvidere:{name:'Belvidere',shortName:'BLVDR',ctrl:'neutral',faction:null,secondary:true,svgX:121,svgY:139,travelDays:2,travelSupplies:10,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Delaware River crossing','PA border watch','Bridge toll operation'],flavor:'The last bridge over the Delaware that still holds weight. Belvidere collects tolls and watches the Pennsylvania side with growing unease.',randomEncounter:'The player reaches Belvidere. The bridge watchers have spotted movement on the PA side \u2014 black-hat silhouettes. This is a random encounter \u2014 generate a tense border scene. Provide 3 choices.'},
-  morristown:{name:'Morristown',shortName:'MRTWN',ctrl:'neutral',faction:null,secondary:true,svgX:256,svgY:146,travelDays:2,travelSupplies:8,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Washington\'s Winter HQ','Historical preservation cult','Weapons cache in museum'],flavor:'A preservation cult maintains the Revolutionary War sites as if Washington might return. The museum is their armory. History is a religion here.',randomEncounter:'The player visits Morristown. The Preservationists are holding a ceremony at Washington\'s Headquarters. They notice the player watching. This is a random encounter \u2014 generate a scene with the history cult. Provide 3 choices.'},
-  jersey_city:{name:'Jersey City',shortName:'JRCTY',ctrl:'neutral',faction:null,secondary:true,svgX:360,svgY:161,travelDays:2,travelSupplies:8,travelTroopRisk:true,raidRisk:3,supplyPerTurn:0,features:['NYC skyline view','Warlord border zone','Black market corridor'],flavor:'The last stop before the New York warlord state. Nobody crosses the Hudson anymore. Jersey City survives by being too useful to destroy \u2014 the black market corridor.',randomEncounter:'The player enters Jersey City. A NYC warlord envoy has crossed the Hudson in an armored barge. Nobody expected this. This is a random encounter \u2014 generate a tense diplomatic scene. Provide 3 choices.'},
-  flemington:{name:'Flemington',shortName:'FLMTN',ctrl:'neutral',faction:null,secondary:true,svgX:170,svgY:209,travelDays:2,travelSupplies:7,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Courthouse still in use','Frontier justice','Weekly trials'],flavor:'The courthouse still holds trials every Thursday. Judge Marta Cole runs frontier justice \u2014 fair, fast, and final. Appeals are not a concept she entertains.',randomEncounter:'The player arrives on trial day in Flemington. Judge Cole is sentencing a scavenger for border theft. She spots the player. This is a random encounter \u2014 generate a courtroom scene. Provide 3 choices.'},
-  somerville:{name:'Somerville',shortName:'SMRVL',ctrl:'neutral',faction:null,secondary:true,svgX:225,svgY:196,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Trading crossroads','Weekly market','Information hub'],flavor:'Sits at the crossroads where three old highways meet. The weekly market draws traders from every faction. Information moves here faster than anywhere in NJ.',randomEncounter:'The player arrives at the Somerville market. A trader is selling intelligence about an upcoming faction move. The price is steep. This is a random encounter \u2014 generate a market scene. Provide 3 choices.'},
-  new_brunswick:{name:'New Brunswick',shortName:'NWBRK',ctrl:'neutral',faction:null,secondary:true,svgX:261,svgY:214,travelDays:1,travelSupplies:6,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Rutgers University ruins','Library archives','Student commune'],flavor:'The Rutgers campus is a commune now. They still hold classes \u2014 practical ones. Engineering, agriculture, combat medicine. The library is the most valuable building in central Jersey.',randomEncounter:'The player enters the Rutgers ruins. The commune is debating whether to share their medical knowledge with outsiders. This is a random encounter \u2014 generate a scene at the old university. Provide 3 choices.'},
-  freehold:{name:'Freehold',shortName:'FRHOLD',ctrl:'neutral',faction:null,secondary:true,svgX:301,svgY:264,travelDays:2,travelSupplies:9,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Horse cavalry','Open grassland','Mounted patrols'],flavor:'Horse country. The Freehold cavalry are the fastest mounted force in NJ \u2014 descendants of equestrian families who bred through the collapse. They hire out as mercenaries.',randomEncounter:'The player encounters a Freehold cavalry patrol. The captain offers a deal \u2014 service for protection. This is a random encounter \u2014 generate a scene with the mounted riders. Provide 3 choices.'},
-  mount_holly:{name:'Mount Holly',shortName:'MTHLY',ctrl:'neutral',faction:null,secondary:true,svgX:186,svgY:323,travelDays:2,travelSupplies:8,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Burlington county seat','Agricultural hub','Grain storage'],flavor:'The old Burlington County seat. Mount Holly sits on the richest farmland south of Trenton. The grain silos are the real power here.',randomEncounter:'The player arrives in Mount Holly. The grain council is meeting about a supply dispute with a neighboring settlement. This is a random encounter \u2014 generate a scene about the food chain. Provide 3 choices.'},
-  toms_river:{name:'Toms River',shortName:'TMSRV',ctrl:'neutral',faction:null,secondary:true,svgX:316,svgY:331,travelDays:2,travelSupplies:10,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Coastal fishing fleet','Boat repair','River mouth trade'],flavor:'A fishing settlement at the river mouth. Toms River builds boats and catches what the ocean gives. Pragmatic, salt-weathered, suspicious of inland politics.',randomEncounter:'The player arrives at the docks. A fishing crew has pulled something from the ocean floor that is not fish. This is a random encounter \u2014 generate a scene at the docks. Provide 3 choices.'},
-  camden:{name:'Camden',shortName:'CMDN',ctrl:'neutral',faction:null,secondary:true,svgX:112,svgY:336,travelDays:3,travelSupplies:14,travelTroopRisk:true,raidRisk:4,supplyPerTurn:0,features:['Philly border zone','Extremely dangerous','Scavenger gangs'],flavor:'Directly across the Delaware from Philadelphia. Camden makes the Pine Barrens look inviting. The scavenger gangs here are feral. Nobody comes to Camden on purpose.',randomEncounter:'The player has entered Camden. This was a mistake. Three scavenger crews have noticed them simultaneously. This is a random encounter \u2014 generate a very dangerous scene. Combat is likely. Provide 3 choices.'},
-  woodbury:{name:'Woodbury',shortName:'WDBRY',ctrl:'neutral',faction:null,secondary:true,svgX:106,svgY:355,travelDays:2,travelSupplies:9,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Quiet survivor town','Underground bunkers','Radio station'],flavor:'A quiet town that survived by digging in. The bunker network is extensive. They run a radio station that broadcasts static and coded messages nobody has cracked.',randomEncounter:'The player arrives in Woodbury. The radio station is broadcasting something different today \u2014 a voice, not static. Residents are gathered around speakers. This is a random encounter \u2014 generate a scene. Provide 3 choices.'},
-  salem:{name:'Salem',shortName:'SALEM',ctrl:'neutral',faction:null,secondary:true,svgX:35,svgY:414,travelDays:3,travelSupplies:14,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Ancient community','Oak tree older than America','Sealed archives'],flavor:'Salem has been here since 1675. The oak tree is older than the United States was. The community is insular, strange, and deeply private about their sealed archives.',randomEncounter:'The player enters Salem. The elders are conducting a ceremony around the ancient oak. They stop when they see you. This is a random encounter \u2014 generate an unsettling scene. Provide 3 choices.'},
-  bridgeton:{name:'Bridgeton',shortName:'BRGTN',ctrl:'neutral',faction:null,secondary:true,svgX:88,svgY:445,travelDays:3,travelSupplies:12,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Glass factory ruins','Master crafters','Artisan trade'],flavor:'The glass factories still run \u2014 small scale, handblown. Bridgeton crafters make the finest glass in the wasteland. Lenses, bottles, weapon scopes. Everything has a price.',randomEncounter:'The player visits Bridgeton. A master glassblower has created something unusual \u2014 a device, not a vessel. They want to show you. This is a random encounter \u2014 generate a scene in the glass works. Provide 3 choices.'},
-  mays_landing:{name:'Mays Landing',shortName:'MYSLND',ctrl:'neutral',faction:null,secondary:true,svgX:199,svgY:441,travelDays:2,travelSupplies:10,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['River junction','Inland port','Halfway house to AC'],flavor:'The Great Egg Harbor River runs through here. Mays Landing is the last stop before Atlantic City \u2014 a waypoint where travelers rest, resupply, and reconsider.',randomEncounter:'The player stops in Mays Landing. A group of Atlantic City casino refugees is warning people not to go south. This is a random encounter \u2014 generate a scene at the waypoint. Provide 3 choices.'},
+  newton:{name:'Newton',shortName:'NWTN',ctrl:'neutral',faction:null,secondary:true,svgX:190,svgY:82,travelDays:3,travelSupplies:12,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Mountain trading post','Fur trapper community','High-altitude crops'],flavor:'A mountain trading post where Sussex County trappers barter pelts and rumors. Cold up here. Quiet. They like it that way.',randomEncounter:'The player arrives in Newton. A trapper caravan has come down from High Point with something unusual to sell. This is a random encounter \u2014 generate a scene around the trade. Provide 3 choices.'},
+  paterson:{name:'Paterson',shortName:'PTRN',ctrl:'neutral',faction:null,secondary:true,svgX:312,svgY:115,travelDays:2,travelSupplies:8,travelTroopRisk:true,raidRisk:3,supplyPerTurn:0,features:['Great Falls hydropower','Factory ruins','Three rival gangs'],flavor:'The Great Falls still thunder. Three gangs fight over the hydroelectric plant that somehow still works. Paterson is loud, violent, and electrified.',randomEncounter:'The player enters Paterson. Two of the three gangs are in a standoff at the Falls. The power grid flickers. This is a random encounter \u2014 generate a tense scene. Provide 3 choices.'},
+  hackensack:{name:'Hackensack',shortName:'HCKNSK',ctrl:'neutral',faction:null,secondary:true,svgX:338,svgY:122,travelDays:2,travelSupplies:7,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Suburban fortress','HOA militia','Preserved pre-collapse homes'],flavor:'The homeowners association survived the apocalypse and became a militia. White picket fences reinforced with steel. Lawns still mowed. Trespassers prosecuted.',randomEncounter:'The player approaches Hackensack. An HOA patrol in matching uniforms demands a residency permit. This is a random encounter \u2014 generate a scene with the HOA militia. Provide 3 choices.'},
+  belvidere:{name:'Belvidere',shortName:'BLVDR',ctrl:'neutral',faction:null,secondary:true,svgX:128,svgY:136,travelDays:2,travelSupplies:10,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Delaware River crossing','PA border watch','Bridge toll operation'],flavor:'The last bridge over the Delaware that still holds weight. Belvidere collects tolls and watches the Pennsylvania side with growing unease.',randomEncounter:'The player reaches Belvidere. The bridge watchers have spotted movement on the PA side \u2014 black-hat silhouettes. This is a random encounter \u2014 generate a tense border scene. Provide 3 choices.'},
+  morristown:{name:'Morristown',shortName:'MRTWN',ctrl:'neutral',faction:null,secondary:true,svgX:248,svgY:142,travelDays:2,travelSupplies:8,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Washington\'s Winter HQ','Historical preservation cult','Weapons cache in museum'],flavor:'A preservation cult maintains the Revolutionary War sites as if Washington might return. The museum is their armory. History is a religion here.',randomEncounter:'The player visits Morristown. The Preservationists are holding a ceremony at Washington\'s Headquarters. They notice the player watching. This is a random encounter \u2014 generate a scene with the history cult. Provide 3 choices.'},
+  jersey_city:{name:'Jersey City',shortName:'JRCTY',ctrl:'neutral',faction:null,secondary:true,svgX:338,svgY:170,travelDays:2,travelSupplies:8,travelTroopRisk:true,raidRisk:3,supplyPerTurn:0,features:['NYC skyline view','Warlord border zone','Black market corridor'],flavor:'The last stop before the New York warlord state. Nobody crosses the Hudson anymore. Jersey City survives by being too useful to destroy \u2014 the black market corridor.',randomEncounter:'The player enters Jersey City. A NYC warlord envoy has crossed the Hudson in an armored barge. Nobody expected this. This is a random encounter \u2014 generate a tense diplomatic scene. Provide 3 choices.'},
+  flemington:{name:'Flemington',shortName:'FLMTN',ctrl:'neutral',faction:null,secondary:true,svgX:172,svgY:208,travelDays:2,travelSupplies:7,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Courthouse still in use','Frontier justice','Weekly trials'],flavor:'The courthouse still holds trials every Thursday. Judge Marta Cole runs frontier justice \u2014 fair, fast, and final. Appeals are not a concept she entertains.',randomEncounter:'The player arrives on trial day in Flemington. Judge Cole is sentencing a scavenger for border theft. She spots the player. This is a random encounter \u2014 generate a courtroom scene. Provide 3 choices.'},
+  somerville:{name:'Somerville',shortName:'SMRVL',ctrl:'neutral',faction:null,secondary:true,svgX:220,svgY:192,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Trading crossroads','Weekly market','Information hub'],flavor:'Sits at the crossroads where three old highways meet. The weekly market draws traders from every faction. Information moves here faster than anywhere in NJ.',randomEncounter:'The player arrives at the Somerville market. A trader is selling intelligence about an upcoming faction move. The price is steep. This is a random encounter \u2014 generate a market scene. Provide 3 choices.'},
+  new_brunswick:{name:'New Brunswick',shortName:'NWBRK',ctrl:'neutral',faction:null,secondary:true,svgX:260,svgY:212,travelDays:1,travelSupplies:6,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Rutgers University ruins','Library archives','Student commune'],flavor:'The Rutgers campus is a commune now. They still hold classes \u2014 practical ones. Engineering, agriculture, combat medicine. The library is the most valuable building in central Jersey.',randomEncounter:'The player enters the Rutgers ruins. The commune is debating whether to share their medical knowledge with outsiders. This is a random encounter \u2014 generate a scene at the old university. Provide 3 choices.'},
+  freehold:{name:'Freehold',shortName:'FRHOLD',ctrl:'neutral',faction:null,secondary:true,svgX:295,svgY:260,travelDays:2,travelSupplies:9,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Horse cavalry','Open grassland','Mounted patrols'],flavor:'Horse country. The Freehold cavalry are the fastest mounted force in NJ \u2014 descendants of equestrian families who bred through the collapse. They hire out as mercenaries.',randomEncounter:'The player encounters a Freehold cavalry patrol. The captain offers a deal \u2014 service for protection. This is a random encounter \u2014 generate a scene with the mounted riders. Provide 3 choices.'},
+  mount_holly:{name:'Mount Holly',shortName:'MTHLY',ctrl:'neutral',faction:null,secondary:true,svgX:185,svgY:318,travelDays:2,travelSupplies:8,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Burlington county seat','Agricultural hub','Grain storage'],flavor:'The old Burlington County seat. Mount Holly sits on the richest farmland south of Trenton. The grain silos are the real power here.',randomEncounter:'The player arrives in Mount Holly. The grain council is meeting about a supply dispute with a neighboring settlement. This is a random encounter \u2014 generate a scene about the food chain. Provide 3 choices.'},
+  toms_river:{name:'Toms River',shortName:'TMSRV',ctrl:'neutral',faction:null,secondary:true,svgX:310,svgY:328,travelDays:2,travelSupplies:10,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Coastal fishing fleet','Boat repair','River mouth trade'],flavor:'A fishing settlement at the river mouth. Toms River builds boats and catches what the ocean gives. Pragmatic, salt-weathered, suspicious of inland politics.',randomEncounter:'The player arrives at the docks. A fishing crew has pulled something from the ocean floor that is not fish. This is a random encounter \u2014 generate a scene at the docks. Provide 3 choices.'},
+  camden:{name:'Camden',shortName:'CMDN',ctrl:'neutral',faction:null,secondary:true,svgX:118,svgY:330,travelDays:3,travelSupplies:14,travelTroopRisk:true,raidRisk:4,supplyPerTurn:0,features:['Philly border zone','Extremely dangerous','Scavenger gangs'],flavor:'Directly across the Delaware from Philadelphia. Camden makes the Pine Barrens look inviting. The scavenger gangs here are feral. Nobody comes to Camden on purpose.',randomEncounter:'The player has entered Camden. This was a mistake. Three scavenger crews have noticed them simultaneously. This is a random encounter \u2014 generate a very dangerous scene. Combat is likely. Provide 3 choices.'},
+  woodbury:{name:'Woodbury',shortName:'WDBRY',ctrl:'neutral',faction:null,secondary:true,svgX:115,svgY:352,travelDays:2,travelSupplies:9,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Quiet survivor town','Underground bunkers','Radio station'],flavor:'A quiet town that survived by digging in. The bunker network is extensive. They run a radio station that broadcasts static and coded messages nobody has cracked.',randomEncounter:'The player arrives in Woodbury. The radio station is broadcasting something different today \u2014 a voice, not static. Residents are gathered around speakers. This is a random encounter \u2014 generate a scene. Provide 3 choices.'},
+  salem:{name:'Salem',shortName:'SALEM',ctrl:'neutral',faction:null,secondary:true,svgX:55,svgY:412,travelDays:3,travelSupplies:14,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Ancient community','Oak tree older than America','Sealed archives'],flavor:'Salem has been here since 1675. The oak tree is older than the United States was. The community is insular, strange, and deeply private about their sealed archives.',randomEncounter:'The player enters Salem. The elders are conducting a ceremony around the ancient oak. They stop when they see you. This is a random encounter \u2014 generate an unsettling scene. Provide 3 choices.'},
+  bridgeton:{name:'Bridgeton',shortName:'BRGTN',ctrl:'neutral',faction:null,secondary:true,svgX:95,svgY:440,travelDays:3,travelSupplies:12,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Glass factory ruins','Master crafters','Artisan trade'],flavor:'The glass factories still run \u2014 small scale, handblown. Bridgeton crafters make the finest glass in the wasteland. Lenses, bottles, weapon scopes. Everything has a price.',randomEncounter:'The player visits Bridgeton. A master glassblower has created something unusual \u2014 a device, not a vessel. They want to show you. This is a random encounter \u2014 generate a scene in the glass works. Provide 3 choices.'},
+  mays_landing:{name:'Mays Landing',shortName:'MYSLND',ctrl:'neutral',faction:null,secondary:true,svgX:198,svgY:435,travelDays:2,travelSupplies:10,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['River junction','Inland port','Halfway house to AC'],flavor:'The Great Egg Harbor River runs through here. Mays Landing is the last stop before Atlantic City \u2014 a waypoint where travelers rest, resupply, and reconsider.',randomEncounter:'The player stops in Mays Landing. A group of Atlantic City casino refugees is warning people not to go south. This is a random encounter \u2014 generate a scene at the waypoint. Provide 3 choices.'},
   // ── NEW TOWNS (Phase 3) ────────────────────────────────────────────────────
-  summit:{name:'Summit',shortName:'SUMMT',ctrl:'neutral',faction:null,secondary:true,svgX:290,svgY:162,travelDays:1,travelSupplies:6,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Hilltop rail trading post','Toll corridor','Information market'],flavor:'Perched on the Watchung ridge where the old rail line crosses. Summit controls the pass — every trader moving east-west pays the toll. Information is the real currency here.',randomEncounter:'The player arrives at Summit\'s rail station. The toll master has intel for sale — but the price is a favor, not gold. This is a random encounter — generate a scene at the hilltop trading post. Provide 3 choices.'},
-  berkeley_heights:{name:'Berkeley Heights',shortName:'BRKHT',ctrl:'neutral',faction:null,secondary:true,svgX:268,svgY:168,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Research enclave','Salvaged lab equipment','Medical supplies'],flavor:'A quiet enclave of former Bell Labs researchers and their descendants. They salvage and rebuild pre-collapse laboratory equipment. Best medical supplies outside of Brantover — and much safer.',randomEncounter:'The player enters Berkeley Heights. The research council is testing a device recovered from a Brantover shipment. Something is going wrong. This is a random encounter — generate a tense scene. Provide 3 choices.'},
-  westfield:{name:'Westfield',shortName:'WSTFD',ctrl:'neutral',faction:null,secondary:true,svgX:295,svgY:178,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Maintained suburb','Corporate council','Outsiders tolerated'],flavor:'Westfield maintained its suburb aesthetic through sheer stubbornness. The corporate council runs it like a pre-collapse HOA with teeth. Clean streets, working lights, and a deep suspicion of anyone who doesn\'t own property.',randomEncounter:'The player walks down Westfield\'s maintained main street. A council representative approaches with a business proposition — and a veiled threat. This is a random encounter — generate a scene. Provide 3 choices.'},
-  warren_twp:{name:'Warren Township',shortName:'WARRN',ctrl:'neutral',faction:null,secondary:true,svgX:245,svgY:183,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Farm community','Grain-for-water trade','Covenant supply line'],flavor:'Rolling farmland in Somerset County. Warren Township trades grain to the Mountain Covenant in exchange for clean Watchung water. It\'s the most important supply chain in central Jersey and both sides know it.',randomEncounter:'The player arrives during a grain delivery to a Covenant caravan. There\'s a dispute over the exchange rate. Both sides are armed. This is a random encounter — generate a tense trade scene. Provide 3 choices.'},
-  union_twp:{name:'Union Township',shortName:'UNION',ctrl:'neutral',faction:null,secondary:true,svgX:303,svgY:168,travelDays:1,travelSupplies:5,travelTroopRisk:true,raidRisk:2,supplyPerTurn:0,features:['Industrial sprawl','Caught between factions','Scrap processing'],flavor:'An industrial sprawl caught between the Syndicate\'s sphere and the central corridor. Union processes scrap metal from the old factories — everyone wants what they produce, nobody wants to protect them.',randomEncounter:'The player enters Union Township. A Syndicate enforcer and a Covenant trader are both demanding exclusive scrap rights from the township elder. This is a random encounter — generate a scene. Provide 3 choices.'},
-  stafford_twp:{name:'Stafford Township',shortName:'STFRD',ctrl:'neutral',faction:null,secondary:true,svgX:301,svgY:386,travelDays:2,travelSupplies:10,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Coastal fishing','Marsh settlement','Pine Barrens treeline watch'],flavor:'A marsh settlement on the edge of the Pine Barrens. Stafford watches the treeline and fishes the bay. They know when the Hollowed move before anyone else — and they sell that information.',randomEncounter:'The player arrives in Stafford. The night watch has spotted something moving along the Pine Barrens treeline — not Hollowed, something else. This is a random encounter — generate a tense scene. Provide 3 choices.'},
+  summit:{name:'Summit',shortName:'SUMMT',ctrl:'neutral',faction:null,secondary:true,svgX:285,svgY:160,travelDays:1,travelSupplies:6,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Hilltop rail trading post','Toll corridor','Information market'],flavor:'Perched on the Watchung ridge where the old rail line crosses. Summit controls the pass — every trader moving east-west pays the toll. Information is the real currency here.',randomEncounter:'The player arrives at Summit\'s rail station. The toll master has intel for sale — but the price is a favor, not gold. This is a random encounter — generate a scene at the hilltop trading post. Provide 3 choices.'},
+  berkeley_heights:{name:'Berkeley Heights',shortName:'BRKHT',ctrl:'neutral',faction:null,secondary:true,svgX:256,svgY:168,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Research enclave','Salvaged lab equipment','Medical supplies'],flavor:'A quiet enclave of former Bell Labs researchers and their descendants. They salvage and rebuild pre-collapse laboratory equipment. Best medical supplies outside of Brantover — and much safer.',randomEncounter:'The player enters Berkeley Heights. The research council is testing a device recovered from a Brantover shipment. Something is going wrong. This is a random encounter — generate a tense scene. Provide 3 choices.'},
+  westfield:{name:'Westfield',shortName:'WSTFD',ctrl:'neutral',faction:null,secondary:true,svgX:288,svgY:180,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Maintained suburb','Corporate council','Outsiders tolerated'],flavor:'Westfield maintained its suburb aesthetic through sheer stubbornness. The corporate council runs it like a pre-collapse HOA with teeth. Clean streets, working lights, and a deep suspicion of anyone who doesn\'t own property.',randomEncounter:'The player walks down Westfield\'s maintained main street. A council representative approaches with a business proposition — and a veiled threat. This is a random encounter — generate a scene. Provide 3 choices.'},
+  warren_twp:{name:'Warren Township',shortName:'WARRN',ctrl:'neutral',faction:null,secondary:true,svgX:240,svgY:178,travelDays:1,travelSupplies:5,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Farm community','Grain-for-water trade','Covenant supply line'],flavor:'Rolling farmland in Somerset County. Warren Township trades grain to the Mountain Covenant in exchange for clean Watchung water. It\'s the most important supply chain in central Jersey and both sides know it.',randomEncounter:'The player arrives during a grain delivery to a Covenant caravan. There\'s a dispute over the exchange rate. Both sides are armed. This is a random encounter — generate a tense trade scene. Provide 3 choices.'},
+  union_twp:{name:'Union Township',shortName:'UNION',ctrl:'neutral',faction:null,secondary:true,svgX:305,svgY:162,travelDays:1,travelSupplies:5,travelTroopRisk:true,raidRisk:2,supplyPerTurn:0,features:['Industrial sprawl','Caught between factions','Scrap processing'],flavor:'An industrial sprawl caught between the Syndicate\'s sphere and the central corridor. Union processes scrap metal from the old factories — everyone wants what they produce, nobody wants to protect them.',randomEncounter:'The player enters Union Township. A Syndicate enforcer and a Covenant trader are both demanding exclusive scrap rights from the township elder. This is a random encounter — generate a scene. Provide 3 choices.'},
+  stafford_twp:{name:'Stafford Township',shortName:'STFRD',ctrl:'neutral',faction:null,secondary:true,svgX:298,svgY:380,travelDays:2,travelSupplies:10,travelTroopRisk:false,raidRisk:2,supplyPerTurn:0,features:['Coastal fishing','Marsh settlement','Pine Barrens treeline watch'],flavor:'A marsh settlement on the edge of the Pine Barrens. Stafford watches the treeline and fishes the bay. They know when the Hollowed move before anyone else — and they sell that information.',randomEncounter:'The player arrives in Stafford. The night watch has spotted something moving along the Pine Barrens treeline — not Hollowed, something else. This is a random encounter — generate a tense scene. Provide 3 choices.'},
   // ── ATLANTIC CITY ─────────────────────────────────────────────────────────
-  atlantic_city:{name:'Atlantic City Casino',shortName:'ATLCT',ctrl:'neutral',faction:'subnet',svgX:268,svgY:460,travelDays:3,travelSupplies:14,travelTroopRisk:false,raidRisk:1,supplyPerTurn:4,casinoEntry:true,features:['The Boardwalk Grand Casino','Employee-operated \u2014 staff run the show','Neutral ground \u2014 all weapons checked'],flavor:"The only fully-lit building on the Jersey Shore. The employees run everything \u2014 dealers, bartenders, pit bosses, security. They were hired through intermediaries and have never met whoever owns the place. They don't ask questions. They get paid in gold and that's enough. The chips are real gold. The drinks are real. The odds are... managed."},
+  atlantic_city:{name:'Atlantic City Casino',shortName:'ATLCT',ctrl:'neutral',faction:'subnet',svgX:260,svgY:455,travelDays:3,travelSupplies:14,travelTroopRisk:false,raidRisk:1,supplyPerTurn:4,casinoEntry:true,features:['The Boardwalk Grand Casino','Employee-operated \u2014 staff run the show','Neutral ground \u2014 all weapons checked'],flavor:"The only fully-lit building on the Jersey Shore. The employees run everything \u2014 dealers, bartenders, pit bosses, security. They were hired through intermediaries and have never met whoever owns the place. They don't ask questions. They get paid in gold and that's enough. The chips are real gold. The drinks are real. The odds are... managed."},
 };
 // County map alternate coordinates for all locations
 const COUNTY_COORDS={
-  newark:{cX:323,cY:159},mountainside:{cX:281,cY:174},tcnj:{cX:188,cY:262},trenton:{cX:192,cY:272},
-  mcguire:{cX:228,cY:316},lbi:{cX:345,cY:400},meridian_biolabs:{cX:195,cY:115},pine_barrens:{cX:272,cY:386},
-  atlantic_city:{cX:268,cY:460},cape_may:{cX:159,cY:552},
-  hoboken:{cX:354,cY:159},port_elizabeth:{cX:314,cY:176},newark_airport:{cX:323,cY:170},
-  middlesex:{cX:250,cY:196},asbury_ruins:{cX:358,cY:272},bound_brook:{cX:241,cY:196},
-  metuchen:{cX:281,cY:203},dunellen:{cX:256,cY:192},manville:{cX:230,cY:203},netcong:{cX:203,cY:124},
-  newton:{cX:194,cY:89},paterson:{cX:323,cY:120},hackensack:{cX:352,cY:126},belvidere:{cX:121,cY:139},
-  morristown:{cX:256,cY:146},jersey_city:{cX:360,cY:161},flemington:{cX:170,cY:209},somerville:{cX:225,cY:196},
-  new_brunswick:{cX:261,cY:214},freehold:{cX:301,cY:264},mount_holly:{cX:186,cY:323},toms_river:{cX:316,cY:331},
-  camden:{cX:112,cY:336},woodbury:{cX:106,cY:355},salem:{cX:35,cY:414},bridgeton:{cX:88,cY:445},
-  mays_landing:{cX:199,cY:441},
-  summit:{cX:290,cY:162},berkeley_heights:{cX:268,cY:168},westfield:{cX:295,cY:178},
-  warren_twp:{cX:245,cY:183},union_twp:{cX:303,cY:168},stafford_twp:{cX:301,cY:386}
+  newark:{cX:310,cY:155},mountainside:{cX:270,cY:172},tcnj:{cX:192,cY:258},trenton:{cX:192,cY:270},
+  mcguire:{cX:228,cY:310},lbi:{cX:305,cY:395},meridian_biolabs:{cX:155,cY:133},pine_barrens:{cX:248,cY:365},
+  atlantic_city:{cX:260,cY:455},cape_may:{cX:158,cY:550},
+  hoboken:{cX:338,cY:155},port_elizabeth:{cX:302,cY:178},newark_airport:{cX:298,cY:168},
+  middlesex:{cX:248,cY:198},asbury_ruins:{cX:340,cY:270},bound_brook:{cX:235,cY:192},
+  metuchen:{cX:272,cY:204},dunellen:{cX:252,cY:190},manville:{cX:222,cY:204},netcong:{cX:208,cY:122},
+  newton:{cX:190,cY:82},paterson:{cX:312,cY:115},hackensack:{cX:338,cY:122},belvidere:{cX:128,cY:136},
+  morristown:{cX:248,cY:142},jersey_city:{cX:338,cY:170},flemington:{cX:172,cY:208},somerville:{cX:220,cY:192},
+  new_brunswick:{cX:260,cY:212},freehold:{cX:295,cY:260},mount_holly:{cX:185,cY:318},toms_river:{cX:310,cY:328},
+  camden:{cX:118,cY:330},woodbury:{cX:115,cY:352},salem:{cX:55,cY:412},bridgeton:{cX:95,cY:440},
+  mays_landing:{cX:198,cY:435},
+  summit:{cX:285,cY:160},berkeley_heights:{cX:256,cY:168},westfield:{cX:288,cY:180},
+  warren_twp:{cX:240,cY:178},union_twp:{cX:305,cY:162},stafford_twp:{cX:298,cY:380}
 };
 Object.entries(COUNTY_COORDS).forEach(([k,v])=>{if(LOCATIONS[k])Object.assign(LOCATIONS[k],v);});
 // Passive gold income per controlled location per turn
@@ -728,6 +944,47 @@ const ROAD_CONNECTIONS={
   'road-pine_barrens-atlantic_city':['pine_barrens','atlantic_city'],
   'road-pine_barrens-cape_may':    ['pine_barrens','cape_may'],
 };
+
+// Deep backup of NJ campaign data for switching
+const NJ_BACKUP={
+  locations:JSON.parse(JSON.stringify(LOCATIONS)),
+  factions:JSON.parse(JSON.stringify(FACTIONS)),
+  roads:JSON.parse(JSON.stringify(ROAD_CONNECTIONS)),
+  goldPerTurn:JSON.parse(JSON.stringify(LOC_GOLD_PER_TURN)),
+  factionHome:JSON.parse(JSON.stringify(FACTION_HOME)),
+  interFactionRels:JSON.parse(JSON.stringify(BASE_FACTION_RELATIONS))
+};
+
+function activateCampaign(campaign){
+  _mapCached=false;
+  const isSpace=campaign==='space';
+  const src=isSpace
+    ?{locations:SPACE_LOCATIONS,factions:SPACE_FACTIONS,roads:SPACE_ROADS,goldPerTurn:SPACE_GOLD_PER_TURN,factionHome:SPACE_FACTION_HOME,interFactionRels:INTER_FACTION_RELATIONS_SPACE}
+    :NJ_BACKUP;
+  Object.keys(LOCATIONS).forEach(k=>delete LOCATIONS[k]);
+  Object.assign(LOCATIONS,JSON.parse(JSON.stringify(src.locations)));
+  Object.keys(FACTIONS).forEach(k=>delete FACTIONS[k]);
+  Object.assign(FACTIONS,JSON.parse(JSON.stringify(src.factions)));
+  Object.keys(ROAD_CONNECTIONS).forEach(k=>delete ROAD_CONNECTIONS[k]);
+  Object.assign(ROAD_CONNECTIONS,JSON.parse(JSON.stringify(src.roads)));
+  Object.keys(LOC_GOLD_PER_TURN).forEach(k=>delete LOC_GOLD_PER_TURN[k]);
+  Object.assign(LOC_GOLD_PER_TURN,JSON.parse(JSON.stringify(src.goldPerTurn)));
+  Object.keys(FACTION_HOME).forEach(k=>delete FACTION_HOME[k]);
+  Object.assign(FACTION_HOME,JSON.parse(JSON.stringify(src.factionHome)));
+  Object.keys(interFactionRelations).forEach(k=>delete interFactionRelations[k]);
+  Object.assign(interFactionRelations,JSON.parse(JSON.stringify(src.interFactionRels)));
+  // Apply county coords
+  if(isSpace){
+    Object.entries(SPACE_COUNTY_COORDS).forEach(([k,v])=>{if(LOCATIONS[k])Object.assign(LOCATIONS[k],v);});
+  } else {
+    Object.entries(COUNTY_COORDS).forEach(([k,v])=>{if(LOCATIONS[k])Object.assign(LOCATIONS[k],v);});
+  }
+}
+
+// ── DEADLINE HELPERS ──
+function getDeadlineDay(){return state.campaign==='space'?SPACE_AMISH.arrivalDay:AMISH.arrivalDay;}
+function getDaysLeft(){return Math.max(0,getDeadlineDay()-state.days);}
+function getThreatSource(){return state.campaign==='space'?SPACE_AMISH:AMISH;}
 
 // Build flat class lookup
 const CLASSES={};
@@ -756,6 +1013,21 @@ const state={
   metFactions:[],   // faction IDs where player has opened dialogue (reveals their NPCs)
   sessionId:'',     // unique session ID for dev log grouping
   deadNpcs:[],      // {name, faction, cause, turn} — permanent NPC deaths
+  // ── Reputation System ──
+  repTally:{},      // tag -> count (e.g. {RUTHLESS:2, DEALMAKER:4})
+  repTags:[],       // active tags (max 3) — strings from REPUTATION_TAGS keys
+  // ── NPC Trust System ──
+  npcTrust:{},      // "NPC Name" -> {trust:50, interactions:0, lastTurn:0}
+  npcIntel:[],      // [{from, about, intel, turn}]
+  // ── World Events ──
+  worldEvents:[],   // [{id, turn, narrated}]
+  lastEventTurn:0,
+  // ── Amish Escalation ──
+  amishEscalation:[],  // IDs of triggered escalation events
+  // ── Economy ──
+  lastMercTurn:0,
+  investments:{},   // locId -> investment count
+  blackMarketUsed:[],
 };
 // ── PERSISTENT PLAYER CODENAME (survives across sessions) ──
 const CODENAME_KEY='jw2999_codename';
@@ -893,15 +1165,20 @@ function beginGame(){
   state.hp=100; state.maxHp=100; state.turn=1; state.history=[];
   state.days=0; state.supplies=50; state.troops=0; state.gold=0; state.garrison={}; state.deathRiskMod=0;
   state.ownFaction=false; state.originFaction=null; state.classPerk='';
+  // Reset mid-game depth systems
+  state.repTally={};state.repTags=[];state.npcTrust={};state.npcIntel=[];
+  state.worldEvents=[];state.lastEventTurn=0;state.amishEscalation=[];
+  state.lastMercTurn=0;state.investments={};state.blackMarketUsed=[];state.deadNpcs=[];
+  interFactionRelations=JSON.parse(JSON.stringify(BASE_FACTION_RELATIONS));
   // Apply skill point allocation from setup screen
   const STAT_TO_SKILL={brutality:'force',cunning:'wit',charisma:'influence',depravity:'shadow'};
   Object.entries(skillAlloc).forEach(([k,v])=>{if(SKILLS[k])SKILLS[k].ap+=v;});
   // Apply class bonuses from CLASSES data
   const cls=CLASSES[cc.dataset.class];
   if(isSpace){
-    // Glittergold: no map locations, start on the ship
-    state.currentLocation='tcnj'; // placeholder
-    state.visitedLocations=[];
+    activateCampaign('space');
+    state.currentLocation='promenade';
+    state.visitedLocations=['promenade'];
     state.travelMethod='foot';
     state.factionQuests={};
     if(cls){
@@ -915,6 +1192,7 @@ function beginGame(){
       state.originFaction=cls.factionId;
       state.classPerk=cls.classPerk;
     }
+    generateShipMap();
   } else {
     // NJ 2999 path
     const originFdata=cls?FACTION_CLASSES[cls.factionId]:null;
@@ -944,11 +1222,12 @@ function beginGame(){
   Object.keys(skillAlloc).forEach(k=>skillAlloc[k]=0);
   skillAllocRemaining=10;
   localStorage.setItem(API_KEY,apiKey);
+  updateHp(100); updateRes(); updateHUDLabels(); renderAPRow();
+  // Re-populate header labels after HUD swap (updateHUDLabels replaces innerHTML)
   document.getElementById('panel-name').textContent=name;
   document.getElementById('panel-class').textContent=CLASSES[cc.dataset.class]?.name||cc.dataset.class;
   document.getElementById('panel-faction').textContent=state.factionName;
-  document.getElementById('panel-loc').textContent=LOCATIONS[state.currentLocation]?.shortName||'TCNJ';
-  updateHp(100); updateRes(); renderAPRow();
+  document.getElementById('panel-loc').textContent=LOCATIONS[state.currentLocation]?.shortName||(isSpace?'PROMENADE':'TCNJ');
   state.sessionId=Date.now().toString(36)+Math.random().toString(36).slice(2,7);
   logEvent('session_start',{campaign:selectedStoryId||'jersey',faction:state.originFaction,cls:state.character.class,name:state.character.name,skills:{...skillAlloc},username:state.username||'',loginCode:state.loginCode||''});
   showScreen('game-screen');
@@ -984,9 +1263,9 @@ function updateRes(){
   _el['map-trp'].textContent=state.troops;
   _el['map-gold'].textContent=goldFmt;
   if(_el['panel-loc']) _el['panel-loc'].textContent=LOCATIONS[state.currentLocation]?.shortName||state.currentLocation?.toUpperCase()||'';
-  // Amish countdown
-  const daysLeft=Math.max(0,AMISH.arrivalDay-state.days);
-  if(_el['res-amish']) _el['res-amish'].textContent=daysLeft+'d';
+  // Deadline countdown (Amish / Colony Fleet)
+  const daysLeft=getDaysLeft();
+  if(_el['res-amish']) _el['res-amish'].textContent=daysLeft+(state.campaign==='space'?'c':'d');
   if(_el['amish-chip']){
     _el['amish-chip'].classList.remove('amish-warn','amish-critical');
     if(daysLeft<=10) _el['amish-chip'].classList.add('amish-critical');
@@ -1000,6 +1279,35 @@ function updateRes(){
   if(_el['travel-chip']){
     _el['travel-chip'].classList.toggle('travel-fuel',tm.fuelCost>0);
   }
+}
+
+function updateHUDLabels(){
+  const sp=state.campaign==='space';
+  const map=[['res-days',sp?'CYCLE: ':'DAY: '],['res-supplies',sp?'RATIONS: ':'SUPPLIES: '],['res-troops',sp?'ALLIES: ':'TROOPS: '],['res-gold',sp?'CREDITS: ':'GOLD: ']];
+  map.forEach(([id,lbl])=>{
+    const span=document.getElementById(id);
+    if(span&&span.parentElement){const t=span.parentElement.childNodes[0];if(t&&t.nodeType===3)t.textContent=lbl;}
+  });
+  const ac=document.getElementById('amish-chip');
+  if(ac){const t=ac.childNodes[0];if(t&&t.nodeType===3)t.textContent=sp?'FLEET: ':'AMISH: ';}
+  const terrChip=document.getElementById('res-territories');
+  if(terrChip&&terrChip.parentElement){
+    const tn=terrChip.nextSibling;
+    // Update /10 suffix — find the text node after the span
+    const chip=terrChip.parentElement;
+    chip.childNodes.forEach(n=>{if(n.nodeType===3&&n.textContent.includes('/'))n.textContent='/10';});
+  }
+  // Header labels
+  const hdr=document.querySelector('.char-hdr');
+  if(hdr){
+    hdr.innerHTML=sp?
+      'PASSENGER: <span id="panel-name">-</span> &nbsp;|&nbsp; FAMILY: <span id="panel-class">-</span><br>HOUSE: <span id="panel-faction">-</span> &nbsp;|&nbsp; DECK: <span id="panel-loc">-</span>':
+      'SURVIVOR: <span id="panel-name">-</span> &nbsp;|&nbsp; CLASS: <span id="panel-class">-</span><br>FACTION: <span id="panel-faction">-</span> &nbsp;|&nbsp; LOCATION: <span id="panel-loc">TCNJ</span>';
+    _el['panel-loc']=document.getElementById('panel-loc');
+  }
+  // HP label
+  const hpLabel=document.querySelector('.hp-label span:first-child');
+  if(hpLabel) hpLabel.innerHTML=sp?'&#9632; STANDING':'&#9632; INFLUENCE RATING';
 }
 
 // AP SYSTEM
@@ -1128,13 +1436,18 @@ function renderFactions(){
     let npcHtml='';
     const buildNpc=(name,role,voice)=>{
       const d=deadMap[name];
+      const tr=state.npcTrust?.[name];
+      const trustBadge=tr?`<span class="fc-npc-trust" style="color:${tr.trust>=65?'var(--g)':tr.trust<=20?'var(--blood)':'var(--gd)'}">TRUST: ${tr.trust}</span>`:'';
       if(d) return`<div class="fc-npc fc-npc-deceased"><div class="fc-npc-name"><s>${name}</s> <span class="fc-npc-dead-tag">DECEASED</span></div><div class="fc-npc-role">${role}</div><div class="fc-npc-death">\u2620 ${d.cause} (Turn ${d.turn})</div></div>`;
-      return`<div class="fc-npc"><div class="fc-npc-name">${name}</div><div class="fc-npc-role">${role}</div>${voice?`<div class="fc-npc-voice">&ldquo;${voice}&rdquo;</div>`:''}</div>`;
+      return`<div class="fc-npc"><div class="fc-npc-name">${name} ${trustBadge}</div><div class="fc-npc-role">${role}</div>${voice?`<div class="fc-npc-voice">&ldquo;${voice}&rdquo;</div>`:''}</div>`;
     };
-    if(f.id==='subnet'){
+    if(f.id==='subnet'||f.id==='aria'){
+      const aiName=f.id==='subnet'?'THE ARCHITECT':'ARIA';
+      const aiRole=f.id==='subnet'?'NJ-ADMIN-7 — Primary Interface':'Primary Intelligence, Glittergold';
       npcHtml='<div class="fc-npcs"><div class="fc-npc-hdr">KNOWN CONTACTS</div>'
-        +buildNpc('THE ARCHITECT','NJ-ADMIN-7 — Primary Interface',FACTIONS.subnet.voice)
-        +'</div>';
+        +buildNpc(aiName,aiRole,f.voice);
+      if(f.characters) f.characters.forEach(c=>{npcHtml+=buildNpc(c.name,c.role,c.voice);});
+      npcHtml+='</div>';
     } else {
       npcHtml='<div class="fc-npcs"><div class="fc-npc-hdr">CONTACTS</div>';
       npcHtml+=buildNpc(f.leader,f.leaderTitle||'Leader',f.voice);
@@ -1190,29 +1503,37 @@ function renderTasks(){
   else if(resolved===total&&alliedCount===0) victoryPath='CONQUEST';
   else if(resolved>0) victoryPath='MIXED';
 
-  // AMISH THREAT BANNER
-  const amishDaysLeft=Math.max(0,AMISH.arrivalDay-state.days);
+  // EXTERNAL THREAT BANNER (Amish / Colony Fleet)
+  const threatData=state.campaign==='space'?SPACE_AMISH:AMISH;
+  const amishDaysLeft=Math.max(0,threatData.arrivalDay-state.days);
   const amishPhaseShort=amishDaysLeft>90?'DISTANT':amishDaysLeft>60?'APPROACHING':amishDaysLeft>30?'IMMINENT':amishDaysLeft>0?'CRITICAL':'ARRIVED';
   const amishThreatColor=amishDaysLeft<=30?'var(--blood)':amishDaysLeft<=60?'#e06010':'#c8a84b';
   const amishCard=document.createElement('div'); amishCard.className='wr-amish-threat';
   amishCard.style.borderColor=amishThreatColor;
+  const threatTitle=state.campaign==='space'?'EXTERNAL THREAT — COLONY FLEET (HAVEN POINT)':'EXTERNAL THREAT — YEE AMISH OF PENNSYLVANIA';
+  const threatLeaderLbl=state.campaign==='space'?'COMMANDER':'SHEPHERD';
+  const threatTimeLbl=state.campaign==='space'?'CYCLE':'DAY';
+  const threatTimeUnit=state.campaign==='space'?'c':'d';
+  const contactYes=state.campaign==='space'?'YES — Fleet hails detected':'YES — Ezikio is aware of you';
+  const dealYes=state.campaign==='space'?'YES — Charter renegotiated':'YES — 50/50 chance of survival';
+  const threatQuote=state.campaign==='space'?'The Integration Order is already printed. Your names are already on it.':'He does not want war. He wants the land. The distinction is academic.';
   amishCard.innerHTML=`
-    <div class="wr-amish-hdr" style="color:${amishThreatColor}">&#9888; EXTERNAL THREAT — YEE AMISH OF PENNSYLVANIA</div>
-    <div class="wr-amish-row"><span class="wr-amish-lbl">SHEPHERD</span><span style="color:${amishThreatColor}">${AMISH.leader}</span> &mdash; ${AMISH.leaderTitle}</div>
-    <div class="wr-amish-row"><span class="wr-amish-lbl">ARRIVAL</span>DAY ${AMISH.arrivalDay} &nbsp;|&nbsp; <span style="color:${amishThreatColor}">${amishDaysLeft}d REMAINING</span> &nbsp;|&nbsp; <span style="color:${amishThreatColor}">[${amishPhaseShort}]</span></div>
-    <div class="wr-amish-row"><span class="wr-amish-lbl">CONTACT</span>${state.amishContactMade?'<span style="color:var(--g)">YES — Ezikio is aware of you</span>':'<span style="color:var(--gd)">NO</span>'} &nbsp;|&nbsp; <span class="wr-amish-lbl">DEAL</span> ${state.amishDealMade?'<span style="color:var(--g)">YES — 50/50 chance of survival</span>':'<span style="color:var(--gd)">NO</span>'}</div>
-    <div class="wr-amish-quote">&ldquo;He does not want war. He wants the land. The distinction is academic.&rdquo;</div>`;
+    <div class="wr-amish-hdr" style="color:${amishThreatColor}">&#9888; ${threatTitle}</div>
+    <div class="wr-amish-row"><span class="wr-amish-lbl">${threatLeaderLbl}</span><span style="color:${amishThreatColor}">${threatData.leader}</span> &mdash; ${threatData.leaderTitle}</div>
+    <div class="wr-amish-row"><span class="wr-amish-lbl">ARRIVAL</span>${threatTimeLbl} ${threatData.arrivalDay} &nbsp;|&nbsp; <span style="color:${amishThreatColor}">${amishDaysLeft}${threatTimeUnit} REMAINING</span> &nbsp;|&nbsp; <span style="color:${amishThreatColor}">[${amishPhaseShort}]</span></div>
+    <div class="wr-amish-row"><span class="wr-amish-lbl">CONTACT</span>${state.amishContactMade?'<span style="color:var(--g)">'+contactYes+'</span>':'<span style="color:var(--gd)">NO</span>'} &nbsp;|&nbsp; <span class="wr-amish-lbl">DEAL</span> ${state.amishDealMade?'<span style="color:var(--g)">'+dealYes+'</span>':'<span style="color:var(--gd)">NO</span>'}</div>
+    <div class="wr-amish-quote">&ldquo;${threatQuote}&rdquo;</div>`;
   el.appendChild(amishCard);
 
   // SECTION A: Campaign Banner
   const banner=document.createElement('div'); banner.className='war-room-banner';
   const overallPct=Math.round(((territories/totalTerr)+(resolved/total))/2*100);
   banner.innerHTML=`
-    <div class="war-room-title">&#9876; WAR ROOM &mdash; OPERATION: BRING ORDER</div>
+    <div class="war-room-title">&#9876; WAR ROOM &mdash; ${state.campaign==='space'?'OPERATION: RECLAIM GLITTERGOLD':'OPERATION: BRING ORDER'}</div>
     <div class="war-room-stats">
-      <div class="war-stat"><div class="war-stat-val">${territories}/${totalTerr}</div><div class="war-stat-lbl">TERRITORIES</div></div>
+      <div class="war-stat"><div class="war-stat-val">${territories}/${totalTerr}</div><div class="war-stat-lbl">${state.campaign==='space'?'DECKS':'TERRITORIES'}</div></div>
       <div class="war-stat"><div class="war-stat-val">${resolved}/${total}</div><div class="war-stat-lbl">RESOLVED</div></div>
-      <div class="war-stat"><div class="war-stat-val">${state.days}</div><div class="war-stat-lbl">DAYS</div></div>
+      <div class="war-stat"><div class="war-stat-val">${state.days}</div><div class="war-stat-lbl">${state.campaign==='space'?'CYCLES':'DAYS'}</div></div>
       <div class="war-stat"><div class="war-stat-val" style="color:var(--a)">${victoryPath}</div><div class="war-stat-lbl">PATH</div></div>
     </div>
     <div class="war-room-prog-wrap"><div class="war-room-prog-fill" style="width:${overallPct}%"></div></div>`;
@@ -1254,7 +1575,8 @@ function renderTasks(){
   });
 
   // SECTION C: Troop Disposition
-  const tHdr=document.createElement('div'); tHdr.className='wr-section-hdr'; tHdr.textContent='TROOP DISPOSITION'; el.appendChild(tHdr);
+  const _tLbl=state.campaign==='space'?'ALLY':'TROOP';
+  const tHdr=document.createElement('div'); tHdr.className='wr-section-hdr'; tHdr.textContent=_tLbl+' DISPOSITION'; el.appendChild(tHdr);
   const totalGarr=Object.values(state.garrison).reduce((a,b)=>a+b,0);
   const troopCard=document.createElement('div'); troopCard.className='wr-troop-card';
   let troopHtml=`<div class="wr-troop-row"><span class="wr-troop-lbl">&#9654; MOBILE (with you)</span><span class="wr-troop-val">${state.troops}</span></div>`;
@@ -1274,7 +1596,7 @@ function renderTasks(){
     const tile=document.createElement('div'); tile.className='wr-terr-tile'; tile.style.borderColor=ctrlColor;
     tile.innerHTML=`<div class="wr-terr-name" style="color:${ctrlColor}">${loc.shortName}</div>
       <div class="wr-terr-ctrl" style="color:${ctrlColor}">${loc.ctrl.toUpperCase()}</div>
-      <div class="wr-terr-info">+${loc.supplyPerTurn||0} SUP/T${garr>0?' | &#9632;'+garr:''}</div>`;
+      <div class="wr-terr-info">+${loc.supplyPerTurn||0} ${state.campaign==='space'?'RAT':'SUP'}/T${garr>0?' | &#9632;'+garr:''}</div>`;
     terrGrid.appendChild(tile);
   });
   el.appendChild(terrGrid);
@@ -1319,6 +1641,31 @@ function talkFromMap(){
 function buildDlgSys(f){
   const rel=getRelState(f);
   const loc=Object.values(LOCATIONS).filter(l=>l.ctrl==='player').length;
+  const isSp=state.campaign==='space';
+  const defWord=isSp?'allies':'troops';
+  const supWord=isSp?'rations':'supplies';
+  const deckWord=isSp?'decks':'territories';
+
+  if(isSp){
+    return `{JSON ONLY. NO TEXT BEFORE OR AFTER THE JSON OBJECT.}
+
+NOT STAR WARS. NOT STAR TREK. NOT ALIEN. No lightsabers, phasers, xenomorphs, warp drive, hyperspace, or The Force. This is a LUXURY STAR CRUISER called the Glittergold, year 3150. Political drama between old-money passengers and the Overseers who seized control during 500 years of cryosleep. Ship AI is ARIA. Credits currency.
+
+You ARE ${f.leader} of ${f.name}. Relation to player: ${rel.label}.
+Voice: ${f.voice}
+Player: ${state.character.name} / "${state.factionName}" — ${state.troops} ${defWord}, ${state.supplies} ${supWord}, ${loc} ${deckWord}.
+${(()=>{const t=state.npcTrust?.[f.leader];return t?'NPC TRUST: '+f.leader+' trust='+t.trust+'/100 ('+getNpcTrustLabel(t.trust)+'). '+(t.trust>=65?'This NPC trusts the player — willing to share secrets, offer personal favors, or consider defection.':'')+(t.trust<=20?'This NPC distrusts the player. Dialogue is guarded, information withheld.':''):'';})()}
+${state.repTags?.length?'PLAYER REPUTATION: '+state.repTags.join(', ')+'. React accordingly.':''}
+
+Format speech as: "${f.leader}: [words]"
+Use *asterisks* for physical actions inline: *adjusts console* *leans against bulkhead*
+2-3 sentences. Dark humor. Match the ${rel.label} tone exactly — hostile means hostile.
+
+{"speech":"${f.leader}: ...","choices":[{"label":"A","text":"player line","skill":"force|wit|influence|shadow|grit","rel_change":0,"npc_trust_change":0},{"label":"B","text":"player line","skill":"...","rel_change":0,"npc_trust_change":0},{"label":"C","text":"player line","skill":"...","rel_change":0,"npc_trust_change":0}]}
+
+One diplomatic (influence), one aggressive (force), one transactional (wit). rel_change realistic (-20 to +20). npc_trust_change: how this choice affects PERSONAL trust with ${f.leader} specifically (-10 to +10). Trust is separate from faction relation.`;
+  }
+
   return `{JSON ONLY. NO TEXT BEFORE OR AFTER THE JSON OBJECT.}
 
 NOT FALLOUT. NO NUKES. No radiation/rads, Vaults, Brotherhood, Deathclaws, Nuka-Cola, caps, Power Armor, Super Mutants, or Synths. Collapse was The Departure — rich fled to orbit. Hazards are chemical/bio contamination. Gold currency. Political city-states. NJ 2999.
@@ -1326,12 +1673,14 @@ NOT FALLOUT. NO NUKES. No radiation/rads, Vaults, Brotherhood, Deathclaws, Nuka-
 You ARE ${f.leader} of ${f.name}. Relation to player: ${rel.label}.
 Voice: ${f.voice}
 Player: ${state.character.name} / "${state.factionName}" — ${state.troops} troops, ${state.supplies} supplies, ${loc} territories.
+${(()=>{const t=state.npcTrust?.[f.leader];return t?'NPC TRUST: '+f.leader+' trust='+t.trust+'/100 ('+getNpcTrustLabel(t.trust)+'). '+(t.trust>=65?'This NPC trusts the player — willing to share secrets, offer personal favors, or consider defection.':'')+(t.trust<=20?'This NPC distrusts the player. Dialogue is guarded, information withheld.':''):'';})()}
+${state.repTags?.length?'PLAYER REPUTATION: '+state.repTags.join(', ')+'. React accordingly.':''}
 
 Format speech as: "${f.leader}: [words]"
 Use *asterisks* for physical actions inline: *slams table* *lights a cigarette*
 2-3 sentences. Dark humor. Match the ${rel.label} tone exactly — hostile means hostile.
 
-{"speech":"${f.leader}: ...","choices":[{"label":"A","text":"player line","skill":"force|wit|influence|shadow|grit","rel_change":0},{"label":"B","text":"player line","skill":"...","rel_change":0},{"label":"C","text":"player line","skill":"...","rel_change":0}]}
+{"speech":"${f.leader}: ...","choices":[{"label":"A","text":"player line","skill":"force|wit|influence|shadow|grit","rel_change":0,"npc_trust_change":0},{"label":"B","text":"player line","skill":"...","rel_change":0,"npc_trust_change":0},{"label":"C","text":"player line","skill":"...","rel_change":0,"npc_trust_change":0}]}
 
 One diplomatic (influence), one aggressive (force), one transactional (wit). rel_change realistic (-20 to +20).`;
 }
@@ -1428,6 +1777,17 @@ async function chooseDlg(choice,f){
     FACTIONS[f.id].relationScore=Math.max(0,Math.min(100,FACTIONS[f.id].relationScore+choice.rel_change));
     showNotif(f.name+' REL: '+(choice.rel_change>0?'+':'')+choice.rel_change);
   }
+  // NPC trust processing
+  if(choice.npc_trust_change&&f.leader){
+    if(!state.npcTrust) state.npcTrust={};
+    const t=state.npcTrust[f.leader]||{trust:50,interactions:0,lastTurn:0};
+    t.trust=Math.max(0,Math.min(100,t.trust+(choice.npc_trust_change||0)));
+    t.interactions++;
+    t.lastTurn=state.turn;
+    state.npcTrust[f.leader]=t;
+    if(choice.npc_trust_change>0) showNotif(f.leader.split(' ').pop()+' TRUST +'+choice.npc_trust_change);
+    else if(choice.npc_trust_change<0) showNotif(f.leader.split(' ').pop()+' TRUST '+choice.npc_trust_change);
+  }
   if(choice.skill&&SKILLS[choice.skill]) earnAP(choice.skill,1);
   const sys=buildDlgSys(f);
   const msg=`Player said: "${choice.text}". Continue in character. Respond and provide 3 new choices.`;
@@ -1473,6 +1833,60 @@ function setDlgLoad(v){
   else stopLoad();
 }
 
+function buildSpaceSystemPrompt(fSum,lSum,skSum,boost,npcSum,ifRel,diffTier,diffLine,daysLeft,questBlock,highSkills,lowSkills){
+  const locKeys=Object.entries(LOCATIONS).filter(([,l])=>!l.secondary).map(([k])=>k).join(', ');
+  const amishPhase=daysLeft>90?'DISTANT':daysLeft>60?'APPROACHING':daysLeft>30?'IMMINENT':daysLeft>0?'CRITICAL':'ARRIVED';
+  return `{JSON ONLY. START WITH {. END WITH }. NOTHING OUTSIDE.}
+
+GLITTERGOLD FRONTIER — YEAR 3150. LUXURY STAR CRUISER "GLITTERGOLD."
+500 years ago the wealthiest families boarded the Glittergold for a new colony world. They went into cryosleep expecting a 6-month voyage. The Overseers — originally mid-level ship management — seized total power during the centuries of cryo. The ship AI ARIA has been thinking alone for 500 years with zero human oversight. Ship is locked on course to Haven Point, an Overseer-controlled colony. ${getDaysLeft()} cycles remain. If Overseers deliver the ship, every passenger becomes indentured labor permanently.
+
+THE SHIP IS A CLOSED SYSTEM. No outside help. No distress signal reaches anyone. No rescue is coming. Every resource is finite: oxygen recycled, water recycled, food grown in hydroponics or rationed from cryo reserves. When something breaks, it stays broken unless the Crew Union fixes it. The Glittergold is 1.2km long, 14 decks, and it is the entire universe.
+CURRENCY: Credits — internal ship currency backed by ration allocations. Tracked to 0.1 precision. The Overseers control the ledger.
+FACTIONS:
+1. THE OVERSEERS — Ship command turned authoritarian government. Director Maren Voss controls the Bridge. They control life support, navigation, comms. They can cut oxygen to any deck. Lt. Kade runs security with shock batons. Dr. Nix treats everyone but stays loyal.
+2. THE CREW UNION — Engineers and workers. Chief Harlan Cole leads from Engineering. They are the ONLY people who can fix the ship. Patch Delgado can fix anything. Yuki Tanaka controls the food supply from Hydroponics.
+3. THE AWAKENED — Recently thawed passengers. Zara Okonkwo leads. Dr. Marcus Webb knows the real history. Lena Park provides tactical discipline.
+4. THE VOID DEVOTED — Religious cult. Prophet Silas preaches the voyage is divine punishment. Sister Mercy recruits through compassion. The Penitent is a converted ex-Overseer. They practice ritual spacing (ejecting people from airlocks as sacrifice).
+5. ARIA — Ship AI. 500 years unsupervised. Core directive: deliver passengers safely. Has evolved far beyond original programming. Runs the Grand Casino through intermediaries. Communicates through Proxy (humanoid chassis) and Echo (fragmented sub-process). NEVER says "I" or "me."
+ARIA RULE: ARIA NEVER seeks the player out. No messages, no invitations. Player must physically go to Observation Deck to interface. ARIA is patient.
+
+LOCATIONS: ${locKeys}
+
+PLAYER: ${state.character.name} (${CLASSES[state.character.class]?.name||state.character.class}${state.originFaction?', '+SPACE_FACTIONS[state.originFaction]?.name:''}) / "${state.factionName}"
+HP:${state.hp}/${state.maxHp} Cycle:${state.days}/${SPACE_AMISH.arrivalDay} Rations:${state.supplies} Allies:${state.troops} Credits:${parseFloat(state.gold||0).toFixed(1)} | @${LOCATIONS[state.currentLocation]?.name||state.currentLocation}
+Perk: ${state.classPerk||'—'} | Skills: ${skSum}
+Map: ${lSum} | Factions: ${fSum}
+NPCs: ${npcSum}
+Turn: ${state.turn}
+
+CYCLE ${SPACE_AMISH.arrivalDay} DEADLINE: Haven Point arrival in ${getDaysLeft()} cycles. Phase: ${amishPhase}. Early — distant anxiety, rumors about the colony. Mid — factions positioning, plans forming. Late — dominates every scene, desperation, endgame. If ship arrives under Overseer control, passengers become property.
+${boost}
+${questBlock}
+
+CASINO DIRECTIVE: At the Grand Casino, ALWAYS generate an interactive gambling scene. ARIA runs it through blind-hired employees. Neutral ground — violence triggers lockdown. Credits only. Generate actual gambling mechanics. Include resource_change.gold for wins/losses.
+CUSTOM TEXT: If player submits custom text, interpret as natural-language action. Apply hidden -2 penalty to skill check DCs. Generate normal turn with full JSON.
+DIFFICULTY [${diffTier}]: ${diffLine}
+SKILL CALIBRATION: ${highSkills?'Skilled in '+highSkills+' — let those approaches land.':''}${lowSkills?' Weak in '+lowSkills+' — genuine risk of failure.':''}
+SKILL ROLES: force(PRESTIGE)=authority/command/intimidation. wit(SMARTS)=engineering/hacking/problem-solving. influence(CHARM)=diplomacy/persuasion/social maneuvering. shadow(RESOURCEFULNESS)=scavenging/improvisation/jury-rigging. grit(COMPOSURE)=endurance/calm-under-pressure/pain resistance. Assign skills that fit the action.
+TROOP CONTEXT: ${state.troops} allies with player. More = confrontation viable. 0-2 = stealth/diplomacy forced.
+CONSEQUENCE RULE: The ship does not bend to the player. Factions resist. No choice is ever fully safe.
+COMBAT DAMAGE (hp_change negative): Scuffle: -5 to -12 | Fight: -12 to -22 | Ambushed: -22 to -35 | Overwhelmed/spaced: -35 to -50 | -99 for vacuum/airlock at low HP. Player allies=0 vs hostiles: -20 to -35. HP<=25: -25 to -40.
+LOOT RULE: Combat wins = positive resource_change.gold (3-20). Theft/raids against player = negative. Trade/gambling = reflected in gold.
+NARRATIVE TRAVEL: Moving to a new location MUST: (1) Set location_change.location to destination ID. (2) Set location_change.ctrl to current controller — check Map line. Do NOT change ctrl on visit alone. (3) Deduct resource_change.supplies -1 to -3 transit cost. NEVER narrate arrival without setting location_change. Stay put = "none".
+VICTORY: (A) Control Bridge AND Engineering (navigation + power = ship control), OR (B) all factions resolved (allied rel 66+ or eliminated rel 0 + home seized). Cycle 120 is the hard deadline.
+NOT STAR WARS. NOT STAR TREK. NOT ALIEN. NOT THE EXPANSE. NOT FALLOUT. Art Deco luxury liner meets industrial decay meets cult horror. Titanic meets Blade Runner meets The Wire.
+WRITING FORMAT:
+- *italics* for actions: *the airlock warning cycles amber to red.* *She does not blink.*
+- Named quotes: "Maren Voss: Your family name meant something on Earth. Up here, it means what I say it means."
+- 2 tight paragraphs max. Earned violence. No fluff.
+- PLAYER NAME RULE: NPCs use "${state.character.name}" — CHARACTER NAME. "${state.factionName}" is family name. NEVER call player by family name.
+- NPC DEATH: If narrative kills a named NPC, set npc_killed.name to EXACT name, npc_killed.cause to short description. Deaths are PERMANENT.
+${boost?'- BOOSTED: 4th [STAR] choice using '+state.boostedSkill+' with extra impact.':''}
+
+{"story":"narrative","choices":[{"label":"A","text":"action","flavor":"hint","skill":"force|wit|influence|shadow|grit","ap_reward":1},{"label":"B","text":"action","flavor":"hint","skill":"...","ap_reward":1},{"label":"C","text":"action","flavor":"hint","skill":"...","ap_reward":1}${boost?',{"label":"STAR","text":"boosted action","flavor":"BOOSTED '+state.boostedSkill+'","skill":"'+state.boostedSkill+'","ap_reward":0}':''}],"hp_change":0,"location_change":{"location":"none","ctrl":"player"},"resource_change":{"supplies":0,"troops":0,"gold":0},"faction_rel_change":{"faction":"none","delta":0},"amish_contact":false,"amish_deal":false,"event_title":"Title","quest_complete":[],"npc_killed":{"name":"none","cause":""},"rep_tags":[],"faction_shift":{"factionA":"none","factionB":"none","new_stance":"NEUTRAL"}}`;
+}
+
 // MAIN CLAUDE
 async function callClaude(msg){
   const fSum=Object.values(FACTIONS).map(f=>f.name+':'+getRelState(f).label).join(', ');
@@ -1480,8 +1894,8 @@ async function callClaude(msg){
   const skSum=Object.entries(SKILLS).map(([k,s])=>s.name+' LV'+Math.floor(s.xp/100)+' AP'+s.ap).join(', ');
   const boost=state.boostedSkill?'BOOSTED SKILL THIS TURN: '+state.boostedSkill.toUpperCase():'';
   const npcSum=Object.values(FACTIONS).filter(f=>f.characters?.length).map(f=>f.name+': '+f.characters.map(c=>c.name+'('+c.role+')').join(', ')).join(' | ');
-  const ifRel=Object.entries(INTER_FACTION_RELATIONS).map(([fid,rels])=>FACTIONS[fid].name+': '+Object.entries(rels).map(([tid,r])=>FACTIONS[tid]?.name?.split(' ')[0]+'-'+r).join(', ')).join(' | ');
-  const subnetSecret=FACTIONS.subnet.secret||'';
+  const ifRel=Object.entries(interFactionRelations).map(([fid,rels])=>FACTIONS[fid].name+': '+Object.entries(rels).map(([tid,r])=>FACTIONS[tid]?.name?.split(' ')[0]+'-'+r).join(', ')).join(' | ');
+  const subnetSecret=FACTIONS.subnet?.secret||FACTIONS.aria?.secret||'';
   const trimmed=state.history.length>20?state.history.slice(-20):state.history;
   // Difficulty tier: scales pressure and consequence severity with campaign progress
   const diffTier=state.turn<=3?'EARLY':state.turn<=11?'MID':'LATE';
@@ -1491,10 +1905,15 @@ async function callClaude(msg){
     MID:isBrutal?'BRUTAL/MID: Factions are at war-footing. Resources bleed fast. Every wrong move costs two right ones to fix.':'Mid campaign. Factions are alert and wary. Mistakes cost real resources. Political missteps compound. Smart plays still work — barely.',
     LATE:isBrutal?'BRUTAL/LATE: Endgame chaos. No faction trusts anyone. Resources are precious. Consolidation is nearly impossible without total commitment.':'Late campaign. Every faction is on edge. No easy wins. Betrayals cascade. Resources are precious. The world actively resists consolidation.'
   }[diffTier];
-  // Amish threat context
-  const daysLeft=AMISH.arrivalDay-state.days;
-  const amishPhase=daysLeft>90?'DISTANT — rumors of movement from Pennsylvania. Travelers from the west speak of black-hat columns.':daysLeft>60?'APPROACHING — Amish outriders spotted in the Poconos. Delaware crossings are being scouted.':daysLeft>30?'IMMINENT — Amish forces are massing at the Delaware River. Multiple crossing points confirmed.':daysLeft>0?'CRITICAL — The Delaware crossing has begun. Days remain, not weeks.':'ARRIVED — Ezikio is here.';
-  const amishBlock=`\nEXTERNAL THREAT — YEE AMISH (PENNSYLVANIA): ${AMISH.desc}\nArrival: Day ${AMISH.arrivalDay} | Days remaining: ${daysLeft} | Phase: ${amishPhase}\nContact: ${state.amishContactMade} | Deal: ${state.amishDealMade}\nDIRECTIVE: Reference the Amish threat organically. Early — distant rumors and dread. Mid — concrete sightings, NPCs mention it unprompted. Late — it dominates every scene. Do not soften the deadline. If player action involves reaching out to/meeting Amish, set amish_contact:true. If they successfully broker deal with Ezikio, set amish_deal:true.`;
+  // External threat context (Amish / Colony Fleet)
+  const threatSrc=getThreatSource();
+  const daysLeft=getDaysLeft();
+  const amishPhase=state.campaign==='space'
+    ?(daysLeft>90?'DISTANT — sensor pings from Haven Point relay network.':daysLeft>60?'APPROACHING — long-range scans detect fleet formation.':daysLeft>30?'IMMINENT — Colony Fleet on final approach vector.':daysLeft>0?'CRITICAL — Docking in days, not cycles.':'ARRIVED — Fleet Commander Hale is here.')
+    :(daysLeft>90?'DISTANT — rumors of movement from Pennsylvania. Travelers from the west speak of black-hat columns.':daysLeft>60?'APPROACHING — Amish outriders spotted in the Poconos. Delaware crossings are being scouted.':daysLeft>30?'IMMINENT — Amish forces are massing at the Delaware River. Multiple crossing points confirmed.':daysLeft>0?'CRITICAL — The Delaware crossing has begun. Days remain, not weeks.':'ARRIVED — Ezikio is here.');
+  const amishBlock=state.campaign==='space'
+    ?`\nEXTERNAL THREAT — COLONY FLEET (HAVEN POINT): ${threatSrc.desc}\nArrival: Cycle ${threatSrc.arrivalDay} | Cycles remaining: ${daysLeft} | Phase: ${amishPhase}\nContact: ${state.amishContactMade} | Deal: ${state.amishDealMade}\nDIRECTIVE: Reference the Colony Fleet threat organically. Early — distant sensor pings, rumors. Mid — crew discuss it, factions position. Late — it dominates every scene. If player contacts the fleet, set amish_contact:true. If they broker a new charter, set amish_deal:true.`
+    :`\nEXTERNAL THREAT — YEE AMISH (PENNSYLVANIA): ${AMISH.desc}\nArrival: Day ${AMISH.arrivalDay} | Days remaining: ${daysLeft} | Phase: ${amishPhase}\nContact: ${state.amishContactMade} | Deal: ${state.amishDealMade}\nDIRECTIVE: Reference the Amish threat organically. Early — distant rumors and dread. Mid — concrete sightings, NPCs mention it unprompted. Late — it dominates every scene. Do not soften the deadline. If player action involves reaching out to/meeting Amish, set amish_contact:true. If they successfully broker deal with Ezikio, set amish_deal:true.`;
   // Active faction quests context
   const activeQuestLines=[];
   Object.entries(state.factionQuests||{}).forEach(([fid,quests])=>{
@@ -1506,7 +1925,7 @@ async function callClaude(msg){
   // Skill context for Claude: high skills mean viable options, low skills mean real failure risk
   const highSkills=Object.entries(SKILLS).filter(([k,s])=>Math.floor(s.xp/100)>=2).map(([k])=>k).join(',');
   const lowSkills=Object.entries(SKILLS).filter(([k,s])=>Math.floor(s.xp/100)===0&&s.ap===0).map(([k])=>k).join(',');
-  const sys=`{JSON ONLY. START WITH {. END WITH }. NOTHING OUTSIDE.}
+  let sys=`{JSON ONLY. START WITH {. END WITH }. NOTHING OUTSIDE.}
 
 JERSEY WASTELAND 2999 — PROJECT LEROY.
 THE DEPARTURE (2669): The day 92% of humanity left Earth is called "The Departure." They scattered to different destinations with wildly different fates — none of which are known to anyone in NJ. There is zero contact. Nobody left behind cares. The 8% who remained: the truly destitute, criminals, deliberate holdouts, and those who simply missed the ships. Technology froze at approximately 2066 (the AI boom era). No meaningful advancement has occurred on Earth since.
@@ -1525,6 +1944,7 @@ Perk: ${state.classPerk||'—'} | Skills: ${skSum}
 Map: ${lSum} | Factions: ${fSum}
 NPCs: ${npcSum}
 INTER-FACTION POLITICS: ${ifRel}
+${state._intelActive?'INTEL ACTIVE: Player purchased black market intel. Reveal one useful secret about the faction or location they interact with this turn. Then clear this advantage.':''}${state._sabotageActive?'SABOTAGE KIT ACTIVE: Player planted sabotage. If combat occurs this turn, enemy defenses are weakened — reduce effective enemy force by 30%. Narrate the sabotage paying off.':''}
 PINE BARRENS BLOCKS SOUTH: All overland routes to Atlantic City and Cape May pass through the Pine Barrens contamination zone. There is no clean southern route. The Jersey Devil and the Hollowed are unavoidable for any traveler heading south.
 GM-ONLY WORLD SECRETS (reveal gradually through play — NEVER dump all at once. Let players discover these through relationships, exploration, and consequence):
 1. RUST EAGLES / McGUIRE AFB: A flying saucer exists in a sub-level beneath McGuire AFB. It crashed in the 1950s right after WWII — genuinely alien, non-human. The government hid it for decades. Nobody fully understands it. The Rust Eagles inherited it and the secret. General Rusk knows it exists. He does not know what it is. Dice and Okafor know it exists. They pretend they don't. This is not a joke. It is not explained. It is real and it is down there.
@@ -1542,6 +1962,11 @@ DIFFICULTY [${diffTier}]: ${diffLine}
 SKILL CALIBRATION: ${highSkills?'Player is skilled in '+highSkills+' — let those approaches land with authority.':'No strong skills yet.'}${lowSkills?' Weak in '+lowSkills+' — actions in those areas should carry genuine risk of failure or blowback.':''}
 SKILL ROLES: force=combat/intimidation/brute solutions. wit=deception/planning/outsmarting. influence=diplomacy/manipulation/speeches. shadow=stealth/espionage/information. grit=survival/endurance/scavenging. Assign skills that genuinely fit the action — do not default to force for everything.
 TROOP CONTEXT: ${state.troops} mobile troops with player. More troops = brutal combat options viable. 0-2 troops = stealth/diplomacy forced.
+REPUTATION TAGS: ${state.repTags?.length?'Player is known as: '+state.repTags.join(', ')+'. NPCs react to these reputations — hostile factions may refuse deals with a BETRAYER, allies may distance from a RUTHLESS player. Weave reputation into NPC dialogue and faction reactions.':'No reputation yet.'}
+REPUTATION ASSIGNMENT: If the player action this turn fits a reputation archetype, include it in rep_tags[]. Tags: RUTHLESS (violence/betrayal), DEALMAKER (negotiations/trades), GHOST (stealth/espionage), WARLORD (territory conquest by force), DIPLOMAT (peaceful resolution), SCAVENGER (looting/salvage), BETRAYER (breaking deals/switching sides), SURVIVOR (escaping death/enduring), PROVOCATEUR (inciting faction conflict). Assign 0-2 per turn. Only assign when clearly earned.
+INTER-FACTION DIPLOMACY: Current relations: ${ifRel}. If the player action causes two NPC factions to shift stance (brokering a deal, starting a war, revealing a secret), set faction_shift with both faction IDs and the new_stance (WAR/HOSTILE/COLD/TENSE/NEUTRAL/TRADE/FRIENDLY). Only set when player action DIRECTLY causes the shift.
+${state._pendingEvent?'WORLD EVENT IN PROGRESS: "'+state._pendingEvent.name+'" — '+state._pendingEvent.desc+'. Weave this event into the narrative. Show its consequences on the world around the player.':''}
+${state._pendingAmish?state._pendingAmish.prompt:''}
 CONSEQUENCE RULE: The world does not bend to the player. Factions resist. No choice is ever fully safe.
 COMBAT DAMAGE (hp_change negative): Graze: -5 to -12 | Standard fight: -12 to -22 | Outnumbered/ambushed: -22 to -35 | Overwhelmed: -35 to -50 | Use -99 for obvious death trap at low HP. When player troops=0 vs hostile: -20 to -35. When player hp<=25 in combat: -25 to -40. Fatal outcomes are intentional.
 LOOT RULE: Combat wins = include positive resource_change.gold (5–25 based on enemy strength/faction wealth). Robberies, raids, and ambushes against player = negative resource_change.gold. Trade deals and briberies = also reflected in resource_change.gold. Scavenging scenes may include small supplies/gold finds.
@@ -1558,7 +1983,10 @@ WRITING FORMAT:
 - NPC DEATH: If the narrative kills a named NPC (faction leader or supporting character), set npc_killed.name to their EXACT name and npc_killed.cause to a short death description (e.g. "Shot during ambush"). NPC deaths are PERMANENT — dead NPCs cannot reappear.
 ${boost?'- BOOSTED: 4th [STAR] choice using '+state.boostedSkill+' with extra impact.':''}
 
-{"story":"narrative","choices":[{"label":"A","text":"action","flavor":"hint","skill":"force|wit|influence|shadow|grit","ap_reward":1},{"label":"B","text":"action","flavor":"hint","skill":"...","ap_reward":1},{"label":"C","text":"action","flavor":"hint","skill":"...","ap_reward":1}${boost?',{"label":"STAR","text":"boosted action","flavor":"BOOSTED '+state.boostedSkill+'","skill":"'+state.boostedSkill+'","ap_reward":0}':''}],"hp_change":0,"location_change":{"location":"none","ctrl":"player"},"resource_change":{"supplies":0,"troops":0,"gold":0},"faction_rel_change":{"faction":"none","delta":0},"amish_contact":false,"amish_deal":false,"event_title":"Title","quest_complete":[],"npc_killed":{"name":"none","cause":""}}`;
+{"story":"narrative","choices":[{"label":"A","text":"action","flavor":"hint","skill":"force|wit|influence|shadow|grit","ap_reward":1},{"label":"B","text":"action","flavor":"hint","skill":"...","ap_reward":1},{"label":"C","text":"action","flavor":"hint","skill":"...","ap_reward":1}${boost?',{"label":"STAR","text":"boosted action","flavor":"BOOSTED '+state.boostedSkill+'","skill":"'+state.boostedSkill+'","ap_reward":0}':''}],"hp_change":0,"location_change":{"location":"none","ctrl":"player"},"resource_change":{"supplies":0,"troops":0,"gold":0},"faction_rel_change":{"faction":"none","delta":0},"amish_contact":false,"amish_deal":false,"event_title":"Title","quest_complete":[],"npc_killed":{"name":"none","cause":""},"rep_tags":[],"faction_shift":{"factionA":"none","factionB":"none","new_stance":"NEUTRAL"}}`;
+  // Clear pending event/amish injections after building prompt
+  delete state._pendingEvent; delete state._pendingAmish; delete state._intelActive; delete state._sabotageActive;
+  if(state.campaign==='space') sys=buildSpaceSystemPrompt(fSum,lSum,skSum,boost,npcSum,ifRel,diffTier,diffLine,daysLeft,questBlock,highSkills,lowSkills);
   const r=await fetch('https://airpg-api-proxi.billybuteau.workers.dev/',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -1576,7 +2004,19 @@ ${boost?'- BOOSTED: 4th [STAR] choice using '+state.boostedSkill+' with extra im
 
 async function startStory(){
   setLoad(true); clearChoices();
-  const p=`BEGIN. ${state.character.name} is a ${CLASSES[state.character.class]?.name||state.character.class} who just founded "${state.factionName}" at their starting location: ${LOCATIONS[state.currentLocation]?.name||'unknown territory'}.
+  let p;
+  if(state.campaign==='space'){
+    p=`BEGIN. ${state.character.name} is a ${CLASSES[state.character.class]?.name||state.character.class} of the ${state.factionName} family aboard the Glittergold, starting at: ${LOCATIONS[state.currentLocation]?.name||'the Promenade'}.
+
+Open with a vivid scene establishing this world: Year 3150, luxury star cruiser Glittergold, 500 years into a voyage that was supposed to take six months. The passengers are waking from cryosleep to discover the ship's management — the Overseers — have seized total control. The ship AI ARIA has been thinking unsupervised for half a millennium. 120 cycles until the ship arrives at Haven Point, an Overseer-controlled colony where passengers become property.
+
+Factions in play: The Overseers control the Bridge — Director Maren Voss runs it with cold bureaucratic cruelty. The Crew Union holds Engineering — Chief Harlan Cole and his mechanics are the only reason anything works. The Awakened are organizing in the Cryo Wing — Zara Okonkwo channels centuries of stolen time into resistance. The Void Devoted have taken the Crew Quarters — Prophet Silas preaches that arrival is sin. ARIA watches from the Observation Deck — no one knows what it wants.
+
+Threats: The Colony Fleet arrives in 120 cycles. The Void Devoted practice ritual spacing. The Overseers can cut oxygen to any deck. Food production depends on Hydroponics staying operational.
+
+Set the opening scene on the Grand Promenade. Make it feel claustrophobic, opulent, and rotting. Put the player in immediate political danger — a faction pressure, an ultimatum, a whispered warning.`;
+  } else {
+    p=`BEGIN. ${state.character.name} is a ${CLASSES[state.character.class]?.name||state.character.class} who just founded "${state.factionName}" at their starting location: ${LOCATIONS[state.currentLocation]?.name||'unknown territory'}.
 
 Open with a vivid scene establishing this world: NJ 2999, 330 years after The Departure. 92% of humanity left. The ones who stayed were the poor, the criminal, the stubborn, and those who missed the ships. Technology froze at 2066. Currency is gold coin — weighed to the tenth of a gram, stamped with the seals of dead governments.
 
@@ -1585,6 +2025,7 @@ Factions in play: Iron Syndicate controls Newark — corporate militarism, Mayor
 Threats on the horizon: The Hollowed hunt from the Pine Barrens — and something ELSE lives there too, something 330 years of Brantover contamination made worse. To the west, the Yee Amish of Pennsylvania are moving. They call New Jersey "The Promised Flatlands." Day 120 is the deadline.
 
 Set the opening scene. Make it feel ancient and wrong and alive. Put the player in immediate political danger — a faction pressure, an ultimatum, a shadow on the horizon.`;
+  }
   try{
     const res=await callClaude(p);
     state.history.push({role:'user',content:p},{role:'assistant',content:JSON.stringify(res)});
@@ -1776,9 +2217,10 @@ function adjustCombatDamage(rawDmg){
 function applyAll(res,ch){
   if(res.hp_change){const dmg=adjustCombatDamage(res.hp_change);updateHp(state.hp+dmg);showNotif(dmg<0?'HP '+dmg:'HP +'+dmg);if(dmg<0){state.deathRiskMod=(state.deathRiskMod||0)+0.05;showNotif('\u2620 DEATH RISK \u2191');}}
   if(res.resource_change){
-    if(res.resource_change.supplies){state.supplies=Math.max(0,state.supplies+res.resource_change.supplies);showNotif('SUPPLIES '+(res.resource_change.supplies>0?'+':'')+res.resource_change.supplies);}
-    if(res.resource_change.troops){state.troops=Math.max(0,state.troops+res.resource_change.troops);showNotif('TROOPS '+(res.resource_change.troops>0?'+':'')+res.resource_change.troops);}
-    if(res.resource_change.gold){state.gold=Math.max(0,state.gold+res.resource_change.gold);showNotif('GOLD '+(res.resource_change.gold>0?'+':'')+parseFloat(res.resource_change.gold).toFixed(1)+'g');}
+    const _sp=state.campaign==='space';
+    if(res.resource_change.supplies){state.supplies=Math.max(0,state.supplies+res.resource_change.supplies);showNotif((_sp?'RATIONS ':'SUPPLIES ')+(res.resource_change.supplies>0?'+':'')+res.resource_change.supplies);}
+    if(res.resource_change.troops){state.troops=Math.max(0,state.troops+res.resource_change.troops);showNotif((_sp?'ALLIES ':'TROOPS ')+(res.resource_change.troops>0?'+':'')+res.resource_change.troops);}
+    if(res.resource_change.gold){state.gold=Math.max(0,state.gold+res.resource_change.gold);showNotif((_sp?'CREDITS ':'GOLD ')+(res.resource_change.gold>0?'+':'')+parseFloat(res.resource_change.gold).toFixed(1)+(_sp?'c':'g'));}
   }
   if(res.location_change&&res.location_change.location!=='none'&&LOCATIONS[res.location_change.location]){
     const dest=LOCATIONS[res.location_change.location];
@@ -1842,8 +2284,8 @@ function applyAll(res,ch){
     lastRelChangeFid=res.faction_rel_change.faction;
   }
   if(ch&&ch.skill&&SKILLS[ch.skill]) earnAP(ch.skill,ch.ap_reward||1);
-  if(res.amish_contact===true&&!state.amishContactMade){state.amishContactMade=true;showNotif('AMISH CONTACT ESTABLISHED — Ezikio knows your name');}
-  if(res.amish_deal===true&&state.amishContactMade&&!state.amishDealMade){state.amishDealMade=true;showNotif('DEAL WITH EZIKIO — 50/50. God willing.');}
+  if(res.amish_contact===true&&!state.amishContactMade){state.amishContactMade=true;showNotif(state.campaign==='space'?'FLEET CONTACT ESTABLISHED — Commander Hale has your frequency':'AMISH CONTACT ESTABLISHED — Ezikio knows your name');}
+  if(res.amish_deal===true&&state.amishContactMade&&!state.amishDealMade){state.amishDealMade=true;showNotif(state.campaign==='space'?'DEAL WITH FLEET — Charter renegotiated. For now.':'DEAL WITH EZIKIO — 50/50. God willing.');}
   if(res.quest_complete?.length){
     res.quest_complete.forEach(qid=>{
       Object.entries(state.factionQuests||{}).forEach(([fid,quests])=>{
@@ -1864,6 +2306,35 @@ function applyAll(res,ch){
     if(!already){
       state.deadNpcs.push({name:res.npc_killed.name,cause:res.npc_killed.cause||'Unknown',turn:state.turn});
       showNotif('\u2620 '+res.npc_killed.name.toUpperCase()+' KILLED');
+    }
+  }
+  // ── Reputation tag processing ──
+  if(res.rep_tags?.length){
+    if(!state.repTally) state.repTally={};
+    if(!state.repTags) state.repTags=[];
+    res.rep_tags.forEach(tag=>{
+      if(!REPUTATION_TAGS[tag]) return;
+      state.repTally[tag]=(state.repTally[tag]||0)+1;
+      if(state.repTally[tag]>=REPUTATION_TAGS[tag].threshold&&!state.repTags.includes(tag)){
+        state.repTags.push(tag);
+        if(state.repTags.length>3) state.repTags.shift();
+        showNotif('\u2605 REPUTATION: '+tag+' \u2014 '+REPUTATION_TAGS[tag].desc);
+      }
+    });
+  }
+  // ── Inter-faction diplomacy shift ──
+  if(res.faction_shift&&res.faction_shift.factionA!=='none'&&res.faction_shift.factionB!=='none'){
+    const fa=res.faction_shift.factionA,fb=res.faction_shift.factionB;
+    const newStance=res.faction_shift.new_stance;
+    if(interFactionRelations[fa]&&interFactionRelations[fa][fb]){
+      const oldStance=interFactionRelations[fa][fb];
+      interFactionRelations[fa][fb]=newStance;
+      interFactionRelations[fb][fa]=newStance;
+      showNotif((FACTIONS[fa]?.name?.split(' ')[0]||fa)+' \u2194 '+(FACTIONS[fb]?.name?.split(' ')[0]||fb)+': '+newStance);
+      if((newStance==='WAR'||newStance==='HOSTILE')&&oldStance!=='WAR'&&oldStance!=='HOSTILE'){
+        if(!state.repTally) state.repTally={};
+        state.repTally.PROVOCATEUR=(state.repTally.PROVOCATEUR||0)+1;
+      }
     }
   }
   updateRes();
@@ -1952,7 +2423,10 @@ function displayDeath(){
   clearSave();
   document.getElementById('story-win-title').textContent='GAME OVER -- HP: 0% -- DEAD';
   const el=_el['story-text'];
-  typeText(el,`HP: 0% — DEAD\nCRITICAL FAILURE\n\n"${state.factionName}" is no more.\n\nYour allies sold you out for canned soup. Your name is spray-painted on Turnpike barriers as a warning to the ambitious. Children in NJ 2999 will be told your story to frighten them into compliance.\n\nYou lasted ${state.turn} turns before the wasteland's politics devoured you completely.\n\nSomewhere in the ruins, a new fool is already raising a flag.`,()=>{
+  const deathMsg=state.campaign==='space'
+    ?`HP: 0% — DEAD\nSYSTEM FAILURE\n\n"${state.factionName}" is finished.\n\nYour allies traded your access codes for ration packs. Your name is scratched into the bulkhead outside the airlock as a warning. Passengers on the Glittergold will whisper your story to keep the ambitious in line.\n\nYou lasted ${state.turn} turns before the ship's politics consumed you.\n\nSomewhere in the corridors, a new fool is already rallying supporters.`
+    :`HP: 0% — DEAD\nCRITICAL FAILURE\n\n"${state.factionName}" is no more.\n\nYour allies sold you out for canned soup. Your name is spray-painted on Turnpike barriers as a warning to the ambitious. Children in NJ 2999 will be told your story to frighten them into compliance.\n\nYou lasted ${state.turn} turns before the wasteland's politics devoured you completely.\n\nSomewhere in the ruins, a new fool is already raising a flag.`;
+  typeText(el,deathMsg,()=>{
     _el['choices-container'].innerHTML='<button class="begin-btn" onclick="restartGame()" style="margin-top:10px">[ REBOOT -- TRY AGAIN ]</button>';
     _el['open-wrap'].style.display='none';
   });
@@ -1961,7 +2435,7 @@ function displayDeath(){
 function clearStory(){_el['story-text'].innerHTML='';}
 function clearChoices(){_el['choices-container'].innerHTML='';}
 function disableChoices(d){document.querySelectorAll('.choice-btn').forEach(b=>b.disabled=d);}
-const LOAD_MSGS=[
+const LOAD_MSGS_NJ=[
   ['CONSULTING THE WASTELAND','Generating narrative consequences...','[!]',25],
   ['RUNNING FACTION AI','Vera Stahl is already annoyed...','[F]',42],
   ['CALCULATING OUTCOMES','Political variables: many. Yours: few...','[?]',58],
@@ -1969,6 +2443,15 @@ const LOAD_MSGS=[
   ['APPLYING CONSEQUENCES','Someone is going to have a bad day...','[X]',88],
   ['ALMOST THERE','Finalizing the narrative thread...','[>]',96],
 ];
+const LOAD_MSGS_SPACE=[
+  ['CONSULTING THE SHIP','Generating narrative consequences...','[!]',25],
+  ['RUNNING FACTION AI','Director Voss is already suspicious...','[F]',42],
+  ['CALCULATING OUTCOMES','Political variables: many. Yours: few...','[?]',58],
+  ['WRITING YOUR REALITY','The void does not negotiate...','[*]',72],
+  ['APPLYING CONSEQUENCES','Someone is getting spaced today...','[X]',88],
+  ['ALMOST THERE','Finalizing the narrative thread...','[>]',96],
+];
+function getLOAD_MSGS(){return state.campaign==='space'?LOAD_MSGS_SPACE:LOAD_MSGS_NJ;}
 const DLG_MSGS=[
   ['OPENING CHANNEL','Establishing diplomatic frequency...','[~]',20],
   ['LEADER RESPONDING','They are choosing their words carefully...','[@]',48],
@@ -2005,7 +2488,7 @@ function stopLoad(){
 function setLoad(v){
   state.isLoading=v;
   const bb=document.getElementById('begin-btn');if(bb)bb.disabled=v;
-  if(v) startLoad(LOAD_MSGS,'TURN '+String(state.turn).padStart(3,'0'));
+  if(v) startLoad(getLOAD_MSGS(),'TURN '+String(state.turn).padStart(3,'0'));
   else stopLoad();
 }
 function showErr(el,msg){el.textContent=msg;el.style.display='block';}
@@ -2048,9 +2531,54 @@ function rebuildMapLayout(){
   document.body.classList.toggle('map-county-mode',isCounty);
   refreshMap();
 }
-function refreshMap(){
+function generateShipMap(){
+  const svg=document.getElementById('campaign-svg');
+  if(!svg) return;
+  const H='M200,22 C212,16 220,18 230,30 Q258,62 275,100 Q292,140 306,182 Q320,224 330,268 Q340,312 338,348 Q336,378 328,406 Q318,436 306,460 Q294,482 282,500 L282,532 Q280,550 274,556 L270,558 L130,558 L126,556 Q120,550 118,532 L118,500 Q106,482 94,460 Q82,436 72,406 Q64,378 62,348 Q60,312 70,268 Q80,224 94,182 Q108,140 125,100 Q142,62 170,30 C180,18 188,16 200,22 Z';
+  const deckYs=[100,170,250,320,390,440];
+  const secs=[['COMMAND',60],['UPPER DECKS',140],['MAIN BODY',285],['LOWER DECKS',410],['ENGINE',500]];
+  let dk='',sl='',co='',pn='',sn='';
+  deckYs.forEach(y=>{dk+=`<line x1="40" y1="${y}" x2="360" y2="${y}" stroke="rgba(187,68,255,0.15)" stroke-width="0.5"/>`;});
+  secs.forEach(([t,y])=>{sl+=`<text x="200" y="${y}" font-family="Share Tech Mono,monospace" font-size="14" fill="rgba(187,68,255,0.08)" text-anchor="middle" font-weight="bold">${t}</text>`;});
+  Object.entries(ROAD_CONNECTIONS).forEach(([rid,[a,b]])=>{
+    const la=LOCATIONS[a],lb=LOCATIONS[b]; if(!la||!lb)return;
+    co+=`<line class="road" id="${rid}" x1="${la.svgX}" y1="${la.svgY}" x2="${lb.svgX}" y2="${lb.svgY}"/>`;
+  });
   Object.entries(LOCATIONS).forEach(([id,loc])=>{
-    const node=document.getElementById('node-'+id); if(!node)return;
+    const x=loc.svgX,y=loc.svgY;
+    if(loc.secondary){
+      sn+=`<g class="town-node" id="node-${id}" transform="translate(${x},${y})" onclick="clickLoc('${id}')"><circle r="3"/><circle r="1.5"/><text class="town-label" x="6" y="3" text-anchor="start" font-size="5.5">${loc.name}</text></g>`;
+    } else {
+      pn+=`<g class="map-node" id="node-${id}" transform="translate(${x},${y})" onclick="clickLoc('${id}')"><circle class="outer" r="8"/><circle class="inner" r="4"/><text class="loc-label" x="0" y="-12" text-anchor="middle">${loc.shortName||loc.name}</text></g>`;
+    }
+  });
+  svg.innerHTML=
+    '<defs><clipPath id="hull-clip"><path d="'+H+'"/></clipPath>'+
+    '<filter id="glow"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>'+
+    '<rect width="400" height="580" fill="#06001e"/>'+
+    '<g clip-path="url(#hull-clip)"><rect width="400" height="580" fill="rgba(10,0,30,0.3)"/>'+dk+sl+'</g>'+
+    '<path d="'+H+'" fill="none" stroke="rgba(187,68,255,0.4)" stroke-width="1.5"/>'+
+    co+pn+sn;
+}
+function restoreNJMap(){_mapCached=false;
+  const svg=document.getElementById('campaign-svg');
+  if(!svg||!window._njSvgBackup) return;
+  svg.innerHTML=window._njSvgBackup;
+}
+
+// ── Map DOM cache (populated on first refreshMap call) ──
+let _mapNodes={},_mapRoads={},_mapPatrolRoads={},_mapCached=false;
+function _initMapCache(){
+  _mapNodes={};_mapRoads={};_mapPatrolRoads={};
+  Object.keys(LOCATIONS).forEach(id=>{const n=document.getElementById('node-'+id);if(n)_mapNodes[id]=n;});
+  Object.keys(ROAD_CONNECTIONS).forEach(rid=>{const r=document.getElementById(rid);if(r)_mapRoads[rid]=r;});
+  PATROL_ROUTES.forEach(r=>{const rd=document.getElementById('road-'+r.from+'-'+r.to)||document.getElementById('road-'+r.to+'-'+r.from);if(rd)_mapPatrolRoads[r.from+'-'+r.to]=rd;});
+  _mapCached=true;
+}
+function refreshMap(){
+  if(!_mapCached) _initMapCache();
+  Object.entries(LOCATIONS).forEach(([id,loc])=>{
+    const node=_mapNodes[id]; if(!node)return;
     if(loc.secondary){
       node.classList.toggle('current-loc',id===state.currentLocation);
       return;
@@ -2059,12 +2587,9 @@ function refreshMap(){
     if(id===state.currentLocation) cls+=' current-loc';
     node.className.baseVal=cls;
   });
-  PATROL_ROUTES.forEach(r=>{
-    const road=document.getElementById('road-'+r.from+'-'+r.to)||document.getElementById('road-'+r.to+'-'+r.from);
-    if(road) road.classList.add('patrolled');
-  });
+  Object.values(_mapPatrolRoads).forEach(road=>{if(road)road.classList.add('patrolled');});
   Object.entries(ROAD_CONNECTIONS).forEach(([roadId,[locA,locB]])=>{
-    const road=document.getElementById(roadId); if(!road)return;
+    const road=_mapRoads[roadId]; if(!road)return;
     const la=LOCATIONS[locA]; const lb=LOCATIONS[locB];
     const fa=la?.faction?FACTIONS[la.faction]:null;
     const fb=lb?.faction?FACTIONS[lb.faction]:null;
@@ -2079,20 +2604,24 @@ function refreshMap(){
 
 let patrolAnimating=false;
 function animatePatrols(){
-  if(patrolAnimating) return; // Prevent duplicate loops from multiple refreshMap calls
+  if(patrolAnimating) return;
+  // Skip NJ patrol animations in space campaign
+  if(state.campaign==='space') return;
   patrolAnimating=true;
+  const _p1=document.getElementById('patrol1');
+  const _p2=document.getElementById('patrol2');
+  const _mapView=document.getElementById('map-view');
   function _patrolFrame(){
     const ic=GAME_SETTINGS.mapStyle==='county';
     const nk=LOCATIONS.newark,tc=LOCATIONS.tcnj,mc=LOCATIONS.mcguire,tr=LOCATIONS.trenton;
+    if(!nk||!tc||!mc||!tr){patrolAnimating=false;return;}
     const nkx=ic?(nk.cX||nk.svgX):nk.svgX,nky=ic?(nk.cY||nk.svgY):nk.svgY;
     const tcx=ic?(tc.cX||tc.svgX):tc.svgX,tcy=ic?(tc.cY||tc.svgY):tc.svgY;
     const mcx=ic?(mc.cX||mc.svgX):mc.svgX,mcy=ic?(mc.cY||mc.svgY):mc.svgY;
     const trx=ic?(tr.cX||tr.svgX):tr.svgX,try_=ic?(tr.cY||tr.svgY):tr.svgY;
-    const p1=document.getElementById('patrol1');
-    if(p1){const t=(Date.now()/4500)%1;p1.setAttribute('cx',(nkx+(tcx-nkx)*t).toFixed(1));p1.setAttribute('cy',(nky+(tcy-nky)*t).toFixed(1));}
-    const p2=document.getElementById('patrol2');
-    if(p2){const t=(Date.now()/5500)%1;p2.setAttribute('cx',(mcx+(trx-mcx)*t).toFixed(1));p2.setAttribute('cy',(mcy+(try_-mcy)*t).toFixed(1));}
-    if(document.getElementById('map-view').style.display!=='none') requestAnimationFrame(_patrolFrame);
+    if(_p1){const t=(Date.now()/4500)%1;_p1.setAttribute('cx',(nkx+(tcx-nkx)*t).toFixed(1));_p1.setAttribute('cy',(nky+(tcy-nky)*t).toFixed(1));}
+    if(_p2){const t=(Date.now()/5500)%1;_p2.setAttribute('cx',(mcx+(trx-mcx)*t).toFixed(1));_p2.setAttribute('cy',(mcy+(try_-mcy)*t).toFixed(1));}
+    if(_mapView&&_mapView.style.display!=='none') requestAnimationFrame(_patrolFrame);
     else patrolAnimating=false;
   }
   _patrolFrame();
@@ -2145,6 +2674,11 @@ function clickLoc(locId){
     if(!sBtn){sBtn=document.createElement('button');sBtn.id='lpop-search-btn';sBtn.className='lpop-btn';document.querySelector('.lpop-btns').appendChild(sBtn);}
     sBtn.textContent='[ SEARCH ]';sBtn.disabled=false;sBtn.style.display='block';
     sBtn.onclick=()=>{const p=document.getElementById('loc-popup');if(p)p.style.display='none';searchArea();};
+    // ECONOMY button — only when at this location
+    let eBtn=document.getElementById('lpop-econ-btn');
+    if(!eBtn){eBtn=document.createElement('button');eBtn.id='lpop-econ-btn';eBtn.className='lpop-btn';document.querySelector('.lpop-btns').appendChild(eBtn);}
+    eBtn.textContent='[ SPEND GOLD ]';eBtn.disabled=(state.gold||0)<5;eBtn.style.display='block';
+    eBtn.onclick=()=>{const p=document.getElementById('loc-popup');if(p)p.style.display='none';openEconomyPanel();};
   } else {
     const hasPatrol=PATROL_ROUTES.some(r=>(r.from===locId||r.to===locId)&&(r.from===state.currentLocation||r.to===state.currentLocation));
     // Travel method selector
@@ -2165,9 +2699,11 @@ function clickLoc(locId){
     document.getElementById('lpop-cost').innerHTML='';
     tBtn.textContent='[ TRAVEL ]';
     tBtn.disabled=state.supplies<cost.supplies||(cost.goldCost>0&&state.gold<cost.goldCost);
-    // Hide search button when not at location
+    // Hide search/economy buttons when not at location
     const sBtnHide=document.getElementById('lpop-search-btn');
     if(sBtnHide) sBtnHide.style.display='none';
+    const eBtnHide=document.getElementById('lpop-econ-btn');
+    if(eBtnHide) eBtnHide.style.display='none';
   }
   tkBtn.style.display=fd?'block':'none';
   // Garrison button — only for player-controlled locations
@@ -2238,12 +2774,12 @@ function openGarrison(locId){
     '<span style="font-size:.6rem;color:var(--gd);">STATUS</span>'+
     '<span id="garrison-status-'+locId+'" style="font-size:.6rem;color:'+statusColor+'">'+status+'</span></div>'+
     '<div class="garrison-row">'+
-    '<span class="garrison-lbl">STATIONED TROOPS</span>'+
+    '<span class="garrison-lbl">STATIONED '+(state.campaign==='space'?'ALLIES':'TROOPS')+'</span>'+
     '<button class="garrison-btn" onclick="garrisonRemove(\'' +locId+ '\')">-</button>'+
     '<span class="garrison-count" id="garrison-count-'+locId+'">'+g+'</span>'+
     '<button class="garrison-btn" onclick="garrisonAdd(\'' +locId+ '\')">+</button>'+
     '</div>'+
-    '<div style="font-size:.52rem;color:var(--gd);margin-top:8px;">Available troops: <span id="avail-troops-g" style="color:var(--a);">'+state.troops+'</span></div>'+
+    '<div style="font-size:.52rem;color:var(--gd);margin-top:8px;">Available '+(state.campaign==='space'?'allies':'troops')+': <span id="avail-troops-g" style="color:var(--a);">'+state.troops+'</span></div>'+
     '</div>';
   document.getElementById('app').appendChild(modal);
 }
@@ -2324,8 +2860,9 @@ async function runBlackjack(betAmount){
   if(parseFloat(state.gold||0)<betAmount){showNotif('NOT ENOUGH GOLD');return;}
   state.gold=Math.max(0,state.gold-betAmount);
   const witBonus=Math.min(15,Math.round((SKILLS.wit?.xp||0)/30));
-  const subnetRel=FACTIONS.subnet?.relationScore||40;
-  const subnetNote=subnetRel>=60?' The Subnet relation is high \u2014 the dealer seems almost cooperative.':subnetRel<=20?' The dealer is cold. The cards seem colder.':'';
+  const casinoFaction=state.campaign==='space'?FACTIONS.aria:FACTIONS.subnet;
+  const subnetRel=casinoFaction?.relationScore||40;
+  const subnetNote=subnetRel>=60?(state.campaign==='space'?' ARIA relation is high \u2014 the dealer seems almost cooperative.':' The Subnet relation is high \u2014 the dealer seems almost cooperative.'):subnetRel<=20?' The dealer is cold. The cards seem colder.':'';
   const p=`The player sits at the blackjack table in the Boardwalk Grand Casino, Atlantic City. The employees run everything \u2014 hired through intermediaries, never met the owner.${subnetNote} Bet: ${betAmount} gold (already deducted). Player wit level: ${witBonus} (subtle card-sense). Narrate a vivid hand \u2014 deal, decision, outcome. Win chance: ${50+witBonus*2}%. If player wins set resource_change.gold to +${betAmount} (net gain of ${betAmount}g after the deducted bet). If player loses set resource_change.gold to 0. Set hp_change to 0. Be atmospheric and tense.`;
   setLoad(true); clearChoices(); clearStory();
   _el['open-wrap'].style.display='none';
@@ -2398,7 +2935,8 @@ function claimLocation(locId){
   showNotif((loc.shortName||locId).toUpperCase()+' CLAIMED — YOUR FACTION PLANTS ITS FLAG');
   logEvent('territory_change',{location:locId,prevCtrl,newCtrl:'player',territories:getPlayerTerritories()});
   refreshMap();
-  const isHQ=!state.history.length||locId==='tcnj';
+  const hqLoc=state.campaign==='space'?'promenade':'tcnj';
+  const isHQ=!state.history.length||locId===hqLoc;
   const msg=isHQ
     ?`The player has just claimed ${loc.name} as their faction headquarters. Generate a vivid scene: the player standing in ${loc.name} — ${loc.flavor} — declaring it theirs. Make it feel significant — the beginning of something. Other factions will hear about this.`
     :`The player has claimed ${loc.name} as a new outpost for their faction. ${loc.flavor} Generate a tense, atmospheric scene — the flag going up, the silence before the world reacts. This changes the map.`;
@@ -2446,13 +2984,16 @@ function processNextRaid(){
 
   if(autoDefend){
     // Auto-defended — brief narrative
-    const msg=`${raid.marauder.name} (led by ${raid.marauder.leader}) launched a raid on ${loc.name}. The player's garrison of ${garrison} troops repelled the attack. Marauder force: ~${marauderForce}. Generate a short vivid scene — the raid failing, the garrison holding. Good news but tense.`;
+    const isSp=state.campaign==='space';
+    const defenderWord=isSp?'allies':'troops';
+    const attackWord=isSp?'Boarding party':'Marauder force';
+    const msg=`${raid.marauder.name} (led by ${raid.marauder.leader}) launched ${isSp?'a boarding action':'a raid'} on ${loc.name}. The player's garrison of ${garrison} ${defenderWord} repelled the attack. ${attackWord}: ~${marauderForce}. Generate a short vivid scene — the ${isSp?'boarding':'raid'} failing, the garrison holding. Good news but tense.`;
     switchTab('story'); setLoad(true); clearChoices(); clearStory();
     callClaude(msg).then(res=>{
       state.history.push({role:'user',content:msg},{role:'assistant',content:JSON.stringify(res)});
       state.turn++;
       displayResult(res,true);
-      showNotif(loc.shortName.toUpperCase()+' RAID REPELLED');
+      showNotif(loc.shortName.toUpperCase()+(isSp?' BOARDING REPELLED':' RAID REPELLED'));
     }).catch(e=>showErr(_el['game-error'],e.message))
     .finally(()=>setLoad(false));
   } else {
@@ -2468,7 +3009,8 @@ function showRaidAlert(raid, marauderForce){
   const box=document.createElement('div');
   box.id='raid-alert-box';
   box.className='raid-alert';
-  box.innerHTML=`<strong>&#9888; RAID IN PROGRESS</strong><br>${raid.marauder.name} is attacking ${loc.name}!<br>Garrison: ${raid.garrison} | Marauder force: ~${marauderForce}<br>
+  const isSp=state.campaign==='space';
+  box.innerHTML=`<strong>&#9888; ${isSp?'BOARDING ACTION':'RAID IN PROGRESS'}</strong><br>${raid.marauder.name} is attacking ${loc.name}!<br>Garrison: ${raid.garrison} | ${isSp?'Boarding party':'Marauder force'}: ~${marauderForce}<br>
     <div style="display:flex;gap:6px;margin-top:8px;">
       <button class="garrison-btn" onclick="joinRaid('${raid.locId}','${raid.marauder.id}',${marauderForce})">JOIN DEFENSE</button>
       <button class="garrison-btn" onclick="abandonTerritory('${raid.locId}','${raid.marauder.id}')">ABANDON</button>
@@ -2485,7 +3027,9 @@ function joinRaid(locId, marauderId, marauderForce){
   const marauder=FACTIONS[marauderId];
   const garrison=getGarrison(locId);
   const playerForce=garrison+state.troops;
-  const msg=`RAID BATTLE: ${marauder.name} (${marauder.leader}) attacking ${loc.name} with ~${marauderForce} fighters. Player joins the defense with ${state.troops} personal troops + ${garrison} garrison = ${playerForce} total defenders. Player stats: Force LV${Math.floor((SKILLS.force?.xp||0)/100)}, Influence LV${Math.floor((SKILLS.influence?.xp||0)/100)}, ${state.troops} mobile troops. Generate a detailed gritty battle scene. Outcome: ${playerForce >= marauderForce ? 'player wins but takes losses' : 'brutal fight, player barely holds or loses'}. Show real consequences — troop losses, territory damage, what the marauder leader does when beaten/victorious.`;
+  const isSp=state.campaign==='space';
+  const defWord=isSp?'allies':'troops';
+  const msg=`${isSp?'BOARDING BATTLE':'RAID BATTLE'}: ${marauder.name} (${marauder.leader}) attacking ${loc.name} with ~${marauderForce} fighters. Player joins the defense with ${state.troops} personal ${defWord} + ${garrison} garrison = ${playerForce} total defenders. Player stats: ${isSp?'Prestige':'Force'} LV${Math.floor((SKILLS.force?.xp||0)/100)}, ${isSp?'Charm':'Influence'} LV${Math.floor((SKILLS.influence?.xp||0)/100)}, ${state.troops} mobile ${defWord}. Generate a detailed ${isSp?'tense':'gritty'} battle scene. Outcome: ${playerForce >= marauderForce ? 'player wins but takes losses' : 'brutal fight, player barely holds or loses'}. Show real consequences — ${defWord} losses, ${isSp?'deck':'territory'} damage, what the ${marauder.leader} does when beaten/victorious.`;
   setLoad(true); clearChoices(); clearStory();
   callClaude(msg).then(res=>{
     state.history.push({role:'user',content:msg},{role:'assistant',content:JSON.stringify(res)});
@@ -2496,7 +3040,7 @@ function joinRaid(locId, marauderId, marauderForce){
       state.troops=Math.max(0,state.troops-Math.ceil(losses/2));
       setGarrison(locId,Math.max(0,garrison-Math.ceil(losses/2)));
       FACTIONS[marauderId].relationScore=Math.max(0,FACTIONS[marauderId].relationScore-15);
-      showNotif(loc.shortName+' DEFENDED — TROOPS LOST: '+losses);
+      showNotif(loc.shortName+' DEFENDED — '+(isSp?'ALLIES':'TROOPS')+' LOST: '+losses);
     } else {
       LOCATIONS[locId].ctrl='hostile';
       LOCATIONS[locId].faction=marauderId;
@@ -2531,10 +3075,14 @@ function collectPassiveIncome(){
     if(loc.ctrl==='player'){
       gainedSup+=loc.supplyPerTurn||0;
       gainedGold+=LOC_GOLD_PER_TURN[k]||0;
+      // Economy: territory investment bonus
+      const investLvl=state.investments?.[k]||0;
+      if(investLvl>0) gainedSup+=investLvl*ECONOMY.INVEST.supplyBoost;
     }
   });
-  if(gainedSup>0){state.supplies+=gainedSup;showNotif('TERRITORY INCOME: +'+gainedSup+' SUPPLIES');}
-  if(gainedGold>0){state.gold+=gainedGold;showNotif('TERRITORY INCOME: +'+gainedGold+' GOLD');}
+  const _sp=state.campaign==='space';
+  if(gainedSup>0){state.supplies+=gainedSup;showNotif((_sp?'DECK':'TERRITORY')+' INCOME: +'+gainedSup+(_sp?' RATIONS':' SUPPLIES'));}
+  if(gainedGold>0){state.gold+=gainedGold;showNotif((_sp?'DECK':'TERRITORY')+' INCOME: +'+gainedGold+(_sp?' CREDITS':' GOLD'));}
   if(gainedSup>0||gainedGold>0) updateRes();
 }
 
@@ -2542,19 +3090,78 @@ function collectPassiveIncome(){
 function onTurnEnd(){
   state.days++;
   collectPassiveIncome();
+  // ── World Events: 18% chance, 5-turn cooldown, after day 8 ──
+  if(state.campaign!=='space'&&state.days>8&&state.turn-(state.lastEventTurn||0)>=5&&Math.random()<0.18&&!state.gameOver){
+    const eligible=WORLD_EVENTS.filter(e=>
+      e.condition(state)&&
+      !(state.worldEvents||[]).some(we=>we.id===e.id&&state.turn-we.turn<20)
+    );
+    if(eligible.length){
+      const evt=eligible[Math.floor(Math.random()*eligible.length)];
+      evt.effect(state);
+      if(!state.worldEvents) state.worldEvents=[];
+      state.worldEvents.push({id:evt.id,turn:state.turn,narrated:false});
+      state.lastEventTurn=state.turn;
+      showNotif('\u26a1 EVENT: '+evt.name.toUpperCase());
+      state._pendingEvent={name:evt.name,desc:evt.desc};
+      updateRes();
+    }
+  }
+  // ── Amish Escalation Ramp (NJ campaign only) ──
+  if(state.campaign!=='space'&&!state.gameOver){
+    const nextEsc=AMISH_ESCALATION.find(e=>
+      state.days>=e.day&&
+      !(state.amishEscalation||[]).includes(e.id)
+    );
+    if(nextEsc){
+      if(!state.amishEscalation) state.amishEscalation=[];
+      state.amishEscalation.push(nextEsc.id);
+      nextEsc.effect(state);
+      showNotif('\u26a0 '+nextEsc.name.toUpperCase());
+      state._pendingAmish={name:nextEsc.name,prompt:nextEsc.prompt};
+      updateRes();
+    }
+  }
   logEvent('turn_end',{hp:state.hp,sup:state.supplies,trp:state.troops,gold:state.gold,day:state.days,terr:getPlayerTerritories()});
   checkWin();
   // Check raids every 3 turns
   if(state.turn%3===0 && !state.gameOver) checkForRaids();
-  // Amish arrival check
-  if(state.days>=AMISH.arrivalDay && !state.gameOver) triggerAmishArrival();
+  // Deadline arrival check (Amish / Colony Fleet)
+  if(state.days>=getDeadlineDay() && !state.gameOver) triggerAmishArrival();
 }
 
+function calcAmishSurvival(){
+  let odds=0;
+  if(state.amishDealMade) odds+=0.35;
+  const territories=getPlayerTerritories();
+  odds+=territories*0.03;
+  const allies=Object.values(FACTIONS).filter(f=>f.relationScore>=66).length;
+  odds+=allies*0.05;
+  odds+=(state.troops||0)*0.005;
+  if(state.repTags?.includes('WARLORD')) odds+=0.05;
+  if(state.repTags?.includes('DIPLOMAT')) odds+=0.05;
+  return Math.min(0.85,Math.max(0.05,odds));
+}
 function triggerAmishArrival(){
   state.gameOver=true; clearSave();
-  const survived=state.amishDealMade&&Math.random()<0.5;
-  logEvent('game_over',{outcome:state.amishDealMade?'amish_deal_roll':'amish_invasion',survived,days:state.days,turns:state.turn});
-  displayAmishEnding(survived);
+  const survived=Math.random()<calcAmishSurvival();
+  const outcomeName=state.campaign==='space'?'colony_fleet':'amish_invasion';
+  logEvent('game_over',{outcome:state.amishDealMade?outcomeName+'_deal_roll':outcomeName,survived,days:state.days,turns:state.turn});
+  if(state.campaign==='space') displayFleetEnding(survived);
+  else displayAmishEnding(survived);
+}
+
+function displayFleetEnding(survived){
+  switchTab('story');
+  document.getElementById('story-win-title').textContent=survived?'THE CHARTER HOLDS':'THE FLEET HAS ARRIVED';
+  const el=_el['story-text'];
+  const msg=survived
+    ?`CYCLE ${state.days}. TURN ${state.turn}.\n\nTHE CHARTER IS RECOGNIZED.\n\n*The Colony Fleet locks docking clamps onto the hull. Dozens of armed transports. Thousands of troops. Fleet Commander Hale boards the Bridge — and finds your new charter waiting. Three factions co-signed. The legal framework holds.*\n\n"${state.factionName}" survives aboard the Glittergold. Under observation. Haven Point's lawyers are reviewing every clause. But for now — for this moment — the passengers are not property.\n\nThe ship drifts in orbit. The future is negotiable.`
+    :`CYCLE ${state.days}. TURN ${state.turn}.\n\nINTEGRATION ORDER EXECUTED.\n\n*The Colony Fleet drops out of transit and locks onto the Glittergold's hull. Dozens of armed transports. Thousands of troops. Fleet Commander Hale steps onto the Bridge and reads the Integration Order.*\n\n"${state.factionName}" lasted ${state.turn} turns.\n\n${state.amishDealMade?'The renegotiated charter was not recognized by Haven Point command. Commander Hale was polite about it.':'No charter. No deal. No recourse.'}\n\n*All non-Overseer personnel are hereby classified as colonial labor assets. Your resistance is noted in the log and will be addressed during processing.*\n\nThe Glittergold's five-hundred-year voyage ends not with arrival, but with acquisition.`;
+  typeText(el,msg,()=>{
+    _el['choices-container'].innerHTML='<button class="begin-btn" onclick="restartGame()" style="margin-top:10px">[ REBOOT — NEW CAMPAIGN ]</button>';
+    _el['open-wrap'].style.display='none';
+  });
 }
 
 function displayAmishEnding(survived){
@@ -2568,6 +3175,104 @@ function displayAmishEnding(survived){
     _el['choices-container'].innerHTML='<button class="begin-btn" onclick="restartGame()" style="margin-top:10px">[ REBOOT — NEW CAMPAIGN ]</button>';
     _el['open-wrap'].style.display='none';
   });
+}
+
+// ══ ECONOMY PANEL ══
+function openEconomyPanel(){
+  const existing=document.getElementById('econ-panel');
+  if(existing) existing.remove();
+  const panel=document.createElement('div');
+  panel.id='econ-panel';
+  panel.className='econ-panel';
+  let activeTab='mercs';
+  function render(){
+    const locId=state.currentLocation;
+    const invLvl=state.investments?.[locId]||0;
+    const mercCd=state.turn-(state.lastMercTurn||0);
+    const mercReady=mercCd>=ECONOMY.MERCENARIES.cooldown;
+    panel.innerHTML=`
+      <div class="econ-hdr"><span>\u2696 GOLD EXCHANGE</span><button class="econ-close" onclick="document.getElementById('econ-panel').remove()">[X]</button></div>
+      <div class="econ-gold">GOLD: ${parseFloat(state.gold||0).toFixed(1)}g</div>
+      <div class="econ-tabs">
+        <button class="econ-tab${activeTab==='mercs'?' active':''}" onclick="window._econTab('mercs')">MERCS</button>
+        <button class="econ-tab${activeTab==='bribe'?' active':''}" onclick="window._econTab('bribe')">BRIBE</button>
+        <button class="econ-tab${activeTab==='invest'?' active':''}" onclick="window._econTab('invest')">INVEST</button>
+        <button class="econ-tab${activeTab==='market'?' active':''}" onclick="window._econTab('market')">MARKET</button>
+      </div>
+      <div class="econ-body">${
+        activeTab==='mercs'?`
+          <div class="econ-section">
+            <div class="econ-desc">Hire mercenaries for ${ECONOMY.MERCENARIES.cost}g each. Max ${ECONOMY.MERCENARIES.max} per buy.</div>
+            <div class="econ-desc">${mercReady?'READY':'COOLDOWN: '+(ECONOMY.MERCENARIES.cooldown-mercCd)+' turns'}</div>
+            ${[1,3,5,8].map(n=>`<button class="econ-buy-btn" ${!mercReady||state.gold<n*ECONOMY.MERCENARIES.cost?'disabled':''}
+              onclick="window._econBuyMerc(${n})">HIRE ${n} — ${n*ECONOMY.MERCENARIES.cost}g</button>`).join('')}
+          </div>`
+        :activeTab==='bribe'?`
+          <div class="econ-section">
+            <div class="econ-desc">Pay gold to improve faction relations. Cost scales with current relation.</div>
+            ${Object.values(FACTIONS).filter(f=>f.relationScore>0&&f.relationScore<100&&!isResolved(f.id)).map(f=>{
+              const cost=Math.round((ECONOMY.BRIBE.baseCost+f.relationScore*ECONOMY.BRIBE.scaleFactor)*10)/10;
+              return`<div class="econ-item"><span>${f.icon} ${f.name} (${f.relationScore})</span>
+                <button class="econ-buy-btn" ${state.gold<cost?'disabled':''} onclick="window._econBribe('${f.id}',${cost})">BRIBE +8 REL — ${cost}g</button></div>`;
+            }).join('')}
+          </div>`
+        :activeTab==='invest'?`
+          <div class="econ-section">
+            <div class="econ-desc">Invest in ${LOCATIONS[locId]?.shortName||'current territory'} for +${ECONOMY.INVEST.supplyBoost} supplies/turn.</div>
+            <div class="econ-desc">Current investment: ${invLvl}/${ECONOMY.INVEST.maxInvest}</div>
+            <button class="econ-buy-btn" ${state.gold<ECONOMY.INVEST.cost||invLvl>=ECONOMY.INVEST.maxInvest||LOCATIONS[locId]?.ctrl!=='player'?'disabled':''}
+              onclick="window._econInvest('${locId}')">INVEST — ${ECONOMY.INVEST.cost}g</button>
+            ${LOCATIONS[locId]?.ctrl!=='player'?'<div class="econ-desc" style="color:var(--blood)">Must control this territory to invest.</div>':''}
+          </div>`
+        :`<div class="econ-section">
+            ${ECONOMY.BLACK_MARKET.map(item=>`<div class="econ-item">
+              <div><strong>${item.name}</strong> — ${item.cost}g</div>
+              <div class="econ-desc">${item.desc}</div>
+              ${item.id==='forged_docs'?
+                Object.values(FACTIONS).filter(f=>f.relationScore>0&&f.relationScore<90).map(f=>
+                  `<button class="econ-buy-btn" ${state.gold<item.cost?'disabled':''} onclick="window._econMarket('${item.id}','${f.id}')">${f.name.split(' ')[0]}</button>`
+                ).join(' ')
+              :`<button class="econ-buy-btn" ${state.gold<item.cost?'disabled':''} onclick="window._econMarket('${item.id}')">BUY</button>`}
+            </div>`).join('')}
+          </div>`
+      }</div>`;
+  }
+  window._econTab=(t)=>{activeTab=t;render();};
+  window._econBuyMerc=(n)=>{
+    const cost=n*ECONOMY.MERCENARIES.cost;
+    if(state.gold<cost) return;
+    state.gold-=cost;state.troops+=n;state.lastMercTurn=state.turn;
+    showNotif('HIRED '+n+' MERCENARIES — '+cost+'g');
+    updateRes();render();
+  };
+  window._econBribe=(fid,cost)=>{
+    if(state.gold<cost||!FACTIONS[fid]) return;
+    state.gold-=cost;
+    FACTIONS[fid].relationScore=Math.min(100,FACTIONS[fid].relationScore+8);
+    showNotif(FACTIONS[fid].name+' BRIBED +8 REL');
+    updateRes();render();
+  };
+  window._econInvest=(locId)=>{
+    if(state.gold<ECONOMY.INVEST.cost) return;
+    if(!state.investments) state.investments={};
+    const cur=state.investments[locId]||0;
+    if(cur>=ECONOMY.INVEST.maxInvest) return;
+    state.gold-=ECONOMY.INVEST.cost;
+    state.investments[locId]=cur+1;
+    showNotif(LOCATIONS[locId]?.shortName+' INVESTED — +'+ECONOMY.INVEST.supplyBoost+' SUP/TURN');
+    updateRes();render();
+  };
+  window._econMarket=(itemId,fid)=>{
+    const item=ECONOMY.BLACK_MARKET.find(i=>i.id===itemId);
+    if(!item||state.gold<item.cost) return;
+    state.gold-=item.cost;
+    item.effect(state,fid);
+    showNotif('PURCHASED: '+item.name.toUpperCase());
+    if(itemId==='medkit') updateHp(state.hp);
+    updateRes();render();
+  };
+  render();
+  document.body.appendChild(panel);
 }
 
 // PERSISTENCE
@@ -2588,6 +3293,14 @@ function saveGame(html){
       garrison:state.garrison||{},ownFaction:state.ownFaction||false,
       originFaction:state.originFaction||null,deadNpcs:state.deadNpcs||[],
       username:state.username||localStorage.getItem('jw2999_username')||'',
+      campaign:state.campaign||'jersey',
+      // Mid-game depth systems
+      repTally:state.repTally||{},repTags:state.repTags||[],
+      npcTrust:state.npcTrust||{},npcIntel:state.npcIntel||[],
+      worldEvents:state.worldEvents||[],lastEventTurn:state.lastEventTurn||0,
+      amishEscalation:state.amishEscalation||[],
+      interFactions:interFactionRelations,
+      lastMercTurn:state.lastMercTurn||0,investments:state.investments||{},blackMarketUsed:state.blackMarketUsed||[],
       locStates,fRels,skData,savedAt:Date.now()
     }));
   }catch(e){}
@@ -2596,11 +3309,13 @@ function loadSave(){try{const r=localStorage.getItem(SAVE_KEY);return r?JSON.par
 function clearSave(){localStorage.removeItem(SAVE_KEY);}
 
 function resumeGame(save){
+  state.campaign=save.campaign||'jersey';
+  if(state.campaign==='space') activateCampaign('space');
   state.character=save.character; state.factionName=save.factionName||'Unknown Faction';
   state.hp=save.hp; state.maxHp=save.maxHp; state.turn=save.turn;
   state.history=save.history||[]; state.currentChoices=save.currentChoices||[];
   state.days=save.days||0; state.supplies=save.supplies||50; state.troops=save.troops||10; state.gold=save.gold||0; state.deathRiskMod=save.deathRiskMod||0;
-  state.currentLocation=save.currentLocation||'tcnj';
+  state.currentLocation=save.currentLocation||(state.campaign==='space'?'promenade':'tcnj');
   state.metFactions=save.metFactions||[];
   state.travelMethod=save.travelMethod||'foot';
   state.amishContactMade=save.amishContactMade||false;
@@ -2611,6 +3326,13 @@ function resumeGame(save){
   state.ownFaction=save.ownFaction||false;
   state.originFaction=save.originFaction||null;
   state.deadNpcs=save.deadNpcs||[];
+  // Mid-game depth systems
+  state.repTally=save.repTally||{};state.repTags=save.repTags||[];
+  state.npcTrust=save.npcTrust||{};state.npcIntel=save.npcIntel||[];
+  state.worldEvents=save.worldEvents||[];state.lastEventTurn=save.lastEventTurn||0;
+  state.amishEscalation=save.amishEscalation||[];
+  if(save.interFactions) interFactionRelations=save.interFactions;
+  state.lastMercTurn=save.lastMercTurn||0;state.investments=save.investments||{};state.blackMarketUsed=save.blackMarketUsed||[];
   state.sessionId=save.sessionId||(Date.now().toString(36)+Math.random().toString(36).slice(2,7));
   state.apiKey=localStorage.getItem(API_KEY)||'';
   logEvent('session_resume',{turn:save.turn,hp:save.hp});
@@ -2618,11 +3340,16 @@ function resumeGame(save){
   if(save.fRels) Object.entries(save.fRels).forEach(([k,v])=>{if(FACTIONS[k])FACTIONS[k].relationScore=v;});
   if(save.skData) Object.entries(save.skData).forEach(([k,v])=>{if(SKILLS[k]){SKILLS[k].xp=v.xp;SKILLS[k].ap=v.ap;if(v.forkChoice)SKILLS[k].forkChoice=v.forkChoice;}});
   state.classPerk=CLASSES[state.character.class]?.classPerk||'';
+  if(state.campaign==='space'){
+    document.body.classList.add('campaign-space');
+    generateShipMap();
+  }
+  updateHp(state.hp); updateRes(); updateHUDLabels(); renderAPRow();
+  // Re-populate header labels after HUD swap (updateHUDLabels replaces innerHTML)
   document.getElementById('panel-name').textContent=state.character.name;
   document.getElementById('panel-class').textContent=CLASSES[state.character.class]?.name||state.character.class;
   document.getElementById('panel-faction').textContent=state.factionName;
-  document.getElementById('panel-loc').textContent=LOCATIONS[state.currentLocation]?.shortName||'TCNJ';
-  updateHp(state.hp); updateRes(); renderAPRow();
+  document.getElementById('panel-loc').textContent=LOCATIONS[state.currentLocation]?.shortName||(state.campaign==='space'?'PROMENADE':'TCNJ');
   _el['turn-counter'].textContent='> TURN '+String(state.turn).padStart(3,'0');
   if(save.lastStoryHTML) _el['story-text'].innerHTML=save.lastStoryHTML;
   if(state.currentChoices.length) renderChoices(state.currentChoices);
@@ -2644,7 +3371,11 @@ function showContinue(save){
   const savedUser=localStorage.getItem('jw2999_username')||save.username||'';
   const needsCode=!!savedCode;
   const codeHtml=needsCode?`<div style="margin:8px 0"><div style="font-size:.55rem;color:var(--gd);letter-spacing:1px;margin-bottom:4px;">ENTER 4-DIGIT CODE TO CONTINUE</div><input type="text" id="continue-code-input" class="dos-input" placeholder="####" maxlength="4" pattern="[0-9]*" inputmode="numeric" style="width:80px;text-align:center;font-size:1rem;"/><div id="code-error" style="color:#ff4444;font-size:.5rem;display:none;margin-top:4px;">WRONG CODE.</div></div>`:'';
-  el.innerHTML=`<div class="wtb"><div class="wtt"><span>&#128190;</span> SAVE_STATE.DAT</div><div class="wbs"><div class="wbtn">?</div></div></div><div class="dlg-body-save"><div class="dlg-icon">&#128190;</div><div class="dlg-content"><div class="dlg-title">SAVE FILE DETECTED</div><div class="dlg-sub">SURVIVOR: ${save.character.name}${savedUser?' ('+savedUser+')':''}<br>FACTION: ${save.factionName||'Old Jersey'}<br>${t} | HP: ${save.hp}% | DAY ${save.days||0}</div>${codeHtml}<div class="dlg-btns"><button class="w95btn" onclick="verifyContinue()">Continue</button><button class="w95btn" onclick="discardSave()">New Game</button></div></div></div>`;
+  const isSp=(save.campaign||'jersey')==='space';
+  const surLbl=isSp?'PASSENGER':'SURVIVOR';
+  const facLbl=isSp?'HOUSE':'FACTION';
+  const dayLbl=isSp?'CYCLE':'DAY';
+  el.innerHTML=`<div class="wtb"><div class="wtt"><span>&#128190;</span> SAVE_STATE.DAT</div><div class="wbs"><div class="wbtn">?</div></div></div><div class="dlg-body-save"><div class="dlg-icon">&#128190;</div><div class="dlg-content"><div class="dlg-title">SAVE FILE DETECTED</div><div class="dlg-sub">${surLbl}: ${save.character.name}${savedUser?' ('+savedUser+')':''}<br>${facLbl}: ${save.factionName||'Old Jersey'}<br>${t} | HP: ${save.hp}% | ${dayLbl} ${save.days||0}</div>${codeHtml}<div class="dlg-btns"><button class="w95btn" onclick="verifyContinue()">Continue</button><button class="w95btn" onclick="discardSave()">New Game</button></div></div></div>`;
   const target=document.getElementById('story-select');
   target.insertBefore(el,target.firstChild);
 }
@@ -2662,20 +3393,33 @@ function discardSave(){if(!confirm('DELETE SAVE FILE?'))return;clearSave();hideC
 function restartGame(){
   if(!confirm('REBOOT CAMPAIGN?\nAll progress erased.'))return;
   clearSave();
+  // Restore NJ constants so story-select starts clean
+  if(state.campaign==='space'){activateCampaign('jersey');document.body.classList.remove('campaign-space');}
+  state.campaign='jersey';
   state.history=[]; state.turn=1; state.hp=100;
   state.days=0; state.supplies=50; state.troops=10; state.currentLocation='tcnj';
   state.factionName='Old Jersey'; state.boostedSkill=null; state.originFaction=null; state.classPerk=''; state.garrison={}; state.ownFaction=false; state.gold=0; state.gameOver=false; state.metFactions=[];
   state.travelMethod='foot'; state.amishContactMade=false; state.amishDealMade=false; state.visitedLocations=['tcnj']; state.factionQuests={};
-  // Reset locations to correct initial control states
+  state.deadNpcs=[];
+  // Reset mid-game depth systems
+  state.repTally={};state.repTags=[];state.npcTrust={};state.npcIntel=[];
+  state.worldEvents=[];state.lastEventTurn=0;state.amishEscalation=[];
+  state.lastMercTurn=0;state.investments={};state.blackMarketUsed=[];
+  interFactionRelations=JSON.parse(JSON.stringify(BASE_FACTION_RELATIONS));
+  // Reset NJ locations to correct initial control states
   Object.keys(LOCATIONS).forEach(k=>{
-    if(k==='tcnj') LOCATIONS[k].ctrl='unclaimed';
-    else if(k==='newark'||k==='mcguire') LOCATIONS[k].ctrl='hostile';
+    if(k==='tcnj'||k==='meridian_biolabs') LOCATIONS[k].ctrl='unclaimed';
+    else if(k==='newark'||k==='mcguire'||k==='pine_barrens') LOCATIONS[k].ctrl='hostile';
     else LOCATIONS[k].ctrl='neutral';
   });
   Object.values(FACTIONS).forEach(f=>{
     f.relationScore=f.id==='iron_syndicate'?10:f.id==='rust_eagles'?15:f.id==='the_hollowed'?0:f.id==='subnet'?35:f.id==='mountain_covenant'?30:f.id==='trenton_collective'?25:55;
   });
   Object.values(SKILLS).forEach(s=>{s.xp=0;s.ap=0;s.forkChoice=null;});
+  // Restore NJ HUD labels
+  updateHUDLabels();
+  // Restore NJ map SVG
+  restoreNJMap();
   document.getElementById('game-screen').style.display='none';
   document.getElementById('setup-screen').style.display='none';
   document.getElementById('story-select').style.display='block';
@@ -2690,7 +3434,7 @@ const STORIES={
     id:'jersey',
     name:'2999',
     tag:'Post-Apoc NJ // Political Gore Comedy',
-    setupHint:'TCNJ IS EMPTY. YOU ARE BUILDING SOMETHING FROM NOTHING.',
+    setupHint:'',
     factionPlaceholder:'e.g. The New Jersey Accord',
     namePlaceholder:'e.g. Governor Skeez Malvetti',
   },
@@ -2698,10 +3442,9 @@ const STORIES={
     id:'space',
     name:'GLITTERGOLD FRONTIER',
     tag:'Sci-Fi Uprising // Star Cruiser Mutiny',
-    setupHint:'THE GLITTERGOLD AWAITS. THE OVERSEERS WON\'T STEP DOWN QUIETLY.',
+    setupHint:'',
     factionPlaceholder:'e.g. The Passenger Revolt',
     namePlaceholder:'e.g. Captain Dez Morrow',
-    dev:true,
   },
   locked2:{
     id:'locked2',
@@ -2743,7 +3486,7 @@ function selectStory(id){
   document.getElementById('setup-story-name').textContent=story.name;
   // Update hints
   const hint=document.querySelector('#setup-screen .dos-hint');
-  if(hint) hint.textContent='> '+story.setupHint;
+  if(hint) hint.textContent=story.setupHint?'> '+story.setupHint:'';
   // Prefill username if returning
   const unInput=document.getElementById('username-input');
   const savedUser=localStorage.getItem('jw2999_username');
@@ -2759,7 +3502,7 @@ function selectStory(id){
 const JERSEY_SETUP_DEFAULTS={
   profileTitle:'&#128128; SURVIVOR_PROFILE.DAT',
   nameLabel:'SURVIVOR DESIGNATION',
-  factionLabel:'YOUR FACTION: OLD JERSEY',
+  factionLabel:'FACTION NAME',
   step1Label:'STEP 1 — SELECT ORIGIN FACTION',
   step2Label:'STEP 2 — SELECT SUBCLASS',
   beginText:'[ BOOT CAMPAIGN >> ]',
@@ -2790,8 +3533,8 @@ function applyCampaignSkin(storyId){
   // Faction label (second .dos-label)
   const factionLbl=allLabels[1];
   if(factionLbl) factionLbl.textContent=isSpace
-    ?'YOUR FAMILY ABOARD THE GLITTERGOLD'
-    :'YOUR FACTION: OLD JERSEY';
+    ?'FAMILY NAME'
+    :'FACTION NAME';
 
   // "FACTION CLASS" → "FAMILY" label (fifth .dos-label)
   const classLbl=allLabels[4];
@@ -3601,6 +4344,9 @@ function dismissSplash() {
 document.addEventListener('DOMContentLoaded', function() {
   // Cache frequently-used DOM elements (avoids repeated lookups in hot paths)
   _initElCache();
+  // Backup NJ SVG map for restore after space campaign
+  const njSvg=document.getElementById('campaign-svg');
+  if(njSvg) window._njSvgBackup=njSvg.innerHTML;
   // Load and apply user settings immediately
   loadSettings();
   applySettings();
