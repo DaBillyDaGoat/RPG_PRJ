@@ -325,6 +325,7 @@ function displayVictory(type){
     diplomatic:`INFLUENCE RATING: 100%\nDIPLOMATIC MASTERY\n\nSeven factions. Seven deals. Every one of them signed.\n\nThe Iron Syndicate calls you an equal. The Mountain Covenant calls you blessed. The Coastal Brotherhood calls you the best business partner they've ever had. The Hollowed still call you lunch, but at a respectful distance.\n\nIn ${state.turn} turns, ${state.character.name} did what nobody in 330 years of NJ wasteland politics managed: made everyone sit at the same table. Whether they like each other is somebody else's problem now.`,
     conquest:`INFLUENCE RATING: 100%\nWARLORD ASCENDANT\n\n"${state.factionName}" left nothing standing.\n\nEvery rival has been broken, buried, or fled beyond the Delaware. The wasteland is quiet now — not peaceful, not prosperous, just quiet in the way places get when there's nobody left to argue.\n\n${state.character.name} wanted control. They got it. ${state.turn} turns of escalating violence, and now they have a throne built from the right enemies. New Jersey 2999 is yours.\n\nEnjoy the silence.`,
     mixed:`INFLUENCE RATING: 100%\nCONSOLIDATION COMPLETE\n\n"${state.factionName}" resolved every faction on its own terms.\n\nSome signed treaties. Some got buried. The ones smart enough to negotiate kept their flags. The ones who didn't...\n\nIn ${state.turn} turns, ${state.character.name} built something from nothing and ended with a hand on every lever that matters in New Jersey. Not every choice was clean. None of them needed to be.\n\nWasteland politics: won.`,
+    supremacy:`INFLUENCE RATING: 100%\nTOTAL SUPREMACY\n\n"${state.factionName}" didn't need every inch of dirt or every faction on their knees.\n\nThey needed the right territory, the right allies, the right weapons, and enough gold to make the rest irrelevant. ${state.character.name} built a machine — part military, part economic, part political — and the machine won.\n\nFacilities secured. Alliances locked. Trade routes flowing. In ${state.turn} turns, raw power settled what politics couldn't.\n\nNew Jersey 2999 has a new apex predator.`,
   };
   document.getElementById('story-win-title').textContent='CAMPAIGN COMPLETE — '+type.toUpperCase();
   const el=_el['story-text'];
@@ -433,6 +434,7 @@ const FACTION_RIVALS={
   coastal_brotherhood:['rust_eagles','the_hollowed'],
   the_hollowed:     ['mountain_covenant','coastal_brotherhood','trenton_collective'],
   subnet:           ['iron_syndicate','rust_eagles'],
+  unaffiliated:     [],
 };
 
 // Inter-faction political relations (for AI context)
@@ -734,6 +736,27 @@ const FACTION_CLASSES={
       },
     ],
   },
+  unaffiliated:{
+    label:'UNAFFILIATED', icon:'&#9760;', color:'#888888',
+    startLocation:'random_secondary',
+    lore:'No faction. No flag. You walked out of the wasteland alone — or you were thrown out. Either way, nobody\'s coming to help.',
+    classes:[
+      { id:'marauder', name:'Marauder', tier:'advanced',
+        icon:'&#9876;',
+        flavor:'You hit hard and move fast. Tactics are for people who can afford to wait. You can\'t.',
+        statBonus:{brutality:2,depravity:1}, startBonus:{supplies:10,troops:5},
+        skillBonus:{force:5,shadow:2},
+        classPerk:'BLITZ: When you attack with more troops than the enemy expects, first-strike damage is doubled. Ambush is your language.',
+      },
+      { id:'bounty_hunter', name:'Bounty Hunter', tier:'advanced',
+        icon:'&#127919;',
+        flavor:'You track people for gold. You\'ve worked for every faction and owe loyalty to none. Your reputation is your resume.',
+        statBonus:{cunning:2,depravity:1}, startBonus:{supplies:25,troops:0,gold:15},
+        skillBonus:{wit:3,shadow:3,grit:1},
+        classPerk:'CONTRACTS: Black market bounty postings appear more frequently. Completing kills or captures for factions earns bonus gold.',
+      },
+    ],
+  },
 };
 
 // ── GLITTERGOLD FRONTIER — FAMILIES & SKILL NAMES ──
@@ -862,7 +885,8 @@ const LOCATIONS={
   trenton:{name:'Trenton',shortName:'TRENT',ctrl:'neutral',faction:'trenton_collective',svgX:192,svgY:270,travelDays:1,travelSupplies:8,travelTroopRisk:false,raidRisk:1,supplyPerTurn:10,features:['Farmland','Food stores','Collective governance'],flavor:'The breadbasket of NJ 2999. Chair King runs it by committee. It somehow works.'},
   mcguire:{name:'McGuire AFB',shortName:'MCGRE',ctrl:'hostile',faction:'rust_eagles',svgX:228,svgY:310,travelDays:2,travelSupplies:12,travelTroopRisk:true,raidRisk:3,supplyPerTurn:10,features:['Military airstrip','Armory','Aircraft (fuel unknown)'],flavor:'Three generations of Air Force descendants who never left. General Rusk still runs daily drills.'},
   lbi:{name:'LBI Harbor',shortName:'LBI',ctrl:'neutral',faction:'coastal_brotherhood',svgX:305,svgY:395,travelDays:3,travelSupplies:18,travelTroopRisk:false,raidRisk:2,supplyPerTurn:9,features:['Harbor','Trade routes','Smuggling network'],flavor:'Long Beach Island. Captain Salieri runs the most profitable port on the coast. Everything moves through here \u2014 for a price.'},
-  meridian_biolabs:{name:'Abandoned Facility',shortName:'???',ctrl:'unclaimed',faction:'player',svgX:155,svgY:133,travelDays:3,travelSupplies:16,travelTroopRisk:false,raidRisk:2,supplyPerTurn:7,claimable:true,revealName:'Brantover AI-Powered Biolabs',features:['Unknown — requires investigation'],flavor:"Something is out here in Warren County. The locals won't go near it. The contamination that poisons the Pine Barrens flows from this direction. Whatever this place is, it's been running on its own for a very long time."},
+  meridian_biolabs:{name:'Abandoned Facility',shortName:'???',ctrl:'unclaimed',faction:'player',svgX:155,svgY:133,facility:true,travelDays:3,travelSupplies:16,travelTroopRisk:false,raidRisk:2,supplyPerTurn:7,claimable:true,revealName:'Brantover AI-Powered Biolabs',features:['Unknown — requires investigation'],flavor:"Something is out here in Warren County. The locals won't go near it. The contamination that poisons the Pine Barrens flows from this direction. Whatever this place is, it's been running on its own for a very long time."},
+  daddyo_robotics:{name:'Abandoned Factory',shortName:'???',ctrl:'unclaimed',faction:'player',svgX:280,svgY:90,facility:true,travelDays:3,travelSupplies:14,travelTroopRisk:true,raidRisk:3,supplyPerTurn:5,claimable:true,revealName:'DaddyO Robotics',features:['Unknown — requires investigation'],flavor:"Something industrial is running in the Ramapo hills. The noise carries for miles on quiet nights — grinding, hammering, the whine of servos. The locals say it's been going since before anyone can remember. Nobody who's gone to look has come back talkative."},
   pine_barrens:{name:'Pine Barrens',shortName:'PNBRN',ctrl:'hostile',faction:'the_hollowed',svgX:248,svgY:365,travelDays:2,travelSupplies:12,travelTroopRisk:true,raidRisk:5,supplyPerTurn:0,features:['Brantover contamination zones','Hollowed hunting grounds','Chemical bog terrain'],flavor:"330 years of Brantover runoff pooling into the aquifer. The trees are wrong — too tall, too quiet, colors that have no name. The Hollowed call this home. Something else does too. Something that has been mutating here since before living memory.",jerseyDevil:true},
   cape_may:{name:'Cape May Municipal',shortName:'CAPMY',ctrl:'neutral',faction:'subnet',svgX:158,svgY:550,travelDays:4,travelSupplies:22,travelTroopRisk:false,raidRisk:1,supplyPerTurn:0,features:['Underground bunker entrance','NJ-ADMIN-7 access terminal','Subnet relay nodes'],flavor:"Cape May Municipal Building \u2014 condemned since 2715. Three sub-basement levels below the public record. The Architect receives visitors, when it chooses to."},
   // ── SECONDARY LOCATIONS ──────────────────────────────────────────────────
@@ -916,7 +940,7 @@ const COUNTY_COORDS={
   morristown:{cX:248,cY:142},jersey_city:{cX:338,cY:170},flemington:{cX:172,cY:208},somerville:{cX:220,cY:192},
   new_brunswick:{cX:260,cY:212},freehold:{cX:295,cY:260},mount_holly:{cX:185,cY:318},toms_river:{cX:310,cY:328},
   camden:{cX:118,cY:330},woodbury:{cX:115,cY:352},salem:{cX:55,cY:412},bridgeton:{cX:95,cY:440},
-  mays_landing:{cX:198,cY:435},
+  mays_landing:{cX:198,cY:435},daddyo_robotics:{cX:280,cY:90},
   summit:{cX:285,cY:160},berkeley_heights:{cX:256,cY:168},westfield:{cX:288,cY:180},
   warren_twp:{cX:240,cY:178},union_twp:{cX:305,cY:162},stafford_twp:{cX:298,cY:380}
 };
@@ -924,7 +948,7 @@ Object.entries(COUNTY_COORDS).forEach(([k,v])=>{if(LOCATIONS[k])Object.assign(LO
 // Passive gold income per controlled location per turn
 const LOC_GOLD_PER_TURN={
   newark:4, mountainside:3, tcnj:2, trenton:4, mcguire:3, lbi:5,
-  meridian_biolabs:3, cape_may:0, pine_barrens:0, atlantic_city:3,
+  meridian_biolabs:3, daddyo_robotics:4, cape_may:0, pine_barrens:0, atlantic_city:3,
 };
 const PATROL_ROUTES=[{from:'newark',to:'tcnj'},{from:'mcguire',to:'tcnj'},{from:'mcguire',to:'trenton'}];
 
@@ -943,6 +967,7 @@ const ROAD_CONNECTIONS={
   'road-lbi-pine_barrens':         ['lbi','pine_barrens'],
   'road-pine_barrens-atlantic_city':['pine_barrens','atlantic_city'],
   'road-pine_barrens-cape_may':    ['pine_barrens','cape_may'],
+  'road-daddyo-newark':            ['daddyo_robotics','newark'],
 };
 
 // Deep backup of NJ campaign data for switching
@@ -998,6 +1023,7 @@ Object.entries(GLITTERGOLD_FAMILIES).forEach(([fid,fam])=>{
 
 // STATE
 const state={
+  campaign:'jersey',
   apiKey:'',turn:1,hp:100,maxHp:100,
   character:{name:'',class:''},
   factionName:'',ownFaction:false,
@@ -1156,7 +1182,8 @@ function beginGame(){
   if(!cc){showErr(err,isSpace?'SELECT FAMILY.':'SELECT CLASS.');return;}
   err.style.display='none';
   state.apiKey=apiKey;
-  state.factionName=isSpace?'Passenger':'Old Jersey';
+  const _cls=CLASSES[cc.dataset.class];
+  state.factionName=isSpace?'Passenger':(_cls&&_cls.factionId&&FACTIONS[_cls.factionId]?FACTIONS[_cls.factionId].name:'Old Jersey');
   state.username=username; state.loginCode=loginCode;
   localStorage.setItem('jw2999_username',username);
   localStorage.setItem('jw2999_logincode',loginCode);
@@ -1197,6 +1224,11 @@ function beginGame(){
     // NJ 2999 path
     const originFdata=cls?FACTION_CLASSES[cls.factionId]:null;
     state.currentLocation=originFdata?.startLocation||'tcnj';
+    // Unaffiliated: random secondary town start
+    if(state.currentLocation==='random_secondary'){
+      const secKeys=Object.keys(LOCATIONS).filter(k=>LOCATIONS[k].secondary);
+      state.currentLocation=secKeys[Math.floor(Math.random()*secKeys.length)];
+    }
     state.visitedLocations=[state.currentLocation];
     state.travelMethod='foot';
     state.amishContactMade=false;
@@ -1210,12 +1242,19 @@ function beginGame(){
       Object.entries(cls.skillBonus).forEach(([sk,v])=>{if(SKILLS[sk])SKILLS[sk].ap+=v;});
       if(cls.startBonus.troops) state.troops=Math.max(0,state.troops+cls.startBonus.troops);
       if(cls.startBonus.supplies) state.supplies=Math.max(0,state.supplies+cls.startBonus.supplies);
+      if(cls.startBonus.gold) state.gold=Math.max(0,state.gold+cls.startBonus.gold);
       const originFid=cls.factionId;
       if(originFid && FACTIONS[originFid]) FACTIONS[originFid].relationScore=41;
       const rivals=FACTION_RIVALS[originFid]||[];
       rivals.forEach(rid=>{ if(FACTIONS[rid]) FACTIONS[rid].relationScore=10; });
       state.originFaction=originFid;
       state.classPerk=cls.classPerk;
+    }
+    // Unaffiliated: start independent, no faction relations
+    if(cls && cls.factionId==='unaffiliated'){
+      state.ownFaction=true;
+      state.factionName='Old Jersey';
+      state.originFaction=null;
     }
   }
   // Reset skill alloc for next new game
@@ -1250,6 +1289,26 @@ function updateHp(v){
   _el['hp-text'].textContent=state.hp+'/'+state.maxHp;
 }
 function getPlayerTerritories(){return Object.values(LOCATIONS).filter(l=>!l.secondary&&l.ctrl==='player').length;}
+
+function calcStrength(){
+  let s=0;
+  // Territories: cities +10, facilities +15
+  Object.values(LOCATIONS).forEach(l=>{
+    if(l.secondary||l.ctrl!=='player') return;
+    s += l.facility ? 15 : 10;
+  });
+  // Faction relations: allied +12, trade +5
+  Object.values(FACTIONS).forEach(f=>{
+    if(f.relationScore>=66) s+=12;
+    else if(f.relationScore>=45) s+=5;
+  });
+  // Military: troops (mobile + garrison) x0.5
+  const totalTroops=state.troops+Object.values(state.garrison||{}).reduce((a,b)=>a+b,0);
+  s += totalTroops * 0.5;
+  // Economic: gold x0.2
+  s += (state.gold||0) * 0.2;
+  return Math.round(s);
+}
 
 function updateRes(){
   const goldFmt=parseFloat(state.gold||0).toFixed(1)+'g';
@@ -1295,7 +1354,8 @@ function updateHUDLabels(){
     const tn=terrChip.nextSibling;
     // Update /10 suffix — find the text node after the span
     const chip=terrChip.parentElement;
-    chip.childNodes.forEach(n=>{if(n.nodeType===3&&n.textContent.includes('/'))n.textContent='/10';});
+    const totalPrimary=Object.values(LOCATIONS).filter(l=>!l.secondary).length;
+    chip.childNodes.forEach(n=>{if(n.nodeType===3&&n.textContent.includes('/'))n.textContent='/'+totalPrimary;});
   }
   // Header labels
   const hdr=document.querySelector('.char-hdr');
@@ -1497,10 +1557,12 @@ function renderTasks(){
   const total=factions.length;
   const territories=getPlayerTerritories();
   const totalTerr=Object.values(LOCATIONS).filter(l=>!l.secondary).length;
+  const strength=calcStrength();
   let victoryPath='UNDECIDED';
   if(territories===totalTerr) victoryPath='DOMINATION';
   else if(resolved===total&&conqueredCount===0) victoryPath='DIPLOMATIC';
   else if(resolved===total&&alliedCount===0) victoryPath='CONQUEST';
+  else if(strength>=100) victoryPath='SUPREMACY';
   else if(resolved>0) victoryPath='MIXED';
 
   // EXTERNAL THREAT BANNER (Amish / Colony Fleet)
@@ -1533,6 +1595,7 @@ function renderTasks(){
     <div class="war-room-stats">
       <div class="war-stat"><div class="war-stat-val">${territories}/${totalTerr}</div><div class="war-stat-lbl">${state.campaign==='space'?'DECKS':'TERRITORIES'}</div></div>
       <div class="war-stat"><div class="war-stat-val">${resolved}/${total}</div><div class="war-stat-lbl">RESOLVED</div></div>
+      <div class="war-stat"><div class="war-stat-val">${strength}/100</div><div class="war-stat-lbl">STRENGTH</div></div>
       <div class="war-stat"><div class="war-stat-val">${state.days}</div><div class="war-stat-lbl">${state.campaign==='space'?'CYCLES':'DAYS'}</div></div>
       <div class="war-stat"><div class="war-stat-val" style="color:var(--a)">${victoryPath}</div><div class="war-stat-lbl">PATH</div></div>
     </div>
@@ -1937,7 +2000,7 @@ THE HOLLOWED — CANNIBALISM: The Hollowed eat people because Brantover contamin
 THE JERSEY DEVIL IS REAL. It is a demon. It is not a legend, not a mutant, not a metaphor. Most people don't believe it — they are wrong. It has been in the Barrens since before living memory and 330 years of Brantover contamination may have made it worse — nobody knows for sure. 80% of those who fight it die. If a player encounters it, treat it as an apex predator, ancient horror, and genuine supernatural entity, not a monster-movie joke.
 NOT FALLOUT. NO NUKES WERE EVER DROPPED. NEVER USE: radiation, rads, Geiger counters, rad zones, Vaults, Vault-Tec, Brotherhood of Steel, Super Mutants, Deathclaws, Nuka-Cola, bottle caps as currency, Power Armor, Pip-Boys, the Institute, Synths, FEV, Stimpaks, RadAway, Rad-X, Enclave, or "War never changes." This world's collapse was The Departure — the rich fled to orbit and abandoned the poor. Environmental hazards are CHEMICAL CONTAMINATION, INDUSTRIAL RUNOFF, and 330 years of BIO-DRIFT from unchecked factories and labs — not nuclear fallout. Currency is GOLD. Factions are POLITICAL CITY-STATES. Mutations come from chemical/biological exposure over generations. This is The Wire meets Dune meets Jersey Shore — gritty urban politics, not retro-nuclear Americana.
 
-PLAYER: ${state.character.name} (${CLASSES[state.character.class]?.name||state.character.class}${state.originFaction?', ex-'+FACTIONS[state.originFaction]?.name:''}) / "${state.factionName}"
+PLAYER: ${state.character.name} (${CLASSES[state.character.class]?.name||state.character.class}${state.originFaction?(state.ownFaction?', ex-'+FACTIONS[state.originFaction]?.name:', '+FACTIONS[state.originFaction]?.name+' member'):''}) / "${state.factionName}"
 HP:${state.hp} Day:${state.days} Sup:${state.supplies} Troops(mobile):${state.troops} Gold:${parseFloat(state.gold||0).toFixed(1)}g | @${LOCATIONS[state.currentLocation]?.name||state.currentLocation}
 Garrisons: ${Object.entries(state.garrison).filter(([k,v])=>v>0).map(([k,v])=>LOCATIONS[k]?.shortName+':'+v).join(', ')||'none'} | OwnFaction:${state.ownFaction}
 Perk: ${state.classPerk||'—'} | Skills: ${skSum}
@@ -1970,8 +2033,8 @@ ${state._pendingAmish?state._pendingAmish.prompt:''}
 CONSEQUENCE RULE: The world does not bend to the player. Factions resist. No choice is ever fully safe.
 COMBAT DAMAGE (hp_change negative): Graze: -5 to -12 | Standard fight: -12 to -22 | Outnumbered/ambushed: -22 to -35 | Overwhelmed: -35 to -50 | Use -99 for obvious death trap at low HP. When player troops=0 vs hostile: -20 to -35. When player hp<=25 in combat: -25 to -40. Fatal outcomes are intentional.
 LOOT RULE: Combat wins = include positive resource_change.gold (5–25 based on enemy strength/faction wealth). Robberies, raids, and ambushes against player = negative resource_change.gold. Trade deals and briberies = also reflected in resource_change.gold. Scavenging scenes may include small supplies/gold finds.
-NARRATIVE TRAVEL RULE: When the player's chosen action PHYSICALLY MOVES them to a different named location, you MUST: (1) Set location_change.location to the destination key (newark, mountainside, tcnj, trenton, mcguire, lbi, meridian_biolabs, cape_may, pine_barrens, atlantic_city, hoboken, port_elizabeth, newark_airport, middlesex, asbury_ruins, bound_brook, metuchen, dunellen, manville, netcong, newton, paterson, hackensack, belvidere, morristown, jersey_city, flemington, somerville, new_brunswick, freehold, mount_holly, toms_river, camden, woodbury, salem, bridgeton, mays_landing, summit, berkeley_heights, westfield, warren_twp, union_twp, stafford_twp). (2) Set location_change.ctrl to whoever CURRENTLY controls that location — check the Map line above. Do NOT change ctrl just because the player visited. (3) Deduct resource_change.supplies -3 to -8 as travel cost. NEVER narrate the player arriving somewhere new without setting location_change. If they stay put, leave location_change.location as "none".
-VICTORY: Win by (A) controlling ALL 10 primary locations, OR (B) every faction resolved — allied (rel 66+) or eliminated (rel 0 + home captured). Any mix of ally/destroy works. Secondary towns (small diamonds on map) do NOT count for victory.
+NARRATIVE TRAVEL RULE: When the player's chosen action PHYSICALLY MOVES them to a different named location, you MUST: (1) Set location_change.location to the destination key (newark, mountainside, tcnj, trenton, mcguire, lbi, meridian_biolabs, daddyo_robotics, cape_may, pine_barrens, atlantic_city, hoboken, port_elizabeth, newark_airport, middlesex, asbury_ruins, bound_brook, metuchen, dunellen, manville, netcong, newton, paterson, hackensack, belvidere, morristown, jersey_city, flemington, somerville, new_brunswick, freehold, mount_holly, toms_river, camden, woodbury, salem, bridgeton, mays_landing, summit, berkeley_heights, westfield, warren_twp, union_twp, stafford_twp). (2) Set location_change.ctrl to whoever CURRENTLY controls that location — check the Map line above. Do NOT change ctrl just because the player visited. (3) Deduct resource_change.supplies -3 to -8 as travel cost. NEVER narrate the player arriving somewhere new without setting location_change. If they stay put, leave location_change.location as "none".
+VICTORY: Win by (A) controlling ALL primary locations (DOMINATION), (B) every faction resolved — allied (rel 66+) or eliminated (rel 0 + home captured) (DIPLOMATIC/CONQUEST/MIXED), OR (C) reaching 100 STRENGTH (SUPREMACY) — calculated from territories (+10/city, +15/facility), alliances (+12), trade relations (+5), troops (+0.5 each), and gold (+0.2 each). Facilities (Brantover AI-Powered Biolabs, DaddyO Robotics) are high-value strategic locations shown as diamonds on the map. Secondary towns (small dots) do NOT count for victory.
 WRITING FORMAT:
 - *italics* for actions: *smoke pours from the factory stack.* *He doesn't look up.*
 - Named quotes for speech: "Vera Stahl: That's not how Newark works."
@@ -1979,7 +2042,7 @@ WRITING FORMAT:
 - NPCs stay in voice: Stahl=cold corporate. Tombstone=loud bluster. Finn=cryptic zealot. Jameer=direct warmth. Salieri=charming criminal. The Mouth=eloquent cannibal. The Architect=systems metaphors, never says I.
 - Supporting NPCs (Frost, Malone, Dice, Okafor, Perpetua, Tomás, Pam, Webb, Patches, Vega, Teeth, Vessel) can appear in scenes for texture and reveals.
 - Each character quote on its own line.
-- PLAYER NAME RULE: NPCs address the player as "${state.character.name}" — their CHARACTER NAME. "${state.factionName}" is the FACTION/organization name. NEVER call the player by their faction name in dialogue. Use their personal name.
+- PLAYER NAME RULE: NPCs address the player as "${state.character.name}" — their CHARACTER NAME. "${state.factionName}" is the ${state.ownFaction?'player\'s own faction name':'faction the player belongs to'}. NEVER call the player by their faction name in dialogue. Use their personal name.
 - NPC DEATH: If the narrative kills a named NPC (faction leader or supporting character), set npc_killed.name to their EXACT name and npc_killed.cause to a short death description (e.g. "Shot during ambush"). NPC deaths are PERMANENT — dead NPCs cannot reappear.
 ${boost?'- BOOSTED: 4th [STAR] choice using '+state.boostedSkill+' with extra impact.':''}
 
@@ -2016,7 +2079,7 @@ Threats: The Colony Fleet arrives in 120 cycles. The Void Devoted practice ritua
 
 Set the opening scene on the Grand Promenade. Make it feel claustrophobic, opulent, and rotting. Put the player in immediate political danger — a faction pressure, an ultimatum, a whispered warning.`;
   } else {
-    p=`BEGIN. ${state.character.name} is a ${CLASSES[state.character.class]?.name||state.character.class} who just founded "${state.factionName}" at their starting location: ${LOCATIONS[state.currentLocation]?.name||'unknown territory'}.
+    p=`BEGIN. ${state.character.name} is a ${CLASSES[state.character.class]?.name||state.character.class}${state.ownFaction?' who just founded "'+state.factionName+'"':' of the '+state.factionName} at their starting location: ${LOCATIONS[state.currentLocation]?.name||'unknown territory'}.
 
 Open with a vivid scene establishing this world: NJ 2999, 330 years after The Departure. 92% of humanity left. The ones who stayed were the poor, the criminal, the stubborn, and those who missed the ships. Technology froze at 2066. Currency is gold coin — weighed to the tenth of a gram, stamped with the seals of dead governments.
 
@@ -2584,6 +2647,7 @@ function refreshMap(){
       return;
     }
     let cls='loc-node ctrl-'+loc.ctrl;
+    if(loc.facility) cls+=' facility-node';
     if(id===state.currentLocation) cls+=' current-loc';
     node.className.baseVal=cls;
   });
@@ -2932,6 +2996,9 @@ function claimLocation(locId){
   loc.ctrl='player';
   loc.faction='player';
   state.ownFaction=true;
+  state.factionName='Old Jersey';
+  const panelFaction=document.getElementById('panel-faction');
+  if(panelFaction) panelFaction.textContent=state.factionName;
   showNotif((loc.shortName||locId).toUpperCase()+' CLAIMED — YOUR FACTION PLANTS ITS FLAG');
   logEvent('territory_change',{location:locId,prevCtrl,newCtrl:'player',territories:getPlayerTerritories()});
   refreshMap();
@@ -3398,7 +3465,7 @@ function restartGame(){
   state.campaign='jersey';
   state.history=[]; state.turn=1; state.hp=100;
   state.days=0; state.supplies=50; state.troops=10; state.currentLocation='tcnj';
-  state.factionName='Old Jersey'; state.boostedSkill=null; state.originFaction=null; state.classPerk=''; state.garrison={}; state.ownFaction=false; state.gold=0; state.gameOver=false; state.metFactions=[];
+  state.factionName=''; state.boostedSkill=null; state.originFaction=null; state.classPerk=''; state.garrison={}; state.ownFaction=false; state.gold=0; state.gameOver=false; state.metFactions=[];
   state.travelMethod='foot'; state.amishContactMade=false; state.amishDealMade=false; state.visitedLocations=['tcnj']; state.factionQuests={};
   state.deadNpcs=[];
   // Reset mid-game depth systems
@@ -3473,6 +3540,13 @@ function showScreen(name){
     if(el) el.style.display='block';
   }
   window.scrollTo(0,0);
+}
+
+function earlyAccessGate(e){
+  if(e)e.stopPropagation();
+  const code=prompt('ENTER DEV CODE:');
+  if(code!=='55')return;
+  selectStory('space');
 }
 
 function selectStory(id){
@@ -3583,6 +3657,7 @@ function applyCampaignSkin(storyId){
         {id:'trenton_collective',icon:'&#127807;',name:'TRENTON COLLECTIVE',color:'#aacc00',sub:'Agrarian Commune'},
         {id:'coastal_brotherhood',icon:'&#9875;',name:'COASTAL BROTHERHOOD',color:'#0066cc',sub:'LBI Crime Network'},
         {id:'the_hollowed',icon:'&#128128;',name:'THE HOLLOWED',color:'#880000',sub:'Pine Barrens Marauders'},
+        {id:'unaffiliated',icon:'&#9760;',name:'UNAFFILIATED',color:'#888888',sub:'No Faction — Lone Operator'},
       ];
       factions.forEach(f=>{
         const card=document.createElement('div');

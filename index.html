@@ -100,31 +100,31 @@
           <div class="sc-title">2999</div>
           <div class="sc-desc">Year 2999. New Jersey was abandoned in 2669 when most of Earth&rsquo;s population fled off-world and left the poor, criminals, and addicts behind on a destroyed world. Three centuries of isolation, wars, and political factions rising later &mdash; six warring city-states control what remains of the Garden State. You start in a pre-designated established faction with a name and a calling to bring order to chaos.<br><br>Unite the wasteland. Conquer it. Or get eaten by the Jersey Devil in the Pine Barrens &mdash; it&rsquo;s up to you.</div>
           <div class="sc-meta">
-            <div class="sc-meta-item">MAP: <span>New Jersey, 2999</span></div>
-            <div class="sc-meta-item">ENDINGS: <span>Multiple</span></div>
+            <div class="sc-meta-item">MAP: <span class="meta-highlight">New Jersey, 2999</span></div>
+            <div class="sc-meta-item">ENDINGS: <span class="meta-highlight">Multiple</span></div>
           </div>
           <button class="sc-select-btn" onclick="selectStory('jersey');event.stopPropagation();">[ SELECT CAMPAIGN &gt;&gt; ]</button>
         </div>
       </div>
 
       <!-- STORY 02: GLITTERGOLD FRONTIER — Coming Soon -->
-      <div class="story-card space-card" id="sc-space">
+      <div class="story-card space-card" id="sc-space" onclick="earlyAccessGate(event)">
         <div class="sc-banner space-banner"></div>
         <div class="sc-inner">
           <div class="sc-top">
             <div class="sc-icon">&#128640;</div>
             <div class="sc-badges">
-              <div class="sc-status coming-soon">&#9670; ALPHA</div>
-              <div class="sc-num">CAMPAIGN 02</div>
+              <div class="sc-status early-access">&#9670; EARLY ACCESS</div>
+              <div class="sc-num sc-num-purple">CAMPAIGN 02</div>
             </div>
           </div>
           <div class="sc-title sc-title-purple">GLITTERGOLD FRONTIER</div>
           <div class="sc-desc space-desc">You awake from cryo sleep in the year 3150 after fleeing Earth on the Glittergold &mdash; a luxury star cruiser &mdash; as it became clear humanity&rsquo;s treatment of the planet had pushed it to its brink.<br><br>The overseers running this ship aren&rsquo;t the help the luxury clientele expected them to be. Influence an uprising, jettison the bastards out the airlock, or just go on a rampage. Someone has to.</div>
-          <div class="sc-meta">
-            <div class="sc-meta-item">MAP: <span>Solar System, 3150</span></div>
-            <div class="sc-meta-item">ENDINGS: <span>Multiple</span></div>
+          <div class="sc-meta space-meta">
+            <div class="sc-meta-item">MAP: <span class="meta-highlight">Cosmos, 3150</span></div>
+            <div class="sc-meta-item">ENDINGS: <span class="meta-highlight">Multiple</span></div>
           </div>
-          <button class="sc-select-btn space-select-btn" onclick="selectStory('space')">[ SELECT CAMPAIGN ]</button>
+          <button class="sc-select-btn space-select-btn" onclick="earlyAccessGate(event)">[ EARLY ACCESS &gt;&gt; ]</button>
         </div>
       </div>
 
@@ -135,15 +135,15 @@
           <div class="sc-top">
             <div class="sc-icon">&#128274;</div>
             <div class="sc-badges">
-              <div class="sc-status coming-soon" style="color:#cc2222;border-color:#cc2222;">&#9670; COMING SOON</div>
+              <div class="sc-status coming-soon sc-status-red">&#9670; COMING SOON</div>
               <div class="sc-num">CAMPAIGN 03</div>
             </div>
           </div>
           <div class="sc-title sc-title-red">BLOCK .45</div>
           <div class="sc-desc sc-desc-dim">Year 2027. You did your tours, you served your time, and you came home to Chicago expecting the same rundown block you grew up on. Instead you find it&rsquo;s been swallowed whole by a gang that doesn&rsquo;t negotiate, doesn&rsquo;t back down, and definitely doesn&rsquo;t remember you.<br><br>They should have picked a different block. Capture evidence to build a case, kill them off, or die trying. This is your home.</div>
           <div class="sc-meta">
-            <div class="sc-meta-item">MAP: <span>O-Block, 2027</span></div>
-            <div class="sc-meta-item">ENDINGS: <span>Multiple</span></div>
+            <div class="sc-meta-item">MAP: <span class="meta-highlight meta-red">O-Block, 2027</span></div>
+            <div class="sc-meta-item">ENDINGS: <span class="meta-highlight meta-red">Multiple</span></div>
           </div>
           <button class="sc-select-btn sc-select-btn-red" disabled>[ IN DEVELOPMENT ]</button>
         </div>
@@ -216,6 +216,11 @@
             <span class="arch-icon">&#128128;</span>
             <div class="arch-name" style="color:#880000">THE HOLLOWED</div>
             <div class="arch-stat">Pine Barrens Raiders</div>
+          </div>
+          <div class="arch-card" data-arch="unaffiliated" onclick="selectFaction(this)">
+            <span class="arch-icon">&#9760;</span>
+            <div class="arch-name" style="color:#888888">UNAFFILIATED</div>
+            <div class="arch-stat">No Faction — Lone Operator</div>
           </div>
         </div>
         <div style="font-size:.5rem;color:var(--gd);letter-spacing:2px;margin-top:10px;margin-bottom:6px;" id="sub-step-label">STEP 2 — SELECT SUBCLASS</div>
@@ -505,6 +510,7 @@
               <path d="M305,395 C288,390 268,380 248,365" fill="none" class="road" id="road-lbi-pine_barrens" stroke-dasharray="3,5"/>
               <path d="M248,365 C252,395 256,425 260,455" fill="none" class="road" id="road-pine_barrens-atlantic_city" stroke-dasharray="3,5"/>
               <path d="M248,365 C225,420 190,480 158,550" fill="none" class="road" id="road-pine_barrens-cape_may" stroke-dasharray="3,8"/>
+              <line x1="280" y1="90" x2="310" y2="155" class="road" id="road-daddyo-newark" stroke-dasharray="4,6"/>
             </g>
             <!-- ═══ COUNTY ROADS (populated by JS) ═══ -->
             <g id="map-roads-county" style="display:none"></g>
@@ -539,10 +545,15 @@
               <text x="0" y="-16" font-family="Share Tech Mono" font-size="5.5" text-anchor="middle" class="node-lbl">LBI</text>
               <text x="0" y="-9" font-family="Share Tech Mono" font-size="4" text-anchor="middle" class="node-sub">[BROTHERHOOD]</text>
             </g>
-            <g class="loc-node ctrl-unclaimed" id="node-meridian_biolabs" onclick="clickLoc('meridian_biolabs')" transform="translate(155,133)">
-              <circle class="outer" cx="0" cy="0" r="11"/><circle class="inner" cx="0" cy="0" r="5.5"/>
+            <g class="loc-node facility-node ctrl-unclaimed" id="node-meridian_biolabs" onclick="clickLoc('meridian_biolabs')" transform="translate(155,133)">
+              <polygon class="outer" points="0,-13 11,0 0,13 -11,0"/><polygon class="inner" points="0,-6 5.5,0 0,6 -5.5,0"/>
               <text x="-13" y="4" font-family="Share Tech Mono" font-size="5.5" text-anchor="end" class="node-lbl">???</text>
-              <text x="-13" y="11" font-family="Share Tech Mono" font-size="4" text-anchor="end" class="node-sub">[ABANDONED]</text>
+              <text x="-13" y="11" font-family="Share Tech Mono" font-size="4" text-anchor="end" class="node-sub">[FACILITY]</text>
+            </g>
+            <g class="loc-node facility-node ctrl-unclaimed" id="node-daddyo_robotics" onclick="clickLoc('daddyo_robotics')" transform="translate(280,90)">
+              <polygon class="outer" points="0,-13 11,0 0,13 -11,0"/><polygon class="inner" points="0,-6 5.5,0 0,6 -5.5,0"/>
+              <text x="13" y="4" font-family="Share Tech Mono" font-size="5.5" text-anchor="start" class="node-lbl">???</text>
+              <text x="13" y="11" font-family="Share Tech Mono" font-size="4" text-anchor="start" class="node-sub">[FACTORY]</text>
             </g>
             <g class="loc-node ctrl-neutral" id="node-cape_may" onclick="clickLoc('cape_may')" transform="translate(158,550)">
               <circle class="outer" cx="0" cy="0" r="11"/><circle class="inner" cx="0" cy="0" r="5.5"/>

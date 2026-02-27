@@ -126,14 +126,16 @@ body::after{content:'';position:fixed;top:0;right:0;bottom:0;left:0;background:r
 .town-node.current-loc .town-dot{stroke:var(--g);fill:rgba(0,255,65,.35);animation:playerPulse 2s ease-in-out infinite;}
 @keyframes rp{0%,100%{opacity:.7}50%{opacity:.3}}
 .loc-node{cursor:pointer;}
-.loc-node circle.outer{fill:transparent;stroke-width:1.5;}
-.loc-node circle.inner{stroke:none;}
+.loc-node circle.outer,.loc-node polygon.outer{fill:transparent;stroke-width:1.5;}
+.loc-node circle.inner,.loc-node polygon.inner{stroke:none;}
 .ctrl-player .outer{stroke:var(--g);}
 .ctrl-player .inner{fill:var(--g);}
 .ctrl-hostile .outer{stroke:var(--blood);}
 .ctrl-hostile .inner{fill:var(--blood);}
 .ctrl-neutral .outer{stroke:var(--a);}
 .ctrl-neutral .inner{fill:var(--a);}
+.ctrl-unclaimed .outer{stroke:var(--gd);stroke-dasharray:3,3;}
+.ctrl-unclaimed .inner{fill:var(--gd);opacity:.5;}
 .ctrl-contested .outer{stroke:#ff8800;animation:cp 1s ease-in-out infinite;}
 .ctrl-contested .inner{fill:#ff8800;}
 @keyframes cp{0%,100%{opacity:1}50%{opacity:.4}}
@@ -256,6 +258,11 @@ body.map-county-mode .road.patrolled{stroke:var(--blood);}
 .sc-banner.space-banner{background:linear-gradient(135deg,#0d001a 0%,#3d0070 40%,#00d4ff 70%,#ff6ec7 100%);height:8px;}
 .sc-desc.space-desc{color:#bb44ff;}
 .sc-status.coming-soon{background:#3d0070;color:#ffe66d;padding:2px 6px;font-size:.5rem;letter-spacing:1px;border:1px solid #7b2fbe;}
+.sc-status.early-access{background:#1a0033;color:#bb44ff;padding:2px 6px;font-size:.5rem;letter-spacing:1px;border:1px solid #7b2fbe;text-shadow:0 0 6px rgba(187,68,255,.4);}
+.sc-num-purple{color:#9944cc!important;}
+.meta-highlight{font-family:'VT323',monospace;font-size:.85rem;letter-spacing:1px;color:#bb44ff;text-shadow:0 0 8px rgba(187,68,255,.35);}
+.meta-highlight.meta-green{color:var(--g);text-shadow:0 0 8px rgba(0,255,65,.3);}
+.meta-highlight.meta-red{color:#cc4422;text-shadow:0 0 8px rgba(204,68,34,.3);}
 .sc-select-btn.space-select-btn{background:#1a0033;color:#bb44ff;border:1px solid #7b2fbe;}
 .sc-select-btn.space-select-btn:hover{background:#3d0070;color:#fff;}
 .red-card{border:1px solid #aa2200!important;background:var(--wg);}
@@ -369,6 +376,7 @@ body.map-county-mode .road.patrolled{stroke:var(--blood);}
 
 /* ── CAMPAIGN CARD EXTRAS ── */
 .sc-title-purple{color:#bb44ff;}
+.sc-status-red{color:#cc2222!important;border-color:#cc2222!important;background:rgba(204,34,34,.07);}
 .sc-select-btn-red{opacity:.55;border-color:#cc2222 !important;color:#cc2222 !important;cursor:not-allowed;}
 .sc-select-btn-red:hover{background:var(--wg);}
 .settings-chip{cursor:pointer;}
